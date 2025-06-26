@@ -1,20 +1,25 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { Service, Product } from '../types';
 
 interface ActionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit: (item: Service | Product) => void;
+  onDelete: (item: Service | Product) => void;
+  item: Service | Product | null;
+  type: 'service' | 'product';
 }
 
 export default function ActionModal({
   isOpen,
   onClose,
   onEdit,
-  onDelete
+  onDelete,
+  item,
+  type
 }: ActionModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen || !item) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -37,13 +42,13 @@ export default function ActionModal({
         {/* Conteúdo - botões de ação */}
         <div className="p-4 space-y-2">
           <button
-            onClick={onEdit}
+            onClick={() => onEdit(item)}
             className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
           >
             Editar
           </button>
           <button
-            onClick={onDelete}
+            onClick={() => onDelete(item)}
             className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
           >
             Excluir

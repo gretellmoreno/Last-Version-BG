@@ -13,6 +13,8 @@ interface Vale {
 
 interface ValesSectionProps {
   vales: Vale[];
+  loading?: boolean;
+  error?: string | null;
   onNewVale: () => void;
   onEditVale: (vale: Vale) => void;
   onDeleteVale: (vale: Vale) => void;
@@ -21,11 +23,45 @@ interface ValesSectionProps {
 
 export default function ValesSection({
   vales,
+  loading = false,
+  error = null,
   onNewVale,
   onEditVale,
   onDeleteVale,
   formatDate
 }: ValesSectionProps) {
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Vales Registrados</h2>
+            <p className="text-gray-600 mt-1">Gerencie vales e adiantamentos dos profissionais</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+          <p className="text-gray-500">Carregando vales...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Vales Registrados</h2>
+            <p className="text-gray-600 mt-1">Gerencie vales e adiantamentos dos profissionais</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+          <p className="text-red-500">Erro: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header da seção com botão */}

@@ -1,4 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Advance } from '../types';
+import { financeService } from '../lib/supabaseService';
+import { useApp } from './AppContext';
+import { useProfessional } from './ProfessionalContext';
 
 interface Vale {
   id: string;
@@ -31,12 +35,19 @@ interface FechamentoHistorico {
 
 interface FinanceiroContextType {
   vales: Vale[];
+  loading: boolean;
+  error: string | null;
   servicosParaFechamento: ServicoFechamento[];
   historicoFechamentos: FechamentoHistorico[];
-  addVale: (vale: Vale) => void;
-  updateVale: (id: string, updates: Partial<Vale>) => void;
-  removeVale: (id: string) => void;
+  addVale: (vale: Omit<Vale, 'id' | 'status'>) => Promise<boolean>;
+  updateVale: (id: string, updates: Partial<Vale>) => Promise<boolean>;
+  removeVale: (id: string) => Promise<boolean>;
+  refreshVales: () => Promise<void>;
   addFechamentoHistorico: (fechamento: FechamentoHistorico) => void;
+}
+
+interface FinanceiroProviderProps {
+  children: ReactNode;
 }
 
 const FinanceiroContext = createContext<FinanceiroContextType | undefined>(undefined);
@@ -49,23 +60,87 @@ export const useFinanceiro = () => {
   return context;
 };
 
-interface FinanceiroProviderProps {
-  children: ReactNode;
-}
-
 export const FinanceiroProvider: React.FC<FinanceiroProviderProps> = ({ children }) => {
-  const [vales, setVales] = useState<Vale[]>([
-    {
-      id: '1',
-      data: '2025-06-05',
-      profissionalId: '1',
-      profissionalNome: 'Carmen',
-      valor: 10.00,
-      status: 'descontado'
-    }
-  ]);
+  const [vales, setVales] = useState<Vale[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { currentSalon, isReady } = useApp();
+  const { professionals } = useProfessional();
 
-  // Dados mock para fechamento de caixa
+  const convertAdvanceToVale = (advance: Advance): Vale => {
+    const professional = professionals?.find(p => p.id === advance.professional_id);
+    
+    return {
+      id: advance.id,
+      data: advance.created_at.split('T')[0], // Converte ISO date para YYYY-MM-DD
+      profissionalId: advance.professional_id,
+      profissionalNome: professional?.name || 'Profissional não encontrado',
+      valor: advance.value,
+      status: 'pendente',
+      observacoes: ''
+    };
+  };
+
+  const refreshVales = async () => {
+    if (!currentSalon?.id || !isReady) return;
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await financeService.listAdvances({
+        salonId: currentSalon.id
+      });
+      
+      if (response.error) {
+        setError(response.error);
+      } else {
+        const convertedVales = response.data?.map(convertAdvanceToVale) || [];
+        setVales(convertedVales);
+      }
+    } catch (err) {
+      setError('Erro ao carregar vales');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addVale = async (vale: Omit<Vale, 'id' | 'status'>): Promise<boolean> => {
+    if (!currentSalon?.id) return false;
+
+    try {
+      const response = await financeService.createAdvance({
+        salonId: currentSalon.id,
+        professionalId: vale.profissionalId,
+        value: vale.valor
+      });
+      
+      if (response.error) {
+        setError(response.error);
+        return false;
+      }
+      
+      await refreshVales();
+      return true;
+    } catch (err) {
+      setError('Erro ao criar vale');
+      return false;
+    }
+  };
+
+  const updateVale = async (id: string, updates: Partial<Vale>): Promise<boolean> => {
+    // Como não há RPC de update para vales, mantemos a funcionalidade local por enquanto
+    setVales(prev => prev.map(vale => vale.id === id ? { ...vale, ...updates } : vale));
+    return true;
+  };
+
+  const removeVale = async (id: string): Promise<boolean> => {
+    // Como não há RPC de delete para vales, mantemos a funcionalidade local por enquanto
+    setVales(prev => prev.filter(vale => vale.id !== id));
+    return true;
+  };
+
+  // Dados mock para fechamento de caixa (mantendo como estava)
   const [servicosParaFechamento] = useState<ServicoFechamento[]>([
     {
       data: '25/06/2025',
@@ -87,7 +162,7 @@ export const FinanceiroProvider: React.FC<FinanceiroProviderProps> = ({ children
     }
   ]);
 
-  // Histórico de fechamentos
+  // Histórico de fechamentos (mantendo como estava)
   const [historicoFechamentos, setHistoricoFechamentos] = useState<FechamentoHistorico[]>([
     {
       id: '1',
@@ -136,30 +211,27 @@ export const FinanceiroProvider: React.FC<FinanceiroProviderProps> = ({ children
     }
   ]);
 
-  const addVale = (vale: Vale) => {
-    setVales(prev => [...prev, vale]);
-  };
-
-  const updateVale = (id: string, updates: Partial<Vale>) => {
-    setVales(prev => prev.map(vale => vale.id === id ? { ...vale, ...updates } : vale));
-  };
-
-  const removeVale = (id: string) => {
-    setVales(prev => prev.filter(vale => vale.id !== id));
-  };
-
   const addFechamentoHistorico = (fechamento: FechamentoHistorico) => {
     setHistoricoFechamentos(prev => [fechamento, ...prev]);
   };
 
+  useEffect(() => {
+    if (isReady && currentSalon?.id && professionals?.length) {
+      refreshVales();
+    }
+  }, [currentSalon?.id, isReady, professionals?.length]);
+
   return (
     <FinanceiroContext.Provider value={{
       vales,
+      loading,
+      error,
       servicosParaFechamento,
       historicoFechamentos,
       addVale,
       updateVale,
       removeVale,
+      refreshVales,
       addFechamentoHistorico
     }}>
       {children}

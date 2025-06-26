@@ -1,11 +1,16 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Produto } from '../types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Product } from '../types';
+import { supabaseService } from '../lib/supabaseService';
+import { useApp } from './AppContext';
 
 interface ProductContextType {
-  produtos: Produto[];
-  addProduto: (produto: Produto) => void;
-  updateProduto: (id: string, updates: Partial<Produto>) => void;
-  removeProduto: (id: string) => void;
+  products: Product[];
+  loading: boolean;
+  error: string | null;
+  addProduct: (product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => Promise<boolean>;
+  updateProduct: (productId: string, updates: Partial<Product>) => Promise<boolean>;
+  removeProduct: (productId: string) => Promise<boolean>;
+  refreshProducts: () => Promise<void>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -23,30 +28,101 @@ interface ProductProviderProps {
 }
 
 export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) => {
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const { currentSalon, isReady } = useApp();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addProduto = (produto: Produto) => {
-    setProdutos(prev => [...prev, produto]);
+  const refreshProducts = async () => {
+    if (!currentSalon) return;
+    setLoading(true);
+    setError(null);
+    
+    const result = await supabaseService.products.list(currentSalon.id);
+    
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setProducts(result.data || []);
+    }
+    
+    setLoading(false);
   };
 
-  const updateProduto = (id: string, updates: Partial<Produto>) => {
-    setProdutos(prev => 
-      prev.map(produto => 
-        produto.id === id ? { ...produto, ...updates } : produto
-      )
-    );
+  useEffect(() => {
+    if (isReady && currentSalon) {
+      refreshProducts();
+    }
+  }, [isReady, currentSalon?.id]);
+
+  const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => {
+    if (!currentSalon) return false;
+    
+    const result = await supabaseService.products.create({
+      salonId: currentSalon.id,
+      name: product.name,
+      price: product.price,
+      costPrice: product.cost_price,
+      profitMargin: product.profit_margin,
+      stock: product.stock,
+      description: product.description
+    });
+
+    if (result.error) {
+      setError(result.error);
+      return false;
+    }
+
+    await refreshProducts();
+    return true;
   };
 
-  const removeProduto = (id: string) => {
-    setProdutos(prev => prev.filter(produto => produto.id !== id));
+  const updateProduct = async (productId: string, updates: Partial<Product>) => {
+    if (!currentSalon) return false;
+    
+    const result = await supabaseService.products.update({
+      productId,
+      salonId: currentSalon.id,
+      name: updates.name || '',
+      price: updates.price || 0,
+      costPrice: updates.cost_price || 0,
+      profitMargin: updates.profit_margin || 0,
+      stock: updates.stock || 0,
+      description: updates.description
+    });
+
+    if (result.error) {
+      setError(result.error);
+      return false;
+    }
+
+    await refreshProducts();
+    return true;
+  };
+
+  const removeProduct = async (productId: string) => {
+    if (!currentSalon) return false;
+    
+    const result = await supabaseService.products.delete(productId, currentSalon.id);
+
+    if (result.error) {
+      setError(result.error);
+      return false;
+    }
+
+    await refreshProducts();
+    return true;
   };
 
   return (
     <ProductContext.Provider value={{
-      produtos,
-      addProduto,
-      updateProduto,
-      removeProduto
+      products,
+      loading,
+      error,
+      addProduct,
+      updateProduct,
+      removeProduct,
+      refreshProducts
     }}>
       {children}
     </ProductContext.Provider>

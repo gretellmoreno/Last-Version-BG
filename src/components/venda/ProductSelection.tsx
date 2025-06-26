@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Package, Plus, Minus, Search } from 'lucide-react';
+import { useProduct } from '../../contexts/ProductContext';
 
 interface SelectedProduct {
   productId: string;
@@ -14,58 +15,6 @@ interface ProductSelectionProps {
   onShowClientSelection?: () => void;
 }
 
-// Produtos mockados para exemplo
-const mockProducts = [
-  {
-    id: '1',
-    nome: 'Shampoo Profissional',
-    preco: 45.00,
-    estoque: 10
-  },
-  {
-    id: '2',
-    nome: 'Condicionador',
-    preco: 38.00,
-    estoque: 8
-  },
-  {
-    id: '3',
-    nome: 'Máscara Hidratante',
-    preco: 65.00,
-    estoque: 5
-  },
-  {
-    id: '4',
-    nome: 'Óleo Capilar',
-    preco: 55.00,
-    estoque: 12
-  },
-  {
-    id: '5',
-    nome: 'Leave-in',
-    preco: 32.00,
-    estoque: 15
-  },
-  {
-    id: '6',
-    nome: 'Esmalte Vermelho',
-    preco: 18.00,
-    estoque: 20
-  },
-  {
-    id: '7',
-    nome: 'Base para unhas',
-    preco: 15.00,
-    estoque: 25
-  },
-  {
-    id: '8',
-    nome: 'Removedor de esmalte',
-    preco: 12.00,
-    estoque: 30
-  }
-];
-
 export default function ProductSelection({
   selectedProducts,
   onSelectProduct,
@@ -74,6 +23,7 @@ export default function ProductSelection({
   onShowClientSelection
 }: ProductSelectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const { products } = useProduct();
   
   const getQuantityForProduct = (productId: string) => {
     const found = selectedProducts.find(item => item.productId === productId);
@@ -87,14 +37,14 @@ export default function ProductSelection({
 
   const getTotalAmount = () => {
     return selectedProducts.reduce((total, item) => {
-      const product = mockProducts.find(p => p.id === item.productId);
-      return total + (product ? product.preco * item.quantity : 0);
+      const product = products?.find(p => p.id === item.productId);
+      return total + (product ? product.price * item.quantity : 0);
     }, 0);
   };
 
   // Filtrar produtos pela busca
-  const filteredProducts = mockProducts.filter(product =>
-    product.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = (products || []).filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const hasSelectedProducts = selectedProducts.length > 0;
@@ -160,7 +110,7 @@ export default function ProductSelection({
         </div>
 
         {/* Lista de produtos */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-3">
             {filteredProducts.length === 0 ? (
               <div className="text-center py-8">
@@ -194,11 +144,11 @@ export default function ProductSelection({
                         </div>
                         
                         <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{product.nome}</h3>
+                          <h3 className="font-medium text-gray-900">{product.name}</h3>
                           <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <span>Estoque: {product.estoque}</span>
+                            <span>Estoque: {product.stock}</span>
                             <span className="font-semibold text-gray-900">
-                              R$ {product.preco.toFixed(2).replace('.', ',')}
+                              R$ {product.price.toFixed(2).replace('.', ',')}
                             </span>
                           </div>
                         </div>
@@ -218,7 +168,7 @@ export default function ProductSelection({
                         
                         <button
                           onClick={() => handleQuantityChange(product.id, quantity + 1)}
-                          disabled={quantity >= product.estoque}
+                          disabled={quantity >= product.stock}
                           className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Plus size={14} />
@@ -226,7 +176,7 @@ export default function ProductSelection({
 
                         {quantity > 0 && (
                           <div className="ml-3 text-sm font-medium text-green-600">
-                            R$ {(product.preco * quantity).toFixed(2).replace('.', ',')}
+                            R$ {(product.price * quantity).toFixed(2).replace('.', ',')}
                           </div>
                         )}
                       </div>

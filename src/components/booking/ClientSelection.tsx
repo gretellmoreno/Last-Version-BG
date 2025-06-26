@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Search, Plus, UserPlus, User } from 'lucide-react';
+import { Search, Plus, UserPlus } from 'lucide-react';
 import { useClient } from '../../contexts/ClientContext';
+import { useService } from '../../contexts/ServiceContext';
 
 interface ClientSelectionProps {
   selectedServices: string[];
@@ -8,39 +9,6 @@ interface ClientSelectionProps {
   onShowForm: () => void;
   onToggleService: (serviceId: string) => void;
 }
-
-interface ServiceCategory {
-  name: string;
-  count: number;
-  services: Array<{
-    id: string;
-    nome: string;
-    preco: number;
-    duracao: number;
-    comissao: number;
-  }>;
-}
-
-// Dados estáticos para evitar re-criação
-const SERVICE_CATEGORIES: ServiceCategory[] = [
-  {
-    name: 'Hair & styling',
-    count: 4,
-    services: [
-      { id: '1', nome: 'Corte de cabelo', preco: 40, duracao: 45, comissao: 50 },
-      { id: '2', nome: 'Coloração de cabelo', preco: 57, duracao: 90, comissao: 50 },
-      { id: '3', nome: 'Escova', preco: 35, duracao: 35, comissao: 50 },
-      { id: '4', nome: 'Balaiagem', preco: 150, duracao: 150, comissao: 50 },
-    ]
-  },
-  {
-    name: 'Eyebrows & eyelashes',
-    count: 1,
-    services: [
-      { id: '5', nome: 'Alongamento de cílios clássico', preco: 60, duracao: 60, comissao: 50 },
-    ]
-  }
-];
 
 export default function ClientSelection({
   selectedServices,
@@ -50,6 +18,7 @@ export default function ClientSelection({
 }: ClientSelectionProps) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const { clients } = useClient();
+  const { services } = useService();
 
   // Filtrar clientes baseado na busca - com verificação de segurança
   const filteredClients = (clients || []).filter(cliente =>
@@ -139,7 +108,7 @@ export default function ClientSelection({
                 key={cliente.id}
                 onClick={() => onSelectClient({
                   id: cliente.id,
-                  nome: cliente.name, // Converter para formato esperado pelo modal
+                  nome: cliente.name,
                   name: cliente.name,
                   telefone: cliente.phone,
                   phone: cliente.phone,
@@ -162,50 +131,43 @@ export default function ClientSelection({
         </div>
       </div>
 
-      {/* Sidebar direita com serviços selecionados - mais compacta */}
+      {/* Sidebar direita com serviços */}
       <div className="w-72 bg-gray-50 border-l border-gray-200 p-4">
         <h3 className="font-semibold text-gray-900 mb-3 text-sm">Selecionar um serviço</h3>
         
-        {/* Lista de serviços (versão compacta) */}
-        <div className="space-y-4">
-          {SERVICE_CATEGORIES.map((category) => (
-            <div key={category.name}>
-              <h4 className="text-xs font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                <span>{category.name}</span>
-                <span className="bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">
-                  {category.count}
-                </span>
-              </h4>
-              
-              <div className="space-y-2">
-                {category.services.map((service) => (
-                  <div
-                    key={service.id}
-                    onClick={() => onToggleService(service.id)}
-                    className={`
-                      p-2.5 border rounded-lg cursor-pointer transition-all text-xs
-                      ${selectedServices.includes(service.id)
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-900 text-xs">{service.nome}</h5>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {formatDuration(service.duracao)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900 text-xs">R$ {service.preco}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* Lista de serviços */}
+        <div className="space-y-2">
+          {services?.length === 0 ? (
+            <div className="text-center py-4 text-gray-500 text-sm">
+              Nenhum serviço cadastrado
             </div>
-          ))}
+          ) : (
+            services?.filter(service => service.active).map((service) => (
+              <div
+                key={service.id}
+                onClick={() => onToggleService(service.id)}
+                className={`
+                  p-2.5 border rounded-lg cursor-pointer transition-all text-xs
+                  ${selectedServices.includes(service.id)
+                    ? 'border-indigo-500 bg-indigo-50'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }
+                `}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h5 className="font-medium text-gray-900 text-xs">{service.name}</h5>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {formatDuration(service.estimated_time)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900 text-xs">R$ {service.price.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

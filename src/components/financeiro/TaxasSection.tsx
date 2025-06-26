@@ -10,7 +10,7 @@ export default function TaxasSection() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [taxaToDelete, setTaxaToDelete] = useState<any>(null);
   
-  const { taxas, addTaxa, updateTaxa, removeTaxa } = useTaxas();
+  const { taxas, loading, error, addTaxa, updateTaxa, removeTaxa } = useTaxas();
 
   const handleNewTaxa = () => {
     setEditingTaxa(null);
@@ -22,11 +22,21 @@ export default function TaxasSection() {
     setIsTaxaModalOpen(true);
   };
 
-  const handleSaveTaxa = (taxa: any) => {
-    if (editingTaxa) {
-      updateTaxa(taxa.id, taxa);
-    } else {
-      addTaxa(taxa);
+  const handleSaveTaxa = async (taxa: any) => {
+    try {
+      let success = false;
+      if (editingTaxa) {
+        success = await updateTaxa(taxa.id, taxa);
+      } else {
+        success = await addTaxa(taxa);
+      }
+      
+      if (success) {
+        setIsTaxaModalOpen(false);
+        setEditingTaxa(null);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar taxa:', err);
     }
   };
 
@@ -35,11 +45,17 @@ export default function TaxasSection() {
     setDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (taxaToDelete) {
-      removeTaxa(taxaToDelete.id);
-      setDeleteModalOpen(false);
-      setTaxaToDelete(null);
+      try {
+        const success = await removeTaxa(taxaToDelete.id);
+        if (success) {
+          setDeleteModalOpen(false);
+          setTaxaToDelete(null);
+        }
+      } catch (err) {
+        console.error('Erro ao deletar taxa:', err);
+      }
     }
   };
 
@@ -47,6 +63,38 @@ export default function TaxasSection() {
     setDeleteModalOpen(false);
     setTaxaToDelete(null);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Taxas de Pagamento</h2>
+            <p className="text-gray-600 mt-1">Configure métodos de pagamento e suas taxas</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+          <p className="text-gray-500">Carregando métodos de pagamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Taxas de Pagamento</h2>
+            <p className="text-gray-600 mt-1">Configure métodos de pagamento e suas taxas</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+          <p className="text-red-500">Erro: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -95,36 +143,34 @@ export default function TaxasSection() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200">
                 {taxas.map((taxa) => (
                   <tr key={taxa.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                          <CreditCard size={20} className="text-indigo-600" />
+                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                          <CreditCard size={16} className="text-indigo-600" />
                         </div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {taxa.nome.replace('[Exemplo]', '')}
-                        </span>
+                        <span className="text-sm font-medium text-gray-900">{taxa.nome}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">
-                        {taxa.taxa.toFixed(2)}%
+                      <span className="text-sm text-gray-900 font-semibold">
+                        {taxa.taxa.toFixed(2).replace('.', ',')}%
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button 
+                        <button
                           onClick={() => handleEditTaxa(taxa)}
-                          className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                           title="Editar"
                         >
                           <Edit size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteClick(taxa)}
-                          className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Excluir"
                         >
                           <Trash2 size={16} />

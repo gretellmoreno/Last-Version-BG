@@ -8,6 +8,8 @@ import ClientForm from './booking/ClientForm';
 import { useBooking } from '../contexts/BookingContext';
 import { useService } from '../contexts/ServiceContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
+import { useApp } from '../contexts/AppContext';
+import { supabaseService } from '../lib/supabaseService';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -47,9 +49,10 @@ export default function BookingModal({
   const [isCreatingAppointment, setIsCreatingAppointment] = useState(false);
 
   // Hooks dos contextos
-  const { addAgendamento, loading: bookingLoading, error: bookingError } = useBooking();
-  const { servicos } = useService();
+  const { refreshAppointments } = useBooking();
+  const { services } = useService();
   const { professionals } = useProfessional();
+  const { currentSalon } = useApp();
   
   // Estados para seleção de data e horário
   const [bookingDate, setBookingDate] = useState(selectedDate);
@@ -73,14 +76,23 @@ export default function BookingModal({
 
   // Effect para pré-selecionar profissional quando modal é aberto via agenda
   React.useEffect(() => {
-    if (selectedProfessional && selectedServices.length > 0) {
-      const prof = professionals?.find(p => p.name.replace('[Exemplo] ', '') === selectedProfessional);
+    console.log('🔧 Effect pré-seleção profissional:', { 
+      selectedProfessional, 
+      selectedServicesLength: selectedServices.length,
+      professionalsLength: professionals?.length 
+    });
+    
+    if (selectedProfessional && selectedServices.length > 0 && professionals) {
+      const prof = professionals.find(p => p.name.replace('[Exemplo] ', '') === selectedProfessional);
+      console.log('   Profissional encontrado:', prof ? { id: prof.id, name: prof.name } : null);
+      
       if (prof) {
         // Pré-selecionar o profissional para todos os serviços selecionados
         const newServiceProfessionals = selectedServices.map(serviceId => ({
           serviceId,
           professionalId: prof.id
         }));
+        console.log('   Configurando serviceProfessionals:', newServiceProfessionals);
         setServiceProfessionals(newServiceProfessionals);
       }
     }
@@ -116,78 +128,104 @@ export default function BookingModal({
 
   // Função para criar o agendamento
   const createAgendamento = useCallback(async () => {
-    if (!selectedClient || selectedServices.length === 0 || serviceProfessionals.length === 0) {
+    console.log('🚀 createAgendamento chamada!');
+    console.log('Debug - Estados detalhados:', {
+      selectedClient: selectedClient ? { id: selectedClient.id, nome: selectedClient.nome } : null,
+      selectedServicesLength: selectedServices.length,
+      selectedServices: selectedServices,
+      serviceProfessionalsLength: serviceProfessionals.length,
+      serviceProfessionals: serviceProfessionals,
+      currentSalon: currentSalon?.id,
+      bookingTime,
+      selectedTime,
+      hasPreselectedDateTime
+    });
+
+    // Validação mais específica
+    if (selectedServices.length === 0) {
+      console.error('❌ Nenhum serviço selecionado');
+      return;
+    }
+
+    if (serviceProfessionals.length === 0) {
+      console.error('❌ Nenhum profissional selecionado para os serviços');
+      console.log('   Serviços selecionados:', selectedServices);
+      console.log('   Profissionais configurados:', serviceProfessionals);
+      return;
+    }
+
+    if (!currentSalon) {
+      console.error('❌ Salão não selecionado');
       return;
     }
 
     setIsCreatingAppointment(true);
+    console.log('⏳ Iniciando criação do agendamento...');
+
+    // Determinar o clientId a ser usado
+    let clientId = selectedClient?.id || null;
+    console.log('📝 Cliente para agendamento:', selectedClient ? selectedClient.nome : 'Sem reserva');
 
     try {
-      // Calcular duração total dos serviços
-      const selectedServiceObjects = servicos.filter(s => selectedServices.includes(s.id));
-      const totalDuration = selectedServiceObjects.reduce((total, service) => total + service.duracao, 0);
-      
-      // Calcular preço total
-      const totalPrice = selectedServiceObjects.reduce((total, service) => total + service.preco, 0);
-      
       // Usar data e horário selecionados (ou pré-selecionados)
       const finalDate = bookingDate;
       const finalTime = bookingTime || selectedTime;
       
       if (!finalTime) {
-        console.error('Horário não selecionado');
+        console.error('❌ Horário não selecionado');
         return;
       }
 
-      // Calcular horário de fim
-      const [hours, minutes] = finalTime.split(':').map(Number);
-      const startMinutes = hours * 60 + minutes;
-      const endMinutes = startMinutes + totalDuration;
-      const endHours = Math.floor(endMinutes / 60);
-      const endMins = endMinutes % 60;
-      const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-
       // Pegar profissional (usar o primeiro selecionado ou encontrar por nome)
       let professionalId = serviceProfessionals[0]?.professionalId;
-      let professionalName = '';
       
       if (selectedProfessional) {
         const prof = professionals?.find(p => p.name.replace('[Exemplo] ', '') === selectedProfessional);
         if (prof) {
           professionalId = prof.id;
-          professionalName = prof.name;
-        }
-      } else if (professionalId) {
-        const prof = professionals?.find(p => p.id === professionalId);
-        if (prof) {
-          professionalName = prof.name;
         }
       }
 
       if (!professionalId) {
-        console.error('Profissional não selecionado');
+        console.error('❌ Profissional não selecionado');
         return;
       }
 
-      const newAgendamento = {
-        id: Date.now().toString(),
-        clienteId: selectedClient.id,
-        clienteNome: selectedClient.nome === 'Sem reserva' ? 'Sem reserva' : selectedClient.nome,
-        servicoIds: selectedServices,
-        servicoNomes: selectedServiceObjects.map(s => s.nome),
-        profissionalId: professionalId,
-        profissionalNome: professionalName,
-        horarioInicio: finalTime,
-        horarioFim: endTime,
-        data: finalDate.toISOString().split('T')[0],
-        preco: totalPrice,
-        status: 'agendado' as const,
-        observacoes: ''
-      };
+      console.log('📋 Dados do agendamento:', {
+        salonId: currentSalon.id,
+        clientId: clientId,
+        professionalId: professionalId,
+        date: finalDate.toISOString().split('T')[0],
+        startTime: finalTime,
+        status: 'agendado',
+        notes: '',
+        clientIdIsNull: clientId === null
+      });
 
-      const success = await addAgendamento(newAgendamento);
+      // Chamar a função RPC create_appointment
+      console.log('🔄 Chamando supabaseService.appointments.create...');
+      const { data, error } = await supabaseService.appointments.create({
+        salonId: currentSalon.id,
+        clientId: clientId, // Pode ser null para agendamentos sem cliente
+        professionalId: professionalId,
+        date: finalDate.toISOString().split('T')[0],
+        startTime: finalTime,
+        status: 'agendado',
+        notes: ''
+      });
       
-      if (success) {
+      console.log('📤 Resposta do Supabase:', { data, error });
+      
+      if (error) {
+        console.error('❌ Erro ao criar agendamento:', error);
+        return;
+      }
+
+      if (data?.success) {
+        console.log('✅ Agendamento criado com sucesso!');
+        // Recarregar agendamentos
+        await refreshAppointments();
+        
         // Reset do modal
         setSelectedServices([]);
         setCurrentStep('service');
@@ -199,37 +237,48 @@ export default function BookingModal({
         
         onClose();
       } else {
-        console.error('Erro ao criar agendamento:', bookingError);
+        console.error('❌ Falha ao criar agendamento - success = false');
       }
     } catch (error) {
-      console.error('Erro inesperado ao criar agendamento:', error);
+      console.error('💥 Erro inesperado ao criar agendamento:', error);
     } finally {
       setIsCreatingAppointment(false);
+      console.log('🏁 createAgendamento finalizada');
     }
   }, [
     selectedClient, 
     selectedServices, 
     serviceProfessionals, 
-    servicos, 
     bookingDate, 
     bookingTime, 
     selectedTime, 
     selectedProfessional, 
     professionals, 
-    addAgendamento,
-    bookingError,
+    currentSalon,
+    refreshAppointments,
     onClose
   ]);
 
   const handleContinueFromConfirmation = useCallback(async () => {
+    console.log('🔄 handleContinueFromConfirmation:', { 
+      hasPreselectedDateTime, 
+      serviceProfessionalsLength: serviceProfessionals.length 
+    });
+    
     if (hasPreselectedDateTime) {
+      // Verificar se temos profissionais antes de criar
+      if (serviceProfessionals.length === 0) {
+        console.error('❌ Não é possível salvar: nenhum profissional selecionado');
+        return;
+      }
       await createAgendamento();
     } else {
       setCurrentStep('datetime');
     }
-  }, [hasPreselectedDateTime, createAgendamento]);
+  }, [hasPreselectedDateTime, createAgendamento, serviceProfessionals.length]);
 
   const handleFinishBooking = useCallback(async () => {
+    console.log('🎯 handleFinishBooking chamada - botão clicado!');
     await createAgendamento();
   }, [createAgendamento]);
 
@@ -390,7 +439,7 @@ export default function BookingModal({
               onTimeChange={setBookingTime}
               onShowClientSelection={handleShowClientSelection}
               onFinish={handleFinishBooking}
-              isLoading={isCreatingAppointment || bookingLoading}
+              isLoading={isCreatingAppointment}
             />
           ) : currentStep === 'confirmation' ? (
             <ServiceConfirmation
@@ -402,7 +451,7 @@ export default function BookingModal({
               onUpdateServiceProfessionals={handleUpdateServiceProfessionals}
               onContinue={handleContinueFromConfirmation}
               hasPreselectedDateTime={hasPreselectedDateTime}
-              isLoading={isCreatingAppointment || bookingLoading}
+              isLoading={isCreatingAppointment}
             />
           ) : (
             <ServiceSelection

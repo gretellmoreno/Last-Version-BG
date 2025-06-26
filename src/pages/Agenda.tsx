@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -9,6 +9,7 @@ import Header from '../components/Header';
 import BookingModal from '../components/BookingModal';
 import AddActionModal from '../components/AddActionModal';
 import VendaModal from '../components/VendaModal';
+import AppointmentTooltip from '../components/AppointmentTooltip';
 import { useBooking } from '../contexts/BookingContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
 import { useClient } from '../contexts/ClientContext';
@@ -51,8 +52,8 @@ interface CalendarEvent {
   resourceId: string;
   client: string;
   service: string;
-  isDraggable?: boolean;
   status: string;
+  professionalName?: string;
   appointmentData: Appointment;
 }
 
@@ -71,6 +72,42 @@ const messages = {
   showMore: (total: number) => `+${total} mais`,
 };
 
+// Componente do cabeçalho fixo dos profissionais
+const ProfessionalsHeader = ({ professionals }: { professionals: any[] }) => {
+  return (
+    <div className="professionals-header">
+      <div className="flex">
+        {/* Coluna de horários - espaço vazio */}
+        <div className="time-column"></div>
+        
+        {/* Colunas dos profissionais */}
+        {professionals.map((prof) => (
+          <div key={prof.id} className="professional-column">
+            <div className="flex flex-col items-center space-y-2">
+              <div 
+                className="professional-avatar"
+                style={{ backgroundColor: prof.color || '#6366f1' }}
+              >
+                {(() => {
+                  const name = prof.name.replace('[Exemplo] ', '');
+                  const names = name.split(' ');
+                  if (names.length === 1) {
+                    return names[0].substring(0, 2).toUpperCase();
+                  }
+                  return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+                })()}
+              </div>
+              <div className="professional-name">
+                {prof.name.replace('[Exemplo] ', '')}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<View>(Views.DAY);
@@ -83,10 +120,75 @@ export default function Agenda() {
   } | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
+  
+  // Estados para o tooltip
+  const [tooltip, setTooltip] = useState<{
+    isVisible: boolean;
+    appointment: CalendarEvent | null;
+    position: { x: number; y: number };
+  }>({
+    isVisible: false,
+    appointment: null,
+    position: { x: 0, y: 0 }
+  });
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { appointments, loading: bookingLoading, refreshAppointments } = useBooking();
+  const { appointments, refreshAppointments } = useBooking();
   const { professionals } = useProfessional();
   const { clients } = useClient();
+
+  // Funções para controlar o tooltip
+  const handleEventMouseEnter = useCallback((event: CalendarEvent, mouseEvent: React.MouseEvent) => {
+    // Limpar timeouts anteriores
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+
+    // Definir novo timeout muito rápido para mostrar tooltip
+    hoverTimeoutRef.current = setTimeout(() => {
+      const professional = professionals?.find(p => p.id === event.resourceId);
+      
+      setTooltip({
+        isVisible: true,
+        appointment: {
+          ...event,
+          professionalName: professional ? professional.name.replace('[Exemplo] ', '') : 'Profissional'
+        },
+        position: {
+          x: mouseEvent.clientX,
+          y: mouseEvent.clientY
+        }
+      });
+    }, 300); // 300ms de delay
+  }, [professionals]);
+
+  const handleEventMouseLeave = useCallback(() => {
+    // Limpar timeout de mostrar
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+
+    // Definir timeout para esconder (pequeno delay para suavizar)
+    hideTimeoutRef.current = setTimeout(() => {
+      setTooltip(prev => ({ ...prev, isVisible: false }));
+    }, 100);
+  }, []);
+
+  // Limpar timeouts quando componente for desmontado
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Converter profissionais para recursos do calendário
   useEffect(() => {
@@ -119,14 +221,13 @@ export default function Agenda() {
 
         return {
           id: appointment.id,
-          title: clientName,
+          title: '', // Remover título para evitar tooltip nativo
           start: startDateTime,
           end: endDateTime,
           resourceId: appointment.professional_id,
           client: clientName,
-          service: appointment.notes || 'Serviço', // Usar notes como serviço temporariamente
+          service: appointment.notes || '', // Usar notes como serviço
           status: appointment.status,
-          isDraggable: appointment.status !== 'cancelado',
           appointmentData: appointment
         };
       });
@@ -135,44 +236,73 @@ export default function Agenda() {
     }
   }, [appointments, professionals, clients]);
 
-  // Estilo dos eventos baseado no status
-  const eventStyleGetter = (event: CalendarEvent) => {
-    let backgroundColor = '#3174ad';
-    let borderColor = '#265a87';
+  // Função para converter cor hex para versão mais clara
+  const lightenColor = (color: string, amount: number = 0.7) => {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
     
-    // Cores baseadas no status
+    const newR = Math.round(r + (255 - r) * amount);
+    const newG = Math.round(g + (255 - g) * amount);
+    const newB = Math.round(b + (255 - b) * amount);
+    
+    return `rgb(${newR}, ${newG}, ${newB})`;
+  };
+
+  // Estilo dos eventos baseado na cor do profissional e status
+  const eventStyleGetter = (event: CalendarEvent) => {
+    // Encontrar o profissional para obter sua cor
+    const professional = professionals?.find(p => p.id === event.resourceId);
+    let baseColor = professional?.color || '#6366f1';
+    let backgroundColor = lightenColor(baseColor); // Cor mais clara para texto preto
+    
+    // Ajustar baseado no status
+    let opacity = 1;
+    let borderStyle = 'solid';
+    let borderColor = baseColor;
+    
     switch (event.status) {
       case 'agendado':
-        backgroundColor = '#2563eb';
-        borderColor = '#1d4ed8';
+        opacity = 1;
+        backgroundColor = lightenColor(baseColor);
         break;
       case 'confirmado':
-        backgroundColor = '#059669';
-        borderColor = '#047857';
+        opacity = 1;
+        backgroundColor = lightenColor(baseColor, 0.6); // Um pouco menos claro para confirmado
         break;
       case 'em_andamento':
-        backgroundColor = '#dc2626';
-        borderColor = '#b91c1c';
+        opacity = 1;
+        backgroundColor = lightenColor('#dc2626', 0.5); // Vermelho claro para em andamento
+        borderColor = '#dc2626';
         break;
       case 'concluido':
-        backgroundColor = '#16a34a';
-        borderColor = '#15803d';
+        opacity = 0.8;
+        borderStyle = 'dashed';
+        backgroundColor = lightenColor(baseColor, 0.8);
         break;
       case 'cancelado':
-        backgroundColor = '#6b7280';
-        borderColor = '#4b5563';
+        opacity = 0.6;
+        backgroundColor = lightenColor('#6b7280', 0.8);
+        borderColor = '#6b7280';
+        borderStyle = 'dashed';
         break;
     }
     
     return {
       style: {
         backgroundColor,
-        borderColor,
-        color: '#ffffff',
-        border: `2px solid ${borderColor}`,
-        borderRadius: '4px',
+        opacity,
+        color: '#000000', // Texto preto
+        border: `2px ${borderStyle} ${borderColor}`,
+        borderRadius: '8px',
         fontSize: '12px',
-        padding: '2px 4px'
+        padding: '6px 8px',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        fontWeight: '500',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        lineHeight: '1.2'
       }
     };
   };
@@ -223,18 +353,81 @@ export default function Agenda() {
     refreshAppointments();
   };
 
-  // Componente customizado para eventos
-  const EventComponent = ({ event }: { event: CalendarEvent }) => (
-    <div className="h-full w-full flex flex-col justify-center">
-      <div className="font-medium text-xs truncate">{event.client}</div>
-      {event.service && (
-        <div className="text-xs opacity-90 truncate">{event.service}</div>
-      )}
-      <div className="text-xs opacity-75">
-        {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+  // Componente customizado para slots de tempo com atributo data-time
+  const TimeSlotWrapper = ({ children, value, resource }: any) => {
+    return (
+      <div 
+        className="rbc-time-slot" 
+        data-time={format(value, 'HH:mm')}
+        style={{ 
+          minHeight: '20px',
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          display: 'block'
+        }}
+      >
+        {children}
       </div>
-    </div>
-  );
+    );
+  };
+
+  // Componente customizado para renderizar eventos
+  const CustomEvent = ({ event }: { event: CalendarEvent }) => {
+    const professional = professionals?.find(p => p.id === event.resourceId);
+    const duration = (event.end.getTime() - event.start.getTime()) / (1000 * 60); // duração em minutos
+    const isShort = duration < 45; // Se menos de 45 minutos, layout compacto
+    const isVeryShort = duration < 30; // Se menos de 30 minutos, layout muito compacto
+    
+    const handleEventMouseEnterLocal = (e: React.MouseEvent) => {
+      // Impedir propagação para não ativar hover do slot
+      e.stopPropagation();
+      handleEventMouseEnter(event, e);
+    };
+
+    const handleEventMouseLeaveLocal = (e: React.MouseEvent) => {
+      // Impedir propagação
+      e.stopPropagation();
+      handleEventMouseLeave();
+    };
+    
+    return (
+      <div 
+        className="w-full h-full flex flex-col justify-start text-black p-1 cursor-pointer relative z-10"
+        onMouseEnter={handleEventMouseEnterLocal}
+        onMouseLeave={handleEventMouseLeaveLocal}
+        title="" // Remover qualquer tooltip nativo
+        style={{ 
+          // Garantir que o evento cubra completamente o slot
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 10
+        }}
+      >
+        {/* Horário - bem no começo, compacto */}
+        <div className="text-xs font-semibold leading-tight">
+          {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+        </div>
+        
+        {/* Nome do cliente - logo em seguida, sem margem */}
+        <div className={`font-semibold truncate leading-tight ${isVeryShort ? 'text-xs' : 'text-sm'}`}>
+          {event.client}
+        </div>
+        
+        {/* Serviços - compacto, só mostra se tem espaço e conteúdo */}
+        {!isVeryShort && event.service && event.service.trim() && (
+          <div className="text-xs truncate leading-tight">
+            {event.service}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -248,9 +441,14 @@ export default function Agenda() {
         onAddClick={handleAddClick}
       />
       
+      {/* Cabeçalho fixo dos profissionais */}
+      {professionals && professionals.length > 0 && (
+        <ProfessionalsHeader professionals={professionals} />
+      )}
+      
       {/* Calendário */}
-      <div className="flex-1 p-4 bg-white">
-        <div className="h-full">
+      <div className="flex-1 bg-white overflow-auto">
+        <div className="h-full min-h-[600px]">
           <Calendar
             localizer={localizer}
             events={events}
@@ -284,13 +482,16 @@ export default function Agenda() {
             messages={messages}
             formats={{
               timeGutterFormat: (date: Date) => format(date, 'HH:mm'),
-              eventTimeRangeFormat: ({ start }: { start: Date }) => `${format(start, 'HH:mm')}`,
+              eventTimeRangeFormat: () => '', // Remove o horário do canto superior
               dayHeaderFormat: (date: Date) => format(date, "EEE dd MMM", { locale: ptBR }),
             }}
             
-            // Remover toolbar padrão
+            // Remover toolbar padrão e header dos recursos
             components={{
-              toolbar: () => null
+              toolbar: () => null,
+              resourceHeader: () => null, // Remove o cabeçalho padrão dos recursos
+              timeSlotWrapper: TimeSlotWrapper, // Componente customizado para slots
+              event: CustomEvent // Componente customizado para eventos
             }}
           />
         </div>
@@ -316,6 +517,24 @@ export default function Agenda() {
         selectedTime={selectedBookingSlot?.time}
         selectedProfessional={selectedBookingSlot?.professional}
       />
+
+      {/* Tooltip de detalhes do agendamento */}
+      {tooltip.appointment && (
+        <AppointmentTooltip
+          appointment={{
+            id: tooltip.appointment.id,
+            start: tooltip.appointment.start,
+            end: tooltip.appointment.end,
+            client: tooltip.appointment.client,
+            service: tooltip.appointment.service,
+            professionalName: tooltip.appointment.professionalName || 'Profissional',
+            status: tooltip.appointment.status,
+            notes: tooltip.appointment.appointmentData.notes
+          }}
+          position={tooltip.position}
+          isVisible={tooltip.isVisible}
+        />
+      )}
     </div>
   );
 }

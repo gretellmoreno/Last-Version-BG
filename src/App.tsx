@@ -70,11 +70,11 @@ function AppContent() {
 
   return (
     <AppProvider>
-      <TaxasProvider>
-        <FinanceiroProvider>
-          <ProductProvider>
-            <ServiceProvider>
-              <ProfessionalProvider>
+      <ProfessionalProvider>
+        <TaxasProvider>
+          <FinanceiroProvider>
+            <ProductProvider>
+              <ServiceProvider>
                 <ClientProvider>
                   <BookingProvider>
                     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -87,11 +87,11 @@ function AppContent() {
                     </div>
                   </BookingProvider>
                 </ClientProvider>
-              </ProfessionalProvider>
-            </ServiceProvider>
-          </ProductProvider>
-        </FinanceiroProvider>
-      </TaxasProvider>
+              </ServiceProvider>
+            </ProductProvider>
+          </FinanceiroProvider>
+        </TaxasProvider>
+      </ProfessionalProvider>
     </AppProvider>
   );
 }

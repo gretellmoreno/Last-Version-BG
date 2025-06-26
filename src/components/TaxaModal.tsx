@@ -11,7 +11,7 @@ interface Taxa {
 interface TaxaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (taxa: Taxa) => void;
+  onSave: (taxa: Omit<Taxa, 'id'> | Taxa) => Promise<void>;
   editingTaxa?: Taxa | null;
 }
 
@@ -30,6 +30,7 @@ export default function TaxaModal({
     nome: '',
     taxa: ''
   });
+  const [saving, setSaving] = useState(false);
 
   // Preencher formulário quando editando
   useEffect(() => {
@@ -56,22 +57,27 @@ export default function TaxaModal({
   const isFormValid = () => {
     return taxaForm.nome.trim() !== '' && 
            taxaForm.taxa.trim() !== '' &&
-           !isNaN(parseFloat(taxaForm.taxa)) &&
-           parseFloat(taxaForm.taxa) >= 0;
+           !isNaN(parseFloat(taxaForm.taxa));
   };
 
-  const handleSave = () => {
-    if (!isFormValid()) return;
+  const handleSave = async () => {
+    if (!isFormValid() || saving) return;
     
-    const taxa: Taxa = {
-      id: editingTaxa?.id || Date.now().toString(),
-      nome: taxaForm.nome.trim(),
-      taxa: parseFloat(taxaForm.taxa),
-      ativo: true
-    };
-    
-    onSave(taxa);
-    onClose();
+    setSaving(true);
+    try {
+      const taxa = {
+        id: editingTaxa?.id || '',
+        nome: taxaForm.nome.trim(),
+        taxa: parseFloat(taxaForm.taxa) || 0,
+        ativo: true
+      };
+      
+      await onSave(taxa);
+    } catch (err) {
+      console.error('Erro ao salvar taxa:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -101,8 +107,12 @@ export default function TaxaModal({
               <CreditCard size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Adicionar Método de Pagamento</h2>
-              <p className="text-sm text-gray-600 mt-1">Configure um novo método de pagamento</p>
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingTaxa ? 'Editar Método de Pagamento' : 'Adicionar Método de Pagamento'}
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {editingTaxa ? 'Atualize os dados do método' : 'Configure um novo método de pagamento'}
+              </p>
             </div>
           </div>
         </div>
@@ -169,22 +179,23 @@ export default function TaxaModal({
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-100">
           <button
             onClick={handleCancel}
-            className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-200"
+            disabled={saving}
+            className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-200 disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            disabled={!isFormValid()}
+            disabled={!isFormValid() || saving}
             className={`
               px-8 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 shadow-lg
-              ${isFormValid()
+              ${isFormValid() && !saving
                 ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-xl transform hover:-translate-y-0.5'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }
             `}
           >
-            Adicionar Método
+            {saving ? 'Salvando...' : editingTaxa ? 'Atualizar' : 'Adicionar Método'}
           </button>
         </div>
       </div>

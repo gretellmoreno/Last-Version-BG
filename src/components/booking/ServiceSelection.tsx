@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, User, Plus } from 'lucide-react';
+import { useService } from '../../contexts/ServiceContext';
 
 interface ServiceSelectionProps {
   selectedClient: any;
@@ -8,39 +9,6 @@ interface ServiceSelectionProps {
   onShowClientSelection: () => void;
 }
 
-interface ServiceCategory {
-  name: string;
-  count: number;
-  services: Array<{
-    id: string;
-    nome: string;
-    preco: number;
-    duracao: number;
-    comissao: number;
-  }>;
-}
-
-// Dados estáticos para evitar re-criação
-const SERVICE_CATEGORIES: ServiceCategory[] = [
-  {
-    name: 'Hair & styling',
-    count: 4,
-    services: [
-      { id: '1', nome: 'Corte de cabelo', preco: 40, duracao: 45, comissao: 50 },
-      { id: '2', nome: 'Coloração de cabelo', preco: 57, duracao: 90, comissao: 50 },
-      { id: '3', nome: 'Escova', preco: 35, duracao: 35, comissao: 50 },
-      { id: '4', nome: 'Balaiagem', preco: 150, duracao: 150, comissao: 50 },
-    ]
-  },
-  {
-    name: 'Eyebrows & eyelashes',
-    count: 1,
-    services: [
-      { id: '5', nome: 'Alongamento de cílios clássico', preco: 60, duracao: 60, comissao: 50 },
-    ]
-  }
-];
-
 export default function ServiceSelection({
   selectedClient,
   selectedServices,
@@ -48,18 +16,17 @@ export default function ServiceSelection({
   onShowClientSelection
 }: ServiceSelectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const { services } = useService();
 
-  // Memoizar categorias filtradas
-  const filteredCategories = useMemo(() => {
-    if (!searchTerm) return SERVICE_CATEGORIES;
+  // Memoizar serviços filtrados
+  const filteredServices = useMemo(() => {
+    if (!services) return [];
     
-    return SERVICE_CATEGORIES.map(category => ({
-      ...category,
-      services: category.services.filter(service =>
-        service.nome.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    })).filter(category => category.services.length > 0);
-  }, [searchTerm]);
+    return services.filter(service =>
+      service.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      service.active
+    );
+  }, [services, searchTerm]);
 
   // Memoizar função de formatação
   const formatDuration = useCallback((minutes: number) => {
@@ -144,44 +111,46 @@ export default function ServiceSelection({
 
         {/* Lista de serviços */}
         <div className="flex-1 overflow-y-auto p-6">
-          {filteredCategories.map((category) => (
-            <div key={category.name} className="mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center space-x-2">
-                <span>{category.name}</span>
-                <span className="bg-gray-100 text-gray-600 text-sm px-2 py-1 rounded-full">
-                  {category.count}
-                </span>
-              </h3>
-              
-              <div className="space-y-3">
-                {category.services.map((service) => (
-                  <div
-                    key={service.id}
-                    onClick={() => onToggleService(service.id)}
-                    className={`
-                      p-4 border rounded-lg cursor-pointer transition-all
-                      ${selectedServices.includes(service.id)
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{service.nome}</h4>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {formatDuration(service.duracao)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">R$ {service.preco}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {filteredServices.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-500">
+                {services?.length === 0 
+                  ? 'Nenhum serviço cadastrado' 
+                  : searchTerm 
+                    ? 'Nenhum serviço encontrado'
+                    : 'Carregando serviços...'
+                }
               </div>
             </div>
-          ))}
+          ) : (
+            <div className="space-y-3">
+              {filteredServices.map((service) => (
+                <div
+                  key={service.id}
+                  onClick={() => onToggleService(service.id)}
+                  className={`
+                    p-4 border rounded-lg cursor-pointer transition-all
+                    ${selectedServices.includes(service.id)
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }
+                  `}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{service.name}</h4>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {formatDuration(service.estimated_time)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">R$ {service.price.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

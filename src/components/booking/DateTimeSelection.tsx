@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, User, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Plus } from 'lucide-react';
 import { useBooking } from '../../contexts/BookingContext';
 import { useProfessional } from '../../contexts/ProfessionalContext';
+import { useService } from '../../contexts/ServiceContext';
 
 interface DateTimeSelectionProps {
   selectedClient: any;
@@ -21,16 +22,7 @@ const MONTHS = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-const WEEK_DAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-
-// Serviços estáticos para evitar re-criação
-const ALL_SERVICES = [
-  { id: '1', nome: 'Corte de cabelo', preco: 40, duracao: 45, comissao: 50 },
-  { id: '2', nome: 'Coloração de cabelo', preco: 57, duracao: 90, comissao: 50 },
-  { id: '3', nome: 'Escova', preco: 35, duracao: 35, comissao: 50 },
-  { id: '4', nome: 'Balaiagem', preco: 150, duracao: 150, comissao: 50 },
-  { id: '5', nome: 'Alongamento de cílios clássico', preco: 60, duracao: 60, comissao: 50 },
-];
+const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export default function DateTimeSelection({
   selectedClient,
@@ -46,6 +38,7 @@ export default function DateTimeSelection({
 }: DateTimeSelectionProps) {
   const { addAgendamento } = useBooking();
   const { professionals } = useProfessional();
+  const { services } = useService();
   
   // Estado para controlar a semana atual
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -59,12 +52,12 @@ export default function DateTimeSelection({
   // Memoizar cálculo do total
   const total = useMemo(() => {
     return selectedServices
-      .map(id => ALL_SERVICES.find(s => s.id === id))
+      .map(id => services?.find(s => s.id === id))
       .filter(Boolean)
-      .reduce((total, service) => total + service!.preco, 0);
-  }, [selectedServices]);
+      .reduce((total, service) => total + service!.price, 0);
+  }, [selectedServices, services]);
 
-  // Memoizar horários disponíveis em grid 4x4
+  // Memoizar horários disponíveis - mais compacto
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let hour = 8; hour <= 22; hour++) {
@@ -124,16 +117,22 @@ export default function DateTimeSelection({
 
   // Função para finalizar o agendamento
   const handleFinishBooking = useCallback(() => {
-    if (!bookingTime || selectedServices.length === 0) return;
+    console.log('🔥 DateTimeSelection - botão clicado!');
+    console.log('Estado:', { bookingTime, selectedServicesLength: selectedServices.length });
     
-    // Temporariamente simplificado - a lógica de criação será feita no BookingModal
+    if (!bookingTime || selectedServices.length === 0) {
+      console.log('❌ Validação falhou no DateTimeSelection');
+      return;
+    }
+    
+    console.log('✅ Validação passou, chamando onFinish...');
     onFinish();
   }, [bookingTime, selectedServices, onFinish]);
 
   return (
     <div className="flex h-full">
-      {/* Sidebar esquerda - cliente */}
-      <div className="w-32 bg-gray-50 border-r border-gray-200 flex flex-col">
+      {/* Sidebar esquerda - mais compacta */}
+      <div className="w-36 bg-gray-50 border-r border-gray-200 flex flex-col">
         <div className="p-4 flex flex-col items-center text-center">
           {selectedClient ? (
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
@@ -147,8 +146,8 @@ export default function DateTimeSelection({
               className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3 cursor-pointer hover:bg-purple-200 transition-colors relative group"
             >
               <User size={20} className="text-purple-600" />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center">
-                <Plus size={10} className="text-white" />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
+                <Plus size={12} className="text-white" />
               </div>
             </button>
           )}
@@ -156,7 +155,7 @@ export default function DateTimeSelection({
           <div>
             {selectedClient ? (
               <>
-                <h3 className="font-semibold text-gray-900 text-xs mb-1">{selectedClient.nome}</h3>
+                <h3 className="font-semibold text-gray-900 text-sm mb-1">{selectedClient.nome}</h3>
                 <button
                   onClick={onShowClientSelection}
                   className="text-xs text-indigo-600 hover:text-indigo-700"
@@ -166,8 +165,8 @@ export default function DateTimeSelection({
               </>
             ) : (
               <>
-                <h3 className="font-semibold text-gray-900 text-xs mb-1">Adicionar cliente</h3>
-                <p className="text-xs text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
+                <h3 className="font-semibold text-gray-900 text-sm mb-1">Adicionar cliente</h3>
+                <p className="text-xs text-gray-500 leading-tight">Ou deixe vazio</p>
               </>
             )}
           </div>
@@ -176,80 +175,76 @@ export default function DateTimeSelection({
 
       {/* Conteúdo principal */}
       <div className="flex-1 flex flex-col">
-        {/* Breadcrumb */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-            <span className="text-gray-400">Serviços</span>
-            <ChevronDown size={14} className="rotate-[-90deg]" />
-            <span>Horário</span>
-          </div>
-          <h2 className="text-lg font-semibold text-gray-900">Selecione um horário</h2>
+        {/* Header compacto */}
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Selecionar data e horário</h2>
+          <p className="text-sm text-gray-600">Escolha quando você quer agendar</p>
         </div>
 
-        {/* Calendário semanal compacto */}
-        <div className="p-4 border-b border-gray-200">
+        {/* Seleção de data compacta */}
+        <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-medium text-gray-900 text-sm">
-              {currentMonthYear}
-            </h3>
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={previousWeek}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <ChevronLeft size={14} className="text-gray-600" />
-              </button>
-              <button
-                onClick={nextWeek}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <ChevronRight size={14} className="text-gray-600" />
-              </button>
-            </div>
+            <button 
+              onClick={previousWeek}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <ChevronLeft size={18} className="text-gray-600" />
+            </button>
+            <h3 className="font-medium text-gray-900 text-sm">{currentMonthYear}</h3>
+            <button 
+              onClick={nextWeek}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <ChevronRight size={18} className="text-gray-600" />
+            </button>
           </div>
 
-          {/* Semana em linha horizontal */}
-          <div className="flex space-x-1">
-            {weekDays.map((date, index) => (
-              <button
-                key={index}
-                onClick={() => onDateChange(date)}
-                className={`
-                  flex-1 h-14 flex flex-col items-center justify-center text-xs rounded-lg transition-all border
-                  ${isSelectedDay(date)
-                    ? 'bg-indigo-600 text-white border-indigo-600 font-semibold'
-                    : isToday(date)
-                    ? 'bg-indigo-100 text-indigo-700 border-indigo-200 font-medium'
-                    : 'text-gray-700 hover:bg-gray-100 border-gray-200'
-                  }
-                `}
-              >
-                <span className="text-xs opacity-70 mb-1">
-                  {WEEK_DAYS[date.getDay()]}
-                </span>
-                <span className="font-medium">
-                  {date.getDate()}
-                </span>
-              </button>
+          <div className="grid grid-cols-7 gap-1">
+            {WEEK_DAYS.map((day) => (
+              <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
+                {day}
+              </div>
             ))}
+            
+            {weekDays.map((date) => {
+              const isSelected = isSelectedDay(date);
+              const isTodayDate = isToday(date);
+              
+              return (
+                <button
+                  key={date.toISOString()}
+                  onClick={() => onDateChange(date)}
+                  className={`
+                    py-2 text-sm rounded-md transition-all
+                    ${isSelected 
+                      ? 'bg-indigo-600 text-white font-medium' 
+                      : isTodayDate
+                        ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200 font-medium'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }
+                  `}
+                >
+                  {date.getDate()}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Horários disponíveis em grid 4x4 compacto */}
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* Seleção de horário otimizada */}
+        <div className="flex-1 px-6 py-4 overflow-y-auto">
           <h3 className="font-medium text-gray-900 text-sm mb-3">Horários disponíveis</h3>
-
-          {/* Grid de horários - 4 colunas, mais compacto */}
-          <div className="grid grid-cols-4 gap-2">
+          
+          <div className="grid grid-cols-6 gap-2">
             {timeSlots.map((time) => (
               <button
                 key={time}
                 onClick={() => onTimeChange(time)}
                 className={`
-                  py-2 px-1 text-center border rounded-lg transition-colors text-sm
+                  py-2 px-2 text-xs rounded-md border transition-all
                   ${bookingTime === time
                     ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
-                    : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+                    : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                   }
                 `}
               >
@@ -259,30 +254,23 @@ export default function DateTimeSelection({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-200 bg-white p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="font-semibold text-gray-900">Total</span>
-            <span className="font-semibold text-gray-900">R$ {total}</span>
-          </div>
-          <button 
-            onClick={handleFinishBooking}
-            disabled={!bookingTime || isLoading}
-            className={`
-              w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center space-x-2
-              ${bookingTime && !isLoading
-                ? 'bg-gray-900 text-white hover:bg-gray-800'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }
-            `}
-          >
-            {isLoading && (
-              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-            )}
-            <span>
+        {/* Footer compacto */}
+        <div className="border-t border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-gray-600 mb-1">
+                {selectedServices.length} serviço(s) • Total: R$ {total.toFixed(2).replace('.', ',')}
+              </div>
+            </div>
+
+            <button
+              onClick={handleFinishBooking}
+              disabled={!bookingTime || selectedServices.length === 0 || isLoading}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
               {isLoading ? 'Salvando...' : 'Salvar agendamento'}
-            </span>
-          </button>
+            </button>
+          </div>
         </div>
       </div>
     </div>

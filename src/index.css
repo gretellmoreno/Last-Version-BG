@@ -150,6 +150,11 @@
   font-family: inherit;
 }
 
+/* Remover fundo azul do dia atual */
+.barber-calendar .rbc-today {
+  background-color: transparent !important;
+}
+
 .barber-calendar .rbc-header {
   background-color: #f8fafc;
   border-bottom: 2px solid #e2e8f0;
@@ -165,58 +170,16 @@
   overflow: hidden;
 }
 
+/* Coluna de horários limpa */
 .barber-calendar .rbc-time-gutter {
   background-color: #f8fafc;
-  border-right: 2px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
 }
 
-.barber-calendar .rbc-time-slot {
-  border-top: 1px solid #f1f5f9;
-  min-height: 20px;
-}
-
-.barber-calendar .rbc-timeslot-group {
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.barber-calendar .rbc-day-slot {
-  border-left: 1px solid #e2e8f0;
-}
-
-.barber-calendar .rbc-event {
-  border-radius: 6px;
-  border: none !important;
-  padding: 4px 6px;
-  font-size: 11px;
-  font-weight: 500;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.barber-calendar .rbc-event:hover {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-
-.barber-calendar .rbc-event-content {
-  font-weight: 500;
-}
-
-.barber-calendar .rbc-time-header-gutter {
-  background-color: #f8fafc;
-  border-right: 2px solid #e2e8f0;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.barber-calendar .rbc-time-content {
-  border-top: none;
-}
-
-.barber-calendar .rbc-time-gutter .rbc-timeslot-group {
-  border-bottom: 2px solid #e2e8f0;
-}
-
+/* Remover linhas dos slots de tempo na coluna de horários */
 .barber-calendar .rbc-time-gutter .rbc-time-slot {
+  border-top: none !important;
+  min-height: 20px;
   color: #6b7280;
   font-size: 12px;
   font-weight: 500;
@@ -224,59 +187,173 @@
   padding: 4px;
 }
 
+/* Manter apenas uma linha sutil entre grupos de hora */
+.barber-calendar .rbc-time-gutter .rbc-timeslot-group {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Slots da agenda com linhas sutis */
+.barber-calendar .rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid #f8fafc;
+  min-height: 20px;
+  position: relative;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}
+
+/* Grupos de slots com linha mais visível */
+.barber-calendar .rbc-day-slot .rbc-timeslot-group {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.barber-calendar .rbc-day-slot {
+  border-left: 1px solid #e2e8f0;
+}
+
+.barber-calendar .rbc-event {
+  border-radius: 6px !important;
+  border: none !important;
+  padding: 3px 5px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.1 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12) !important;
+  transition: all 0.2s ease !important;
+  overflow: hidden !important;
+}
+
+.barber-calendar .rbc-event:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-1px) !important;
+}
+
+.barber-calendar .rbc-event-content {
+  font-weight: 500;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  line-height: 1.1 !important;
+}
+
+/* Garantir que eventos bloqueiem hover dos slots pai */
+.barber-calendar .rbc-event-container {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 15 !important;
+}
+
+.barber-calendar .rbc-event {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+.barber-calendar .rbc-time-header-gutter {
+  background-color: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.barber-calendar .rbc-time-content {
+  border-top: none;
+}
+
 /*
  * Estilização para o efeito de hover nos slots de tempo do react-big-calendar
  */
 
-/* Configuração básica dos slots de tempo */
+/* Slot básico com overlay para hover completo */
 .barber-calendar .rbc-day-slot .rbc-time-slot {
-  position: relative;
-  transition: all 0.2s ease-in-out;
-  cursor: pointer;
-  border-top: 1px solid #f1f5f9;
+  position: relative !important;
+  overflow: visible !important;
 }
 
-/* Efeito de hover no slot individual */
-.barber-calendar .rbc-day-slot .rbc-time-slot:hover {
-  background-color: #f0f0ff !important;
-  border-color: #e0e7ff;
-  z-index: 10;
-}
-
-/* Ponto pulsante no hover */
-.barber-calendar .rbc-day-slot .rbc-time-slot:hover::after {
+/* Overlay invisível que cobre todo o slot */
+.barber-calendar .rbc-day-slot .rbc-time-slot::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
-  background-color: #4f46e5;
-  border-radius: 50%;
-  animation: pulse-dot 1.5s infinite;
-  z-index: 11;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  background: transparent;
+  transition: background-color 0.2s ease;
 }
 
-/* Animação do ponto pulsante */
-@keyframes pulse-dot {
-  0%, 100% {
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    opacity: 0.3;
-    transform: translate(-50%, -50%) scale(1.5);
-  }
+/* Efeito de hover no overlay */
+.barber-calendar .rbc-day-slot .rbc-time-slot:hover::after {
+  background-color: #e0e7ff !important;
+  z-index: 6;
 }
+
+/* Mostrar horário no canto esquerdo durante hover */
+.barber-calendar .rbc-day-slot .rbc-time-slot:hover::before {
+  content: attr(data-time);
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4338ca;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  display: block;
+}
+
+
 
 /* Garantir que slots com eventos não tenham o hover de fundo */
 .barber-calendar .rbc-day-slot .rbc-event-container .rbc-time-slot:hover {
-  background-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.barber-calendar .rbc-day-slot .rbc-event-container .rbc-time-slot:hover::before {
+  display: none !important;
 }
 
 .barber-calendar .rbc-day-slot .rbc-event-container .rbc-time-slot:hover::after {
-  display: none;
+  background: transparent !important;
+}
+
+/* Desabilitar hover em eventos diretamente também */
+.barber-calendar .rbc-event:hover::before,
+.barber-calendar .rbc-event:hover::after {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Garantir que qualquer slot que contenha evento não tenha hover */
+.barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event):hover::before,
+.barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event):hover::after {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Desabilitar hover em slots que contêm eventos de forma mais abrangente */
+.barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event):hover {
+  background: transparent !important;
+}
+
+.barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event)::after {
+  display: none !important;
+  background: transparent !important;
+}
+
+.barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event)::before {
+  display: none !important;
 }
 
 /* Responsividade */
@@ -287,8 +364,9 @@
   }
   
   .barber-calendar .rbc-event {
-    font-size: 10px;
-    padding: 2px 4px;
+    font-size: 10px !important;
+    padding: 2px 3px !important;
+    line-height: 1.0 !important;
   }
   
   .barber-calendar .rbc-time-gutter .rbc-time-slot {
@@ -296,8 +374,144 @@
   }
   
   /* Ajustar hover no mobile */
-  .barber-calendar .rbc-day-slot .rbc-time-slot:hover::after {
-    width: 6px;
-    height: 6px;
+  .barber-calendar .rbc-day-slot .rbc-time-slot:hover::before {
+    font-size: 9px;
+    padding: 1px 3px;
+  }
+}
+
+/* Estilos para o cabeçalho fixo dos profissionais */
+.professionals-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+  border-bottom: 2px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.professional-column {
+  flex: 1;
+  padding: 16px;
+  text-align: center;
+  transition: background-color 0.2s ease;
+}
+
+.professional-column:hover {
+  background-color: #f8fafc;
+}
+
+.professional-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  margin: 0 auto 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.professional-avatar:hover {
+  transform: scale(1.05);
+}
+
+.professional-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ajuste para o container do calendário com cabeçalho fixo */
+.calendar-with-fixed-header {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+.calendar-with-fixed-header .rbc-calendar {
+  height: 100% !important;
+}
+
+/* Remover o header padrão dos recursos do calendário */
+.barber-calendar .rbc-time-header-content {
+  display: none;
+}
+
+.barber-calendar .rbc-time-header .rbc-header {
+  display: none;
+}
+
+/* Ajustar o espaçamento da coluna de tempo para alinhar com o cabeçalho */
+.barber-calendar .rbc-time-gutter {
+  width: 80px !important;
+}
+
+/* Garantir que o fundo azul do dia atual seja removido */
+.barber-calendar .rbc-today,
+.barber-calendar .rbc-day-bg.rbc-today {
+  background-color: transparent !important;
+}
+
+/* Limpar completamente a coluna de horários */
+.barber-calendar .rbc-time-gutter,
+.barber-calendar .rbc-time-gutter .rbc-timeslot-group {
+  background-color: #f8fafc !important;
+  border: none !important;
+}
+
+.barber-calendar .rbc-time-gutter .rbc-time-slot {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+}
+
+/* Forçar o hover em toda a área do slot */
+.barber-calendar .rbc-day-slot .rbc-time-slot,
+.barber-calendar .rbc-day-slot div[data-time] {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 20px !important;
+  display: block !important;
+  position: relative !important;
+}
+
+
+
+.professionals-header .time-column {
+  width: 80px;
+  background-color: #f8fafc;
+}
+
+/* Responsividade para mobile */
+@media (max-width: 768px) {
+  .professional-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+  
+  .professional-name {
+    font-size: 12px;
+  }
+  
+  .professional-column {
+    padding: 12px 8px;
+  }
+  
+  .professionals-header .time-column {
+    width: 60px;
+  }
+  
+  .barber-calendar .rbc-time-gutter {
+    width: 60px !important;
   }
 }

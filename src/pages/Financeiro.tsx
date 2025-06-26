@@ -35,6 +35,8 @@ export default function Financeiro() {
   const { professionals } = useProfessional();
   const { 
     vales, 
+    loading,
+    error,
     addVale, 
     updateVale, 
     removeVale,
@@ -100,11 +102,21 @@ export default function Financeiro() {
     setIsValeModalOpen(true);
   };
 
-  const handleSaveVale = (vale: any) => {
-    if (editingVale) {
-      updateVale(vale.id, vale);
-    } else {
-      addVale(vale);
+  const handleSaveVale = async (vale: any) => {
+    try {
+      let success = false;
+      if (editingVale) {
+        success = await updateVale(vale.id, vale);
+      } else {
+        success = await addVale(vale);
+      }
+      
+      if (success) {
+        setIsValeModalOpen(false);
+        setEditingVale(null);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar vale:', err);
     }
   };
 
@@ -113,11 +125,17 @@ export default function Financeiro() {
     setDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (valeToDelete) {
-      removeVale(valeToDelete.id);
-      setDeleteModalOpen(false);
-      setValeToDelete(null);
+      try {
+        const success = await removeVale(valeToDelete.id);
+        if (success) {
+          setDeleteModalOpen(false);
+          setValeToDelete(null);
+        }
+      } catch (err) {
+        console.error('Erro ao deletar vale:', err);
+      }
     }
   };
 
@@ -188,6 +206,8 @@ export default function Financeiro() {
         {activeSection === 'vales' && (
           <ValesSection
             vales={vales}
+            loading={loading}
+            error={error}
             onNewVale={handleNewVale}
             onEditVale={handleEditVale}
             onDeleteVale={handleDeleteClick}

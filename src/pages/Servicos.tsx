@@ -7,32 +7,32 @@ import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import ActionModal from '../components/ActionModal';
 import { useService } from '../contexts/ServiceContext';
 import { useProduct } from '../contexts/ProductContext';
-import { Servico, Produto } from '../types';
+import { Service, Product, Servico, Produto } from '../types';
 
 export default function Servicos() {
   const [activeTab, setActiveTab] = useState<'servicos' | 'produtos'>('servicos');
   const [searchTerm, setSearchTerm] = useState('');
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [editingService, setEditingService] = useState<Servico | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [serviceToDelete, setServiceToDelete] = useState<Servico | null>(null);
-  const [productToDelete, setProductToDelete] = useState<Produto | null>(null);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [actionModalOpen, setActionModalOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<Servico | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
-  const { servicos, addServico, updateServico, removeServico } = useService();
-  const { produtos, addProduto, updateProduto, removeProduto } = useProduct();
+  const { services, addService, updateService, removeService } = useService();
+  const { products, addProduct, updateProduct, removeProduct } = useProduct();
 
-  const filteredServicos = servicos.filter(servico =>
-    servico.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredServices = services?.filter(service =>
+    service.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
-  const filteredProdutos = produtos.filter(produto =>
-    produto.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products?.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   const handleNew = () => {
     if (activeTab === 'servicos') {
@@ -44,51 +44,53 @@ export default function Servicos() {
     }
   };
 
-  const handleEditService = (servico: Servico) => {
-    setEditingService(servico);
+  const handleEditService = (service: Service) => {
+    setEditingService(service);
     setIsServiceModalOpen(true);
     setActionModalOpen(false);
   };
 
-  const handleEditProduct = (produto: Produto) => {
-    setEditingProduct(produto);
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
     setIsProductModalOpen(true);
     setActionModalOpen(false);
   };
 
-  const handleSaveService = (servico: Servico) => {
+  const handleSaveService = async (service: Omit<Service, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => {
     if (editingService) {
-      updateServico(servico.id, servico);
+      await updateService(editingService.id, service);
     } else {
-      addServico(servico);
+      await addService(service);
     }
+    setIsServiceModalOpen(false);
   };
 
-  const handleSaveProduct = (produto: Produto) => {
+  const handleSaveProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => {
     if (editingProduct) {
-      updateProduto(produto.id, produto);
+      await updateProduct(editingProduct.id, product);
     } else {
-      addProduto(produto);
+      await addProduct(product);
     }
+    setIsProductModalOpen(false);
   };
 
-  const handleDeleteClick = (item: Servico | Produto) => {
+  const handleDeleteClick = (item: Service | Product) => {
     if (activeTab === 'servicos') {
-      setServiceToDelete(item as Servico);
+      setServiceToDelete(item as Service);
     } else {
-      setProductToDelete(item as Produto);
+      setProductToDelete(item as Product);
     }
     setDeleteModalOpen(true);
     setActionModalOpen(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (serviceToDelete) {
-      removeServico(serviceToDelete.id);
+      await removeService(serviceToDelete.id);
       setServiceToDelete(null);
     }
     if (productToDelete) {
-      removeProduto(productToDelete.id);
+      await removeProduct(productToDelete.id);
       setProductToDelete(null);
     }
     setDeleteModalOpen(false);
@@ -100,12 +102,12 @@ export default function Servicos() {
     setProductToDelete(null);
   };
 
-  const handleActionsClick = (item: Servico | Produto) => {
+  const handleActionsClick = (item: Service | Product) => {
     if (activeTab === 'servicos') {
-      setSelectedService(item as Servico);
+      setSelectedService(item as Service);
       setSelectedProduct(null);
     } else {
-      setSelectedProduct(item as Produto);
+      setSelectedProduct(item as Product);
       setSelectedService(null);
     }
     setActionModalOpen(true);
@@ -123,14 +125,45 @@ export default function Servicos() {
     return `${minutes}min`;
   };
 
+  const convertServicoToService = (servico: Servico): Omit<Service, 'id' | 'created_at' | 'updated_at' | 'salon_id'> => ({
+    name: servico.nome,
+    price: servico.preco,
+    estimated_time: servico.duracao,
+    commission_rate: servico.comissao,
+    active: true,
+    description: ''
+  });
+
+  const convertProdutoToProduct = (produto: Produto): Omit<Product, 'id' | 'created_at' | 'updated_at' | 'salon_id'> => ({
+    name: produto.nome,
+    price: produto.preco,
+    cost_price: produto.custoAquisicao || 0,
+    profit_margin: produto.custoAquisicao ? ((produto.preco - produto.custoAquisicao) / produto.preco) * 100 : 0,
+    stock: produto.estoque,
+    description: ''
+  });
+
+  const convertServiceToServico = (service: Service): Servico => ({
+    id: service.id,
+    nome: service.name,
+    preco: service.price,
+    duracao: service.estimated_time,
+    comissao: service.commission_rate
+  });
+
+  const convertProductToProduto = (product: Product): Produto => ({
+    id: product.id,
+    nome: product.name,
+    preco: product.price,
+    custoAquisicao: product.cost_price,
+    estoque: product.stock
+  });
+
   return (
     <div className="flex-1 flex flex-col">
       <Header 
         title="Serviços e Produtos" 
-        action={{
-          label: activeTab === 'servicos' ? 'Novo Serviço' : 'Novo Produto',
-          onClick: handleNew
-        }}
+        onAddClick={handleNew}
       />
       
       <div className="flex-1 bg-gray-50">
@@ -201,69 +234,56 @@ export default function Servicos() {
                         Comissão
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {/* Removido "Ações" - apenas espaço vazio */}
+                        Ações
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredServicos.length === 0 ? (
+                    {filteredServices.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-12 text-center">
-                          <Scissors size={48} className="mx-auto text-gray-400 mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            {searchTerm ? 'Nenhum serviço encontrado' : 'Nenhum serviço cadastrado'}
-                          </h3>
-                          <p className="text-gray-500 mb-4">
-                            {searchTerm 
-                              ? 'Tente buscar com outros termos.' 
-                              : 'Comece adicionando seu primeiro serviço.'
-                            }
-                          </p>
-                          {!searchTerm && (
-                            <button
-                              onClick={handleNew}
-                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                            >
-                              Cadastrar Primeiro Serviço
-                            </button>
-                          )}
+                          <p className="text-gray-500">Nenhum serviço encontrado</p>
                         </td>
                       </tr>
                     ) : (
-                      filteredServicos.map((servico) => (
-                        <tr key={servico.id} className="hover:bg-gray-50 transition-colors">
+                      filteredServices.map((service) => (
+                        <tr key={service.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                                <Scissors size={20} className="text-indigo-600" />
+                              <div className="flex-shrink-0 h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                                <Scissors className="h-4 w-4 text-indigo-600" />
                               </div>
-                              <span className="text-sm font-medium text-gray-900">
-                                {servico.nome.replace('[Exemplo] ', '')}
-                              </span>
+                              <div className="ml-4">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {service.name}
+                                </span>
+                                {service.description && (
+                                  <p className="text-xs text-gray-500">{service.description}</p>
+                                )}
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm font-semibold text-gray-900">
-                              R$ {servico.preco.toFixed(2).replace('.', ',')}
+                              R$ {service.price.toFixed(2).replace('.', ',')}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-gray-600">
-                              {formatDuration(servico.duracao)}
+                              {formatDuration(service.estimated_time)}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-indigo-600 font-medium">
-                              {servico.comissao}%
+                              {service.commission_rate}%
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <button
-                              onClick={() => handleActionsClick(servico)}
+                              onClick={() => handleActionsClick(service)}
                               className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
                             >
-                              Ações
-                              <MoreVertical size={14} className="ml-1" />
+                              <MoreVertical size={16} className="text-gray-500" />
                             </button>
                           </td>
                         </tr>
@@ -310,79 +330,60 @@ export default function Servicos() {
                         Margem
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {/* Removido "Ações" - apenas espaço vazio */}
+                        Ações
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredProdutos.length === 0 ? (
+                    {filteredProducts.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-12 text-center">
-                          <Package size={48} className="mx-auto text-gray-400 mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            {searchTerm ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado'}
-                          </h3>
-                          <p className="text-gray-500 mb-4">
-                            {searchTerm 
-                              ? 'Tente buscar com outros termos.' 
-                              : 'Comece adicionando seu primeiro produto.'
-                            }
-                          </p>
-                          {!searchTerm && (
-                            <button
-                              onClick={handleNew}
-                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                            >
-                              Cadastrar Primeiro Produto
-                            </button>
-                          )}
+                          <p className="text-gray-500">Nenhum produto encontrado</p>
                         </td>
                       </tr>
                     ) : (
-                      filteredProdutos.map((produto) => {
-                        const margem = produto.custoAquisicao && produto.preco 
-                          ? (((produto.preco - produto.custoAquisicao) / produto.preco) * 100).toFixed(1)
-                          : '0';
-                        
-                        return (
-                          <tr key={produto.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                  <Package size={20} className="text-green-600" />
-                                </div>
-                                <span className="text-sm font-medium text-gray-900">
-                                  {produto.nome}
-                                </span>
+                      filteredProducts.map((product) => (
+                        <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                                <Package className="h-4 w-4 text-indigo-600" />
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm font-semibold text-gray-900">
-                                R$ {produto.preco.toFixed(2).replace('.', ',')}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm text-gray-600">
-                                {produto.estoque} und.
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm text-green-600 font-medium">
-                                {margem}%
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                              <button
-                                onClick={() => handleActionsClick(produto)}
-                                className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                              >
-                                Ações
-                                <MoreVertical size={14} className="ml-1" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
+                              <div className="ml-4">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {product.name}
+                                </span>
+                                {product.description && (
+                                  <p className="text-xs text-gray-500">{product.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-semibold text-gray-900">
+                              R$ {product.price.toFixed(2).replace('.', ',')}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">
+                              {product.stock} und.
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-indigo-600 font-medium">
+                              {product.profit_margin}%
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <button
+                              onClick={() => handleActionsClick(product)}
+                              className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                            >
+                              <MoreVertical size={16} className="text-gray-500" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -392,43 +393,36 @@ export default function Servicos() {
         </div>
       </div>
 
-      {/* Modal de cadastro/edição de serviços */}
+      {/* Modais */}
       <ServiceModal
         isOpen={isServiceModalOpen}
         onClose={() => setIsServiceModalOpen(false)}
-        onSave={handleSaveService}
-        editingService={editingService}
+        onSave={(servico) => handleSaveService(convertServicoToService(servico))}
+        editingService={editingService ? convertServiceToServico(editingService) : null}
       />
 
-      {/* Modal de cadastro/edição de produtos */}
       <ProductModal
         isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
-        onSave={handleSaveProduct}
-        editingProduct={editingProduct}
+        onSave={(produto) => handleSaveProduct(convertProdutoToProduct(produto))}
+        editingProduct={editingProduct ? convertProductToProduto(editingProduct) : null}
       />
 
-      {/* Modal de ações */}
-      <ActionModal
-        isOpen={actionModalOpen}
-        onClose={() => setActionModalOpen(false)}
-        onEdit={() => {
-          if (selectedService) handleEditService(selectedService);
-          if (selectedProduct) handleEditProduct(selectedProduct);
-        }}
-        onDelete={() => {
-          if (selectedService) handleDeleteClick(selectedService);
-          if (selectedProduct) handleDeleteClick(selectedProduct);
-        }}
-      />
-
-      {/* Modal de confirmação de exclusão */}
       <DeleteConfirmationModal
         isOpen={deleteModalOpen}
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        title={`Excluir ${activeTab === 'servicos' ? 'serviço' : 'produto'}?`}
+        title={`Excluir ${activeTab === 'servicos' ? 'Serviço' : 'Produto'}`}
         message={`Tem certeza que deseja excluir este ${activeTab === 'servicos' ? 'serviço' : 'produto'}? Esta ação não pode ser desfeita.`}
+      />
+
+      <ActionModal
+        isOpen={actionModalOpen}
+        onClose={() => setActionModalOpen(false)}
+        onEdit={activeTab === 'servicos' ? handleEditService : handleEditProduct}
+        onDelete={handleDeleteClick}
+        item={selectedService || selectedProduct}
+        type={activeTab === 'servicos' ? 'service' : 'product'}
       />
     </div>
   );

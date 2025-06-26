@@ -15,7 +15,7 @@ interface Vale {
 interface ValeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (vale: Vale) => void;
+  onSave: (vale: Omit<Vale, 'id' | 'status'> | Vale) => Promise<void>;
   editingVale?: Vale | null;
 }
 
@@ -33,6 +33,7 @@ export default function ValeModal({
   editingVale
 }: ValeModalProps) {
   const { professionals } = useProfessional();
+  const [saving, setSaving] = useState(false);
   
   const [valeForm, setValeForm] = useState<ValeFormData>({
     data: new Date().toISOString().split('T')[0],
@@ -74,23 +75,29 @@ export default function ValeModal({
            parseFloat(valeForm.valor) > 0;
   };
 
-  const handleSave = () => {
-    if (!isFormValid()) return;
+  const handleSave = async () => {
+    if (!isFormValid() || saving) return;
     
-    const profissional = professionals?.find(p => p.id === valeForm.profissionalId);
-    
-    const vale: Vale = {
-      id: editingVale?.id || Date.now().toString(),
-      data: valeForm.data,
-      profissionalId: valeForm.profissionalId,
-      profissionalNome: profissional?.name.replace('[Exemplo] ', '') || '',
-      valor: parseFloat(valeForm.valor),
-      status: 'pendente',
-      observacoes: valeForm.observacoes.trim()
-    };
-    
-    onSave(vale);
-    onClose();
+    setSaving(true);
+    try {
+      const profissional = professionals?.find(p => p.id === valeForm.profissionalId);
+      
+      const vale = {
+        id: editingVale?.id || '',
+        data: valeForm.data,
+        profissionalId: valeForm.profissionalId,
+        profissionalNome: profissional?.name || '',
+        valor: parseFloat(valeForm.valor),
+        status: 'pendente' as const,
+        observacoes: valeForm.observacoes.trim()
+      };
+      
+      await onSave(vale);
+    } catch (err) {
+      console.error('Erro ao salvar vale:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -126,8 +133,12 @@ export default function ValeModal({
               <Receipt size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Registrar Novo Vale</h2>
-              <p className="text-sm text-gray-600 mt-1">Preencha os dados do vale</p>
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingVale ? 'Editar Vale' : 'Registrar Novo Vale'}
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {editingVale ? 'Atualize os dados do vale' : 'Preencha os dados do vale'}
+              </p>
             </div>
           </div>
         </div>
@@ -162,7 +173,7 @@ export default function ValeModal({
               <option value="">Selecione um profissional</option>
               {professionals?.map((prof) => (
                 <option key={prof.id} value={prof.id}>
-                  {prof.name.replace('[Exemplo] ', '')}
+                  {prof.name}
                 </option>
               )) || []}
             </select>
@@ -209,22 +220,23 @@ export default function ValeModal({
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-100">
           <button
             onClick={handleCancel}
-            className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-200"
+            disabled={saving}
+            className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-200 disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            disabled={!isFormValid()}
+            disabled={!isFormValid() || saving}
             className={`
               px-8 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 shadow-lg
-              ${isFormValid()
+              ${isFormValid() && !saving
                 ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-xl transform hover:-translate-y-0.5'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }
             `}
           >
-            Registrar Vale
+            {saving ? 'Salvando...' : editingVale ? 'Atualizar Vale' : 'Registrar Vale'}
           </button>
         </div>
       </div>
