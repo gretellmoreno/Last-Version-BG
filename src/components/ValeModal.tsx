@@ -80,18 +80,18 @@ export default function ValeModal({
     
     setSaving(true);
     try {
-      const profissional = professionals?.find(p => p.id === valeForm.profissionalId);
-      
+    const profissional = professionals?.find(p => p.id === valeForm.profissionalId);
+    
       const vale = {
         id: editingVale?.id || '',
-        data: valeForm.data,
-        profissionalId: valeForm.profissionalId,
+      data: valeForm.data,
+      profissionalId: valeForm.profissionalId,
         profissionalNome: profissional?.name || '',
-        valor: parseFloat(valeForm.valor),
+      valor: parseFloat(valeForm.valor),
         status: 'pendente' as const,
-        observacoes: valeForm.observacoes.trim()
-      };
-      
+      observacoes: valeForm.observacoes.trim()
+    };
+    
       await onSave(vale);
     } catch (err) {
       console.error('Erro ao salvar vale:', err);

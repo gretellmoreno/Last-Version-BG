@@ -44,7 +44,7 @@ export const TaxasProvider: React.FC<TaxasProviderProps> = ({ children }) => {
     id: paymentMethod.id,
     nome: paymentMethod.name,
     taxa: paymentMethod.fee,
-    ativo: true
+      ativo: true
   });
 
   const refreshTaxas = async () => {

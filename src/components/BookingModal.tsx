@@ -202,7 +202,15 @@ export default function BookingModal({
         clientIdIsNull: clientId === null
       });
 
-      // Chamar a função RPC create_appointment
+      // Preparar os serviços no formato correto para a nova função RPC
+      const services = selectedServices.map(serviceId => ({
+        service_id: serviceId,
+        // Campos opcionais podem ser adicionados aqui no futuro
+        // custom_price: undefined,
+        // custom_time: undefined
+      }));
+
+      // Chamar a função RPC create_appointment com a nova estrutura
       console.log('🔄 Chamando supabaseService.appointments.create...');
       const { data, error } = await supabaseService.appointments.create({
         salonId: currentSalon.id,
@@ -210,7 +218,7 @@ export default function BookingModal({
         professionalId: professionalId,
         date: finalDate.toISOString().split('T')[0],
         startTime: finalTime,
-        status: 'agendado',
+        services: services,
         notes: ''
       });
       

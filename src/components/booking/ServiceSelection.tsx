@@ -53,7 +53,7 @@ export default function ServiceSelection({
           {selectedClient ? (
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <span className="text-green-600 font-semibold text-lg">
-                {selectedClient.nome.charAt(0).toUpperCase()}
+                {selectedClient.nome?.charAt(0).toUpperCase() || 'C'}
               </span>
             </div>
           ) : (
@@ -71,7 +71,7 @@ export default function ServiceSelection({
           <div>
             {selectedClient ? (
               <>
-                <h3 className="font-semibold text-gray-900 text-base mb-1">{selectedClient.nome}</h3>
+                <h3 className="font-semibold text-gray-900 text-base mb-1">{selectedClient.nome || 'Cliente'}</h3>
                 <p className="text-sm text-gray-500">Cliente selecionado</p>
                 <button
                   onClick={onShowClientSelection}

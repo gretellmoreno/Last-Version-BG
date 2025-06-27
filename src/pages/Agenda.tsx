@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, addMinutes } from 'date-fns';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast, { Toaster } from 'react-hot-toast';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -10,10 +11,12 @@ import BookingModal from '../components/BookingModal';
 import AddActionModal from '../components/AddActionModal';
 import VendaModal from '../components/VendaModal';
 import AppointmentTooltip from '../components/AppointmentTooltip';
+import EditAppointmentModal from '../components/EditAppointmentModal';
 import { useBooking } from '../contexts/BookingContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
-import { useClient } from '../contexts/ClientContext';
-import { Appointment } from '../types';
+import { useApp } from '../contexts/AppContext';
+import { supabaseService } from '../lib/supabaseService';
+import { Appointment, CalendarEvent } from '../types';
 
 // Configuração do localizador em português
 const locales = { 'pt-BR': ptBR };
@@ -24,6 +27,9 @@ const localizer = dateFnsLocalizer({
   getDay,
   locales,
 });
+
+// Criar o componente "aprimorado" com drag-and-drop
+const DragAndDropCalendar = withDragAndDrop<CalendarEvent, Resource>(Calendar);
 
 // Horários de funcionamento
 const BUSINESS_HOURS = {
@@ -44,18 +50,18 @@ interface Resource {
 }
 
 // Interface dos Eventos (Agendamentos)
-interface CalendarEvent {
-  id: string;
-  title: string;
-  start: Date;
-  end: Date;
-  resourceId: string;
-  client: string;
-  service: string;
-  status: string;
-  professionalName?: string;
-  appointmentData: Appointment;
-}
+// interface CalendarEvent {
+//   id: string;
+//   title: string;
+//   start: Date;
+//   end: Date;
+//   resourceId: string;
+//   client: string;
+//   service: string;
+//   status: string;
+//   professionalName?: string;
+//   appointmentData: Appointment;
+// }
 
 // Mensagens em português
 const messages = {
@@ -121,6 +127,13 @@ export default function Agenda() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   
+  // Estados para o modal de edição de agendamento
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<CalendarEvent | null>(null);
+  
+  // ID do agendamento selecionado para buscar detalhes via RPC
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  
   // Estados para o tooltip
   const [tooltip, setTooltip] = useState<{
     isVisible: boolean;
@@ -131,15 +144,99 @@ export default function Agenda() {
     appointment: null,
     position: { x: 0, y: 0 }
   });
+  const [isDragging, setIsDragging] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { appointments, refreshAppointments } = useBooking();
   const { professionals } = useProfessional();
-  const { clients } = useClient();
+  const { currentSalon } = useApp();
+
+  // Funções para drag-and-drop
+  const handleEventResize = useCallback(async ({ event, start, end }: any) => {
+    handleDragStart(); // Iniciar estado de drag
+    
+    // Não permitir mudança no horário de início
+    if (start.getTime() !== event.start.getTime()) {
+      handleDragEnd(); // Finalizar estado de drag
+      return;
+    }
+
+    const originalEnd = event.end.getTime();
+    const newEnd = end.getTime();
+    
+    // Verificar se realmente houve mudança na duração
+    if (newEnd === originalEnd) {
+      handleDragEnd(); // Finalizar estado de drag
+      return;
+    }
+
+    const toastId = toast.loading('Atualizando horário...');
+
+    try {
+      const { data, error } = await supabaseService.appointments.updateTime({
+        appointmentId: event.id,
+        salonId: currentSalon?.id || '',
+        newDate: start.toISOString().split('T')[0],
+        newStartTime: start.toTimeString().split(' ')[0],
+        newEndTime: end.toTimeString().split(' ')[0],
+        newProfessionalId: event.resourceId
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        await refreshAppointments();
+        toast.success('Horário atualizado!', { id: toastId });
+      } else {
+        toast.error('Falha ao atualizar horário.', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar horário:', error);
+      toast.error('Falha ao atualizar.', { id: toastId });
+    } finally {
+      handleDragEnd(); // Finalizar estado de drag
+    }
+  }, [refreshAppointments]);
+
+  const handleEventMove = useCallback(async ({ event, start, end, resourceId }: any) => {
+    handleDragStart(); // Iniciar estado de drag
+
+    const toastId = toast.loading('Atualizando agendamento...');
+
+    try {
+      const { data, error } = await supabaseService.appointments.updateTime({
+        appointmentId: event.id,
+        salonId: currentSalon?.id || '',
+        newDate: start.toISOString().split('T')[0],
+        newStartTime: start.toTimeString().split(' ')[0],
+        newEndTime: end.toTimeString().split(' ')[0],
+        newProfessionalId: resourceId
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        await refreshAppointments();
+        toast.success('Agendamento atualizado!', { id: toastId });
+      } else {
+        toast.error('Falha ao atualizar agendamento.', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar agendamento:', error);
+      toast.error('Falha ao atualizar.', { id: toastId });
+    } finally {
+      handleDragEnd(); // Finalizar estado de drag
+    }
+  }, [refreshAppointments]);
 
   // Funções para controlar o tooltip
   const handleEventMouseEnter = useCallback((event: CalendarEvent, mouseEvent: React.MouseEvent) => {
+    // Não mostrar tooltip se estiver arrastando
+    if (isDragging) {
+      return;
+    }
+    
     // Limpar timeouts anteriores
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
@@ -150,7 +247,42 @@ export default function Agenda() {
 
     // Definir novo timeout muito rápido para mostrar tooltip
     hoverTimeoutRef.current = setTimeout(() => {
+      // Verificar novamente se não está arrastando antes de mostrar
+      if (isDragging) {
+        return;
+      }
+      
       const professional = professionals?.find(p => p.id === event.resourceId);
+      
+      // Calcular posição baseada no elemento do agendamento, não no mouse
+      const eventElement = (mouseEvent.currentTarget || mouseEvent.target) as HTMLElement;
+      const rect = eventElement.getBoundingClientRect();
+      
+      // Calcular posicionamento seguro para evitar sair da tela
+      const tooltipWidth = 320;
+      const tooltipHeight = 300; // altura estimada do tooltip
+      const margin = 15;
+      
+      let x = rect.right + margin; // Posição padrão: à direita do evento
+      let y = rect.top;
+      
+      // Se não cabe à direita, posicionar à esquerda
+      if (x + tooltipWidth > window.innerWidth) {
+        x = rect.left - tooltipWidth - margin;
+      }
+      
+      // Se ainda não cabe à esquerda, centralizar horizontalmente
+      if (x < 0) {
+        x = Math.max(margin, (window.innerWidth - tooltipWidth) / 2);
+      }
+      
+      // Garantir que não saia da parte superior da tela
+      y = Math.max(margin, y);
+      
+      // Garantir que não saia da parte inferior da tela
+      if (y + tooltipHeight > window.innerHeight) {
+        y = window.innerHeight - tooltipHeight - margin;
+      }
       
       setTooltip({
         isVisible: true,
@@ -158,13 +290,10 @@ export default function Agenda() {
           ...event,
           professionalName: professional ? professional.name.replace('[Exemplo] ', '') : 'Profissional'
         },
-        position: {
-          x: mouseEvent.clientX,
-          y: mouseEvent.clientY
-        }
+        position: { x, y }
       });
-    }, 300); // 300ms de delay
-  }, [professionals]);
+    }, 200); // 200ms de delay para aparecer mais rápido
+  }, [professionals, isDragging]);
 
   const handleEventMouseLeave = useCallback(() => {
     // Limpar timeout de mostrar
@@ -172,10 +301,10 @@ export default function Agenda() {
       clearTimeout(hoverTimeoutRef.current);
     }
 
-    // Definir timeout para esconder (pequeno delay para suavizar)
+    // Aumentar delay para esconder o tooltip (500ms para dar tempo de ler)
     hideTimeoutRef.current = setTimeout(() => {
       setTooltip(prev => ({ ...prev, isVisible: false }));
-    }, 100);
+    }, 500);
   }, []);
 
   // Limpar timeouts quando componente for desmontado
@@ -203,38 +332,53 @@ export default function Agenda() {
 
   // Converter agendamentos para eventos do calendário
   useEffect(() => {
-    if (appointments && appointments.length > 0 && professionals && clients) {
-      const calendarEvents: CalendarEvent[] = appointments.map(appointment => {
+    if (appointments && appointments.length > 0 && professionals) {
+      const calendarEvents: CalendarEvent[] = appointments.map((appointment: any) => {
         // Encontrar profissional
-        const professional = professionals.find(p => p.id === appointment.professional_id);
-        const professionalName = professional ? professional.name.replace('[Exemplo] ', '') : 'Profissional';
+        const professional = professionals.find(p => p.id === appointment.professional?.id);
+        const professionalName = professional ? professional.name.replace('[Exemplo] ', '') : appointment.professional?.name || 'Profissional';
 
-        // Encontrar cliente
-        const client = clients.find(c => c.id === appointment.client_id);
-        const clientName = client ? client.name : 'Cliente';
+        // Nome do cliente (pode ser null no novo formato)
+        const clientName = appointment.client?.name || 'Cliente não definido';
 
-        // Criar data/hora de início
+        // Criar data/hora de início e fim usando os valores do banco de dados
         const startDateTime = new Date(`${appointment.date}T${appointment.start_time}`);
         
-        // Estimar duração (1 hora por padrão, pode ser ajustado)
-        const endDateTime = addMinutes(startDateTime, 60);
+        // Se end_time for null, calcular baseado na duração dos serviços
+        let endDateTime: Date;
+        if (appointment.end_time) {
+          endDateTime = new Date(`${appointment.date}T${appointment.end_time}`);
+        } else if (appointment.services && appointment.services.length > 0) {
+          // Calcular duração total dos serviços
+          const totalDuration = appointment.services.reduce((total: number, service: any) => total + (service.duration || 30), 0);
+          endDateTime = new Date(startDateTime.getTime() + totalDuration * 60000); // converter minutos para millisegundos
+        } else {
+          // Fallback: 30 minutos
+          endDateTime = new Date(startDateTime.getTime() + 30 * 60000);
+        }
+
+        // Preparar lista de serviços
+        const services = appointment.services || [];
+        const serviceNames = services.map((s: any) => s.name).join(', ') || 'Serviço não definido';
 
         return {
           id: appointment.id,
           title: '', // Remover título para evitar tooltip nativo
           start: startDateTime,
           end: endDateTime,
-          resourceId: appointment.professional_id,
+          resourceId: appointment.professional?.id || appointment.professional_id,
           client: clientName,
-          service: appointment.notes || '', // Usar notes como serviço
+          service: serviceNames, // Lista dos nomes dos serviços
+          services: services, // Array completo dos serviços
           status: appointment.status,
+          professionalName,
           appointmentData: appointment
         };
       });
 
       setEvents(calendarEvents);
     }
-  }, [appointments, professionals, clients]);
+  }, [appointments, professionals]);
 
   // Função para converter cor hex para versão mais clara
   const lightenColor = (color: string, amount: number = 0.7) => {
@@ -291,8 +435,7 @@ export default function Agenda() {
     
     return {
       style: {
-        backgroundColor,
-        opacity,
+        backgroundColor,        
         color: '#000000', // Texto preto
         border: `2px ${borderStyle} ${borderColor}`,
         borderRadius: '8px',
@@ -324,7 +467,9 @@ export default function Agenda() {
 
   // Manipulador de seleção de evento
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
-    toast(`Agendamento: ${event.client} - ${format(event.start, 'HH:mm')}`);
+    console.log('handleSelectEvent chamado com evento:', event.id);
+    setSelectedAppointmentId(event.id);
+    setIsEditModalOpen(true);
   }, []);
 
   // Manipulador de navegação de datas
@@ -373,61 +518,156 @@ export default function Agenda() {
   };
 
   // Componente customizado para renderizar eventos
-  const CustomEvent = ({ event }: { event: CalendarEvent }) => {
+  const CustomEvent = ({ event }: any) => {
     const professional = professionals?.find(p => p.id === event.resourceId);
     const duration = (event.end.getTime() - event.start.getTime()) / (1000 * 60); // duração em minutos
     const isShort = duration < 45; // Se menos de 45 minutos, layout compacto
     const isVeryShort = duration < 30; // Se menos de 30 minutos, layout muito compacto
     
     const handleEventMouseEnterLocal = (e: React.MouseEvent) => {
-      // Impedir propagação para não ativar hover do slot
-      e.stopPropagation();
-      handleEventMouseEnter(event, e);
+      if (isDragging) return; // Não mostrar tooltip se estiver arrastando
+      
+      // NÃO impedir propagação para permitir click do calendário
+      // e.stopPropagation();
+      
+      // Limpar TODOS os timeouts anteriores (mostrar E esconder)
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+      
+      hoverTimeoutRef.current = setTimeout(() => {
+        // Buscar o elemento mais próximo que represente o evento
+        const targetElement = (e.currentTarget || e.target) as HTMLElement;
+        const rect = targetElement.getBoundingClientRect();
+        
+        // Verificar se o elemento ainda está na tela
+        if (rect.width === 0 || rect.height === 0) {
+          return; // Não mostrar tooltip se o elemento não estiver visível
+        }
+        
+        // Aplicar a mesma lógica robusta de posicionamento
+        const tooltipWidth = 320;
+        const tooltipHeight = 300;
+        const margin = 15;
+        
+        let x = rect.right + margin; // Posição padrão: à direita do evento
+        let y = rect.top;
+        
+        // Se não cabe à direita, posicionar à esquerda
+        if (x + tooltipWidth > window.innerWidth) {
+          x = rect.left - tooltipWidth - margin;
+        }
+        
+        // Se ainda não cabe à esquerda, centralizar horizontalmente
+        if (x < 0) {
+          x = Math.max(margin, (window.innerWidth - tooltipWidth) / 2);
+        }
+        
+        // Garantir que não saia da parte superior da tela
+        y = Math.max(margin, y);
+        
+        // Garantir que não saia da parte inferior da tela
+        if (y + tooltipHeight > window.innerHeight) {
+          y = window.innerHeight - tooltipHeight - margin;
+        }
+        
+        setTooltip({
+          isVisible: true,
+          appointment: event,
+          position: { x, y }
+        });
+      }, 100); // Reduzido para 100ms para resposta ainda mais rápida na transição entre agendamentos
     };
 
     const handleEventMouseLeaveLocal = (e: React.MouseEvent) => {
-      // Impedir propagação
-      e.stopPropagation();
-      handleEventMouseLeave();
+      // NÃO impedir propagação para permitir click do calendário
+      // e.stopPropagation();
+      
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      
+      hideTimeoutRef.current = setTimeout(() => {
+        setTooltip(prev => ({ ...prev, isVisible: false }));
+      }, 300); // Aumentado para 300ms para dar mais tempo nas transições entre agendamentos
     };
-    
+
+    const handleEventClickLocal = (e: React.MouseEvent) => {
+      // Verificar se o click foi na área de resize (parte inferior)
+      const target = e.target as HTMLElement;
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const clickY = e.clientY - rect.top;
+      const eventHeight = rect.height;
+      
+      // Se o click foi nos últimos 12px (área de resize), não abrir modal
+      if (clickY > eventHeight - 12) {
+        return;
+      }
+      
+      e.stopPropagation(); // Impedir duplo click
+      console.log('CustomEvent click - abrindo modal de detalhes para:', event.id);
+      setSelectedAppointmentId(event.id);
+      setIsEditModalOpen(true);
+    };
+
     return (
-      <div 
-        className="w-full h-full flex flex-col justify-start text-black p-1 cursor-pointer relative z-10"
+      <div
+        className="w-full h-full"
         onMouseEnter={handleEventMouseEnterLocal}
         onMouseLeave={handleEventMouseLeaveLocal}
+        onClick={handleEventClickLocal}
         title="" // Remover qualquer tooltip nativo
         style={{ 
-          // Garantir que o evento cubra completamente o slot
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 10
-        }}
+          pointerEvents: 'auto',
+          cursor: 'pointer'
+        }} // Garantir que o container principal seja clicável
       >
         {/* Horário - bem no começo, compacto */}
-        <div className="text-xs font-semibold leading-tight">
+        <div className="text-xs font-semibold leading-tight text-black" style={{ pointerEvents: 'none' }}>
           {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
         </div>
         
         {/* Nome do cliente - logo em seguida, sem margem */}
-        <div className={`font-semibold truncate leading-tight ${isVeryShort ? 'text-xs' : 'text-sm'}`}>
+        <div className={`font-semibold truncate leading-tight text-black ${isVeryShort ? 'text-xs' : 'text-sm'}`} style={{ pointerEvents: 'none' }}>
           {event.client}
         </div>
         
         {/* Serviços - compacto, só mostra se tem espaço e conteúdo */}
-        {!isVeryShort && event.service && event.service.trim() && (
-          <div className="text-xs truncate leading-tight">
-            {event.service}
+        {!isVeryShort && event.services && event.services.length > 0 && (
+          <div className="text-xs leading-tight text-black space-y-0.5" style={{ pointerEvents: 'none' }}>
+            {event.services.slice(0, isShort ? 1 : 2).map((service: any, index: number) => (
+              <div key={service.id} className="truncate">
+                {service.name}
+                {event.services.length > 1 && index === 0 && event.services.length > (isShort ? 1 : 2) && (
+                  <span className="text-gray-600"> +{event.services.length - (isShort ? 1 : 2)}</span>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
     );
   };
 
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+    setTooltip(prev => ({ ...prev, isVisible: false }));
+    
+    // Limpar quaisquer timeouts pendentes
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+  }, []);
 
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -449,7 +689,7 @@ export default function Agenda() {
       {/* Calendário */}
       <div className="flex-1 bg-white overflow-auto">
         <div className="h-full min-h-[600px]">
-          <Calendar
+          <DragAndDropCalendar
             localizer={localizer}
             events={events}
             view={currentView}
@@ -469,11 +709,15 @@ export default function Agenda() {
             
             // Funcionalidades de Interação
             selectable
+            resizable // Habilita redimensionamento - controlado pelo CSS para apenas parte inferior
             
             // Event Handlers
             onSelectSlot={handleSelectSlot}
             onSelectEvent={handleSelectEvent}
             onNavigate={handleNavigate}
+            onEventDrop={handleEventMove}
+            onEventResize={handleEventResize}
+            onDragStart={() => handleDragStart()}
             
             // Personalização Visual
             eventPropGetter={eventStyleGetter}
@@ -519,7 +763,7 @@ export default function Agenda() {
       />
 
       {/* Tooltip de detalhes do agendamento */}
-      {tooltip.appointment && (
+      {tooltip.appointment && tooltip.isVisible && (
         <AppointmentTooltip
           appointment={{
             id: tooltip.appointment.id,
@@ -527,12 +771,31 @@ export default function Agenda() {
             end: tooltip.appointment.end,
             client: tooltip.appointment.client,
             service: tooltip.appointment.service,
+            services: (tooltip.appointment.services || []).map(service => ({
+              ...service,
+              duration: service.duration || 30 // fallback para 30 minutos
+            })),
             professionalName: tooltip.appointment.professionalName || 'Profissional',
             status: tooltip.appointment.status,
             notes: tooltip.appointment.appointmentData.notes
           }}
           position={tooltip.position}
           isVisible={tooltip.isVisible}
+        />
+      )}
+      
+      {/* Modal de edição de agendamento */}
+      {isEditModalOpen && (
+        <EditAppointmentModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedAppointmentId(null);
+            // Atualizar agendamentos quando fechar o modal
+            refreshAppointments();
+          }}
+          appointment={selectedAppointment}
+          appointmentId={selectedAppointmentId}
         />
       )}
     </div>

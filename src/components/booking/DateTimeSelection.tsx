@@ -137,7 +137,7 @@ export default function DateTimeSelection({
           {selectedClient ? (
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
               <span className="text-green-600 font-semibold text-sm">
-                {selectedClient.nome.charAt(0).toUpperCase()}
+                {selectedClient.nome?.charAt(0).toUpperCase() || 'C'}
               </span>
             </div>
           ) : (
@@ -155,7 +155,7 @@ export default function DateTimeSelection({
           <div>
             {selectedClient ? (
               <>
-                <h3 className="font-semibold text-gray-900 text-sm mb-1">{selectedClient.nome}</h3>
+                <h3 className="font-semibold text-gray-900 text-sm mb-1">{selectedClient.nome || 'Cliente'}</h3>
                 <button
                   onClick={onShowClientSelection}
                   className="text-xs text-indigo-600 hover:text-indigo-700"

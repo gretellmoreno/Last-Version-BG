@@ -25,9 +25,9 @@ export default function TaxasSection() {
   const handleSaveTaxa = async (taxa: any) => {
     try {
       let success = false;
-      if (editingTaxa) {
+    if (editingTaxa) {
         success = await updateTaxa(taxa.id, taxa);
-      } else {
+    } else {
         success = await addTaxa(taxa);
       }
       
@@ -50,8 +50,8 @@ export default function TaxasSection() {
       try {
         const success = await removeTaxa(taxaToDelete.id);
         if (success) {
-          setDeleteModalOpen(false);
-          setTaxaToDelete(null);
+      setDeleteModalOpen(false);
+      setTaxaToDelete(null);
         }
       } catch (err) {
         console.error('Erro ao deletar taxa:', err);
@@ -161,14 +161,14 @@ export default function TaxasSection() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button
+                        <button 
                           onClick={() => handleEditTaxa(taxa)}
                           className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                           title="Editar"
                         >
                           <Edit size={16} />
                         </button>
-                        <button
+                        <button 
                           onClick={() => handleDeleteClick(taxa)}
                           className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Excluir"

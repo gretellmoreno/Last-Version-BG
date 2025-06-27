@@ -105,9 +105,9 @@ export default function Financeiro() {
   const handleSaveVale = async (vale: any) => {
     try {
       let success = false;
-      if (editingVale) {
+    if (editingVale) {
         success = await updateVale(vale.id, vale);
-      } else {
+    } else {
         success = await addVale(vale);
       }
       
@@ -130,8 +130,8 @@ export default function Financeiro() {
       try {
         const success = await removeVale(valeToDelete.id);
         if (success) {
-          setDeleteModalOpen(false);
-          setValeToDelete(null);
+      setDeleteModalOpen(false);
+      setValeToDelete(null);
         }
       } catch (err) {
         console.error('Erro ao deletar vale:', err);

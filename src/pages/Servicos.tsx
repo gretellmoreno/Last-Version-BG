@@ -254,9 +254,9 @@ export default function Servicos() {
                                 <Scissors className="h-4 w-4 text-indigo-600" />
                               </div>
                               <div className="ml-4">
-                                <span className="text-sm font-medium text-gray-900">
+                              <span className="text-sm font-medium text-gray-900">
                                   {service.name}
-                                </span>
+                              </span>
                                 {service.description && (
                                   <p className="text-xs text-gray-500">{service.description}</p>
                                 )}
@@ -344,11 +344,11 @@ export default function Servicos() {
                     ) : (
                       filteredProducts.map((product) => (
                         <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
                               <div className="flex-shrink-0 h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center">
                                 <Package className="h-4 w-4 text-indigo-600" />
-                              </div>
+                                </div>
                               <div className="ml-4">
                                 <span className="text-sm font-medium text-gray-900">
                                   {product.name}
@@ -357,32 +357,32 @@ export default function Servicos() {
                                   <p className="text-xs text-gray-500">{product.description}</p>
                                 )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-semibold text-gray-900">
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-sm font-semibold text-gray-900">
                               R$ {product.price.toFixed(2).replace('.', ',')}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-600">
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-sm text-gray-600">
                               {product.stock} und.
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-indigo-600 font-medium">
                               {product.profit_margin}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <button
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <button
                               onClick={() => handleActionsClick(product)}
-                              className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                            >
+                                className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                              >
                               <MoreVertical size={16} className="text-gray-500" />
-                            </button>
-                          </td>
-                        </tr>
+                              </button>
+                            </td>
+                          </tr>
                       ))
                     )}
                   </tbody>

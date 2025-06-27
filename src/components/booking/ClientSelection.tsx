@@ -118,7 +118,7 @@ export default function ClientSelection({
               >
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                   <span className="text-purple-600 font-medium text-lg">
-                    {cliente.name.charAt(0).toUpperCase()}
+                    {cliente.name?.charAt(0).toUpperCase() || 'C'}
                   </span>
                 </div>
                 <div>

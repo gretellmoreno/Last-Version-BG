@@ -67,11 +67,11 @@ export default function TaxaModal({
     try {
       const taxa = {
         id: editingTaxa?.id || '',
-        nome: taxaForm.nome.trim(),
+      nome: taxaForm.nome.trim(),
         taxa: parseFloat(taxaForm.taxa) || 0,
-        ativo: true
-      };
-      
+      ativo: true
+    };
+    
       await onSave(taxa);
     } catch (err) {
       console.error('Erro ao salvar taxa:', err);

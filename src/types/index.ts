@@ -139,6 +139,7 @@ export interface Appointment {
   professional_id: string;
   date: string;
   start_time: string;
+  end_time: string;
   status: string;
   notes?: string;
   created_at: string;
@@ -182,4 +183,52 @@ export interface Advance {
   professional_id: string;
   value: number;
   created_at: string;
+}
+
+// Interface para eventos do calendário
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  resourceId: string;
+  client: string;
+  service: string;
+  services: Array<{
+    id: string;
+    name: string;
+    price: number;
+    duration?: number;
+  }>;
+  status: string;
+  professionalName?: string;
+  appointmentData: any; // Mudado para aceitar o novo formato de appointment
+}
+
+// Novo tipo para o retorno detalhado do agendamento
+export interface AppointmentDetails {
+  success: boolean;
+  appointment: {
+    id: string;
+    date: string;
+    notes: string | null;
+    client: {
+      id: string;
+      name: string;
+    };
+    status: string;
+    end_time: string | null;
+    services: Array<{
+      id: string;
+      name: string;
+      price: number;
+      duration: number;
+    }>;
+    start_time: string;
+    professional: {
+      id: string;
+      name: string;
+      color: string;
+    };
+  };
 }

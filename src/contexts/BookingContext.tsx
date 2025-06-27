@@ -74,28 +74,46 @@ export const BookingProvider: React.FC<BookingProviderProps> = ({ children }) =>
     setError(null);
     
     try {
-      // Para criar um agendamento no Supabase, precisamos de um clientId válido
-      // Se o cliente não tem ID (cliente temporário), vamos criar um cliente primeiro
+      // Primeiro, encontrar ou criar o cliente usando a função RPC
       let clientId = agendamento.clienteId;
       
-      if (!clientId || clientId === 'temp') {
-        // Criar cliente temporário ou usar cliente "Sem reserva"
-        if (agendamento.clienteNome === 'Sem reserva') {
-          // Para "Sem reserva", vamos usar um cliente especial ou criar um temporário
-          clientId = 'temp-' + Date.now().toString();
-        } else {
-          // Aqui você pode implementar a criação do cliente se necessário
-          clientId = 'temp-' + Date.now().toString();
+      if (!clientId || clientId === 'temp' || agendamento.clienteNome !== 'Sem reserva') {
+        const { data: clientData, error: clientError } = await supabaseService.clients.findOrCreate({
+          salonId: currentSalon.id,
+          name: agendamento.clienteNome,
+          phone: '', // Telefone não está disponível no tipo Agendamento atual
+          email: '' // Email não está disponível no tipo Agendamento atual
+        });
+        
+        if (clientError) {
+          setError(clientError);
+          return false;
         }
+        
+        if (!clientData?.client_id) {
+          setError('Erro ao obter ID do cliente');
+          return false;
+        }
+        
+        clientId = clientData.client_id;
       }
 
+      // Preparar os serviços no formato correto
+      const services = agendamento.servicoIds?.map(servicoId => ({
+        service_id: servicoId,
+        // Campos personalizados não estão disponíveis no tipo atual
+        // custom_price: undefined,
+        // custom_time: undefined
+      })) || [];
+
+      // Criar o agendamento usando a nova função RPC
       const { data, error } = await supabaseService.appointments.create({
         salonId: currentSalon.id,
         clientId: clientId,
         professionalId: agendamento.profissionalId,
         date: agendamento.data,
         startTime: agendamento.horarioInicio,
-        status: agendamento.status,
+        services: services,
         notes: agendamento.observacoes
       });
       

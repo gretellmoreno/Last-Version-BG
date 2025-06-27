@@ -8,17 +8,43 @@ import {
   ProductSale,
   PaymentMethod,
   CashClosure,
-  Advance
+  Advance,
+  AppointmentDetails
 } from '../types'
 
 // === CLIENTES ===
 export const clientService = {
+  // Encontrar ou criar cliente
+  async findOrCreate(params: {
+    salonId: string
+    name: string
+    phone: string
+    email?: string
+  }): Promise<RPCResponse<{ client_id: string }>> {
+    try {
+      const { data, error } = await supabase.rpc('find_or_create_client', {
+        p_salon_id: params.salonId,
+        p_name: params.name,
+        p_phone: params.phone,
+        p_email: params.email || null
+      })
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data || { client_id: null }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao encontrar/criar cliente: ${err}` }
+    }
+  },
+
   // Listar clientes
   async list(salonId: string, search?: string): Promise<RPCResponse<Client[]>> {
     try {
       const { data, error } = await supabase.rpc('list_clients', {
-        salon_id: salonId,
-        search: search || null
+        p_salon_id: salonId,
+        p_search: search || null
       })
       
       if (error) {
@@ -116,7 +142,7 @@ export const professionalService = {
   async list(salonId: string): Promise<RPCResponse<Professional[]>> {
     try {
       const { data, error } = await supabase.rpc('list_professionals', {
-        salon_id: salonId
+        p_salon_id: salonId
       })
       
       if (error) {
@@ -505,10 +531,10 @@ export const appointmentService = {
   }): Promise<RPCResponse<Appointment[]>> {
     try {
       const { data, error } = await supabase.rpc('list_appointments', {
-        salon_id: params.salonId,
-        professional_id: params.professionalId || null,
-        date_from: params.dateFrom || null,
-        date_to: params.dateTo || null
+        p_salon_id: params.salonId,
+        p_professional_filter_id: params.professionalId || null,
+        p_date_from: params.dateFrom || null,
+        p_date_to: params.dateTo || null
       })
       
       if (error) {
@@ -528,9 +554,13 @@ export const appointmentService = {
     professionalId: string
     date: string
     startTime: string
-    status?: string
+    services: Array<{
+      service_id: string
+      custom_price?: number
+      custom_time?: number
+    }>
     notes?: string
-  }): Promise<RPCResponse<RPCSuccessResponse>> {
+  }): Promise<RPCResponse<any>> {
     try {
       const { data, error } = await supabase.rpc('create_appointment', {
         p_salon_id: params.salonId,
@@ -538,7 +568,65 @@ export const appointmentService = {
         p_professional_id: params.professionalId,
         p_date: params.date,
         p_start_time: params.startTime,
-        p_status: params.status || 'agendado',
+        p_services_json: params.services,
+        p_notes: params.notes || null
+      })
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      // A resposta agora retorna o appointment completo se success for true
+      return { data: data || { success: false }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao criar agendamento: ${err}` }
+    }
+  },
+
+  // Atualizar horário do agendamento (arrastar ou redimensionar)
+  async updateTime(params: {
+    appointmentId: string
+    salonId: string
+    newDate: string
+    newStartTime: string
+    newEndTime: string
+    newProfessionalId: string
+  }): Promise<RPCResponse<any>> {
+    try {
+      const { data, error } = await supabase.rpc('update_appointment_time', {
+        p_appointment_id: params.appointmentId,
+        p_salon_id: params.salonId,
+        p_new_date: params.newDate,
+        p_new_start_time: params.newStartTime,
+        p_new_end_time: params.newEndTime,
+        p_new_professional_id: params.newProfessionalId
+      })
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data || { success: false }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao atualizar horário do agendamento: ${err}` }
+    }
+  },
+
+  // Atualizar agendamento (método genérico para outras atualizações)
+  async update(appointmentId: string, params: {
+    start_time?: string
+    end_time?: string
+    professional_id?: string
+    status?: string
+    notes?: string
+  }): Promise<RPCResponse<RPCSuccessResponse>> {
+    try {
+      const { data, error } = await supabase.rpc('update_appointment', {
+        p_appointment_id: appointmentId,
+        p_start_time: params.start_time || null,
+        p_end_time: params.end_time || null,
+        p_professional_id: params.professional_id || null,
+        p_status: params.status || null,
         p_notes: params.notes || null
       })
       
@@ -548,7 +636,7 @@ export const appointmentService = {
       
       return { data: data?.[0] || { success: false }, error: null }
     } catch (err) {
-      return { data: null, error: `Erro ao criar agendamento: ${err}` }
+      return { data: null, error: `Erro ao atualizar agendamento: ${err}` }
     }
   },
 
@@ -567,6 +655,56 @@ export const appointmentService = {
       return { data: data?.[0] || { success: false }, error: null }
     } catch (err) {
       return { data: null, error: `Erro ao cancelar agendamento: ${err}` }
+    }
+  },
+
+  // Obter detalhes específicos de um agendamento
+  async getDetails(appointmentId: string, salonId: string): Promise<RPCResponse<AppointmentDetails>> {
+    try {
+      const { data, error } = await supabase.rpc('get_appointment_details', {
+        p_appointment_id: appointmentId,
+        p_salon_id: salonId
+      })
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data || { success: false, appointment: null }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao obter detalhes do agendamento: ${err}` }
+    }
+  },
+
+  // Atualizar agendamento (nova função RPC)
+  async updateAppointment(params: {
+    appointmentId: string
+    salonId: string
+    newStatus?: string
+    newNotes?: string
+    servicesToAdd?: Array<{
+      service_id: string
+      custom_price?: number
+    }>
+    servicesToRemove?: string[]
+  }): Promise<RPCResponse<AppointmentDetails>> {
+    try {
+      const { data, error } = await supabase.rpc('update_appointment', {
+        p_appointment_id: params.appointmentId,
+        p_salon_id: params.salonId,
+        p_new_status: params.newStatus || null,
+        p_new_notes: params.newNotes || null,
+        p_services_to_add: params.servicesToAdd || null,
+        p_services_to_remove: params.servicesToRemove || null
+      })
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data || { success: false, appointment: null }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao atualizar agendamento: ${err}` }
     }
   }
 }
@@ -757,7 +895,7 @@ export const utilityService = {
   // Obter contexto do usuário
   async getUserContext(): Promise<RPCResponse<any>> {
     try {
-      const { data, error } = await supabase.rpc('get_user_context')
+      const { data, error } = await supabase.rpc('load_initial_data')
       
       if (error) {
         return { data: null, error: error.message }
