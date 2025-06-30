@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Plus, Minus, Search } from 'lucide-react';
+import { Package, Plus, Minus, Search, User, Edit2, Check, X as XIcon } from 'lucide-react';
 import { useProduct } from '../../contexts/ProductContext';
 
 interface SelectedProduct {
@@ -23,6 +23,9 @@ export default function ProductSelection({
   onShowClientSelection
 }: ProductSelectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [tempProductValue, setTempProductValue] = useState('');
+  const [editedProductPrices, setEditedProductPrices] = useState<Record<string, number>>({});
   const { products } = useProduct();
   
   const getQuantityForProduct = (productId: string) => {
@@ -35,10 +38,72 @@ export default function ProductSelection({
     onSelectProduct(productId, newQuantity);
   };
 
+  // Função para obter preço do produto (editado ou original)
+  const getProductPrice = (product: any) => {
+    return editedProductPrices[product.id] ?? product.price;
+  };
+
+  // Função para formatar valor para exibição
+  const formatDisplayValue = (value: number) => {
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  // Função para aplicar máscara de valor monetário
+  const formatCurrencyInput = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    const number = parseInt(digits, 10);
+    const reais = number / 100;
+    return reais.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  // Função para converter valor formatado para número
+  const parseFormattedValue = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return 0;
+    return parseInt(digits, 10) / 100;
+  };
+
+  // Funções para edição de preços
+  const startEditingProduct = (product: any) => {
+    setEditingProductId(product.id);
+    setTempProductValue(getProductPrice(product).toFixed(2).replace('.', ','));
+  };
+
+  const saveProductEdit = () => {
+    if (editingProductId && tempProductValue) {
+      const value = parseFormattedValue(tempProductValue);
+      if (!isNaN(value) && value >= 0) {
+        setEditedProductPrices(prev => ({
+          ...prev,
+          [editingProductId]: value
+        }));
+      }
+    }
+    setEditingProductId(null);
+    setTempProductValue('');
+  };
+
+  const cancelProductEdit = () => {
+    setEditingProductId(null);
+    setTempProductValue('');
+  };
+
+  const handleProductValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCurrencyInput(e.target.value);
+    setTempProductValue(formatted);
+  };
+
   const getTotalAmount = () => {
     return selectedProducts.reduce((total, item) => {
       const product = products?.find(p => p.id === item.productId);
-      return total + (product ? product.price * item.quantity : 0);
+      return total + (product ? getProductPrice(product) * item.quantity : 0);
     }, 0);
   };
 
@@ -51,41 +116,45 @@ export default function ProductSelection({
 
   return (
     <div className="flex h-full">
-      {/* Sidebar do cliente */}
-      <div className="w-64 border-r border-gray-200 p-4 flex flex-col">
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Cliente</h3>
+      {/* Sidebar esquerda */}
+      <div 
+        className={`w-48 bg-gray-50 border-r border-gray-200 flex flex-col ${
+          !selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''
+        }`}
+        onClick={!selectedClient ? onShowClientSelection : undefined}
+      >
+        <div 
+          className={`p-6 flex flex-col items-center text-center ${selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
+          onClick={selectedClient ? onShowClientSelection : undefined}
+        >
           {selectedClient ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-green-900">{selectedClient.nome}</p>
-                  {selectedClient.telefone && (
-                    <p className="text-sm text-green-600">{selectedClient.telefone}</p>
-                  )}
-                </div>
-                {onShowClientSelection && (
-                  <button
-                    onClick={onShowClientSelection}
-                    className="text-green-600 hover:text-green-800 text-xs"
-                  >
-                    Alterar
-                  </button>
-                )}
+            <>
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <span className="text-green-600 font-semibold text-lg">
+                  {selectedClient.nome?.charAt(0).toUpperCase() || 'C'}
+                </span>
               </div>
-            </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base mb-1">{selectedClient.nome || 'Cliente'}</h3>
+                <p className="text-sm text-gray-500">Cliente selecionado</p>
+                <p className="text-xs text-indigo-600 mt-2">
+                  Alterar cliente
+                </p>
+              </div>
+            </>
           ) : (
-            <div className="text-center py-4">
-              <p className="text-gray-500 text-sm mb-3">Ou deixe vazio se não há cadastro</p>
-              {onShowClientSelection && (
-                <button
-                  onClick={onShowClientSelection}
-                  className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Adicionar Cliente
-                </button>
-              )}
-            </div>
+            <>
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4 hover:bg-purple-200 transition-colors relative group">
+                <User size={28} className="text-purple-600" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                  <Plus size={14} className="text-white" />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base mb-1">Adicionar cliente</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -94,7 +163,7 @@ export default function ProductSelection({
       <div className="flex-1 flex flex-col">
         {/* Header com busca */}
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Selecionar Produtos</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Selecionar Produtos</h2>
           
           {/* Barra de busca */}
           <div className="relative">
@@ -104,7 +173,7 @@ export default function ProductSelection({
               placeholder="Buscar produto por nome..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
         </div>
@@ -147,37 +216,76 @@ export default function ProductSelection({
                           <h3 className="font-medium text-gray-900">{product.name}</h3>
                           <div className="flex items-center space-x-4 text-sm text-gray-500">
                             <span>Estoque: {product.stock}</span>
-                            <span className="font-semibold text-gray-900">
-                              R$ {product.price.toFixed(2).replace('.', ',')}
-                            </span>
+                            {editingProductId !== product.id && (
+                              <span className="font-semibold text-gray-900">
+                                R$ {formatDisplayValue(getProductPrice(product))}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Controles de quantidade */}
+                      {/* Controles de quantidade e preço */}
                       <div className="flex items-center space-x-3">
-                        <button
-                          onClick={() => handleQuantityChange(product.id, quantity - 1)}
-                          disabled={quantity === 0}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        
-                        <span className="w-8 text-center font-medium">{quantity}</span>
-                        
-                        <button
-                          onClick={() => handleQuantityChange(product.id, quantity + 1)}
-                          disabled={quantity >= product.stock}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Plus size={14} />
-                        </button>
-
-                        {quantity > 0 && (
-                          <div className="ml-3 text-sm font-medium text-green-600">
-                            R$ {(product.price * quantity).toFixed(2).replace('.', ',')}
+                        {/* Edição de preço */}
+                        {editingProductId === product.id ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center">
+                              <span className="text-sm text-gray-500 mr-1">R$</span>
+                              <input
+                                type="text"
+                                value={tempProductValue}
+                                onChange={handleProductValueChange}
+                                className="w-20 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="0,00"
+                                autoFocus
+                              />
+                            </div>
+                            <button
+                              onClick={saveProductEdit}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={cancelProductEdit}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <XIcon size={16} />
+                            </button>
                           </div>
+                        ) : (
+                          <>
+                            {/* Botão editar preço */}
+                            <button
+                              onClick={() => startEditingProduct(product)}
+                              className="w-7 h-7 flex items-center justify-center text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Editar valor"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+
+                            {/* Controles de quantidade mais sutis */}
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleQuantityChange(product.id, quantity - 1)}
+                                disabled={quantity === 0}
+                                className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                              >
+                                <Minus size={12} className="text-gray-600" />
+                              </button>
+                              
+                              <span className="w-8 text-center font-medium text-sm">{quantity}</span>
+                              
+                              <button
+                                onClick={() => handleQuantityChange(product.id, quantity + 1)}
+                                disabled={quantity >= product.stock}
+                                className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                              >
+                                <Plus size={12} className="text-gray-600" />
+                              </button>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -198,7 +306,7 @@ export default function ProductSelection({
                     {selectedProducts.length} produto(s) selecionado(s)
                   </div>
                   <div className="text-lg font-semibold text-gray-900">
-                    Total: R$ {getTotalAmount().toFixed(2).replace('.', ',')}
+                    Total: R$ {getTotalAmount().toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </>
               ) : (

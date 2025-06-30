@@ -547,7 +547,7 @@ export const appointmentService = {
     }
   },
 
-  // Criar agendamento
+  // Criar agendamento (Abrir a Comanda)
   async create(params: {
     salonId: string
     clientId: string
@@ -560,24 +560,25 @@ export const appointmentService = {
       custom_time?: number
     }>
     notes?: string
-  }): Promise<RPCResponse<any>> {
+  }): Promise<RPCResponse<AppointmentDetails>> {
     try {
+      console.log('🆕 Criando novo agendamento (comanda):', params);
+      
       const { data, error } = await supabase.rpc('create_appointment', {
         p_salon_id: params.salonId,
         p_client_id: params.clientId,
         p_professional_id: params.professionalId,
         p_date: params.date,
         p_start_time: params.startTime,
-        p_services_json: params.services,
-        p_notes: params.notes || null
+        p_services_json: params.services // Formato atualizado
       })
       
       if (error) {
         return { data: null, error: error.message }
       }
       
-      // A resposta agora retorna o appointment completo se success for true
-      return { data: data || { success: false }, error: null }
+      console.log('✅ Agendamento criado com sucesso:', data);
+      return { data: data || { success: false, appointment: null }, error: null }
     } catch (err) {
       return { data: null, error: `Erro ao criar agendamento: ${err}` }
     }
@@ -676,27 +677,114 @@ export const appointmentService = {
     }
   },
 
-  // Atualizar agendamento (nova função RPC)
+  // ===== NOVO MODELO DE COMANDA =====
+
+  // Adicionar serviço a uma comanda existente
+  async addServiceToComanda(params: {
+    appointmentId: string
+    salonId: string
+    serviceId: string
+    customPrice?: number
+    customTime?: number
+  }): Promise<RPCResponse<AppointmentDetails>> {
+    try {
+      const { data, error } = await supabase.rpc('add_service_to_comanda', {
+        p_appointment_id: params.appointmentId,
+        p_salon_id: params.salonId,
+        p_service_id: params.serviceId,
+        p_custom_price: params.customPrice || null,
+        p_custom_time: params.customTime || null
+      });
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data || { success: false, appointment: null }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao adicionar serviço à comanda: ${err}` }
+    }
+  },
+
+  // Remover serviço de uma comanda existente
+  async removeServiceFromComanda(params: {
+    appointmentServiceId: string
+    salonId: string
+  }): Promise<RPCResponse<AppointmentDetails>> {
+    try {
+      const { data, error } = await supabase.rpc('remove_service_from_comanda', {
+        p_appointment_service_id: params.appointmentServiceId,
+        p_salon_id: params.salonId
+      });
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data || { success: false, appointment: null }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao remover serviço da comanda: ${err}` }
+    }
+  },
+
+  // Finalizar comanda (finalizar e pagar)
+  async finalizeComanda(params: {
+    appointmentId: string
+    salonId: string
+    paymentMethodId: string
+  }): Promise<RPCResponse<AppointmentDetails>> {
+    try {
+      const { data, error } = await supabase.rpc('finalize_comanda', {
+        p_appointment_id: params.appointmentId,
+        p_salon_id: params.salonId,
+        p_payment_method_id: params.paymentMethodId
+      });
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data || { success: false, appointment: null }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao finalizar comanda: ${err}` }
+    }
+  },
+
+  // Atualizar agendamento (função legada - manter para compatibilidade)
   async updateAppointment(params: {
     appointmentId: string
     salonId: string
     newStatus?: string
     newNotes?: string
+    newClientId?: string
     servicesToAdd?: Array<{
       service_id: string
       custom_price?: number
     }>
-    servicesToRemove?: string[]
+    servicesToRemove?: Array<{
+      appointment_service_id: string
+    }>
   }): Promise<RPCResponse<AppointmentDetails>> {
     try {
-      const { data, error } = await supabase.rpc('update_appointment', {
+      // Preparar parâmetros da RPC (só enviar os que foram fornecidos)
+      const rpcParams: any = {
         p_appointment_id: params.appointmentId,
         p_salon_id: params.salonId,
         p_new_status: params.newStatus || null,
         p_new_notes: params.newNotes || null,
         p_services_to_add: params.servicesToAdd || null,
         p_services_to_remove: params.servicesToRemove || null
-      })
+      };
+
+      // Só incluir p_new_client_id se foi fornecido
+      if (params.newClientId) {
+        rpcParams.p_new_client_id = params.newClientId;
+      }
+      // Não enviar p_new_client_id se não foi fornecido (deixar undefined)
+
+      console.log('🔧 Parâmetros RPC finais:', rpcParams);
+
+      const { data, error } = await supabase.rpc('update_appointment', rpcParams);
       
       if (error) {
         return { data: null, error: error.message }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, UserPlus } from 'lucide-react';
+import { Search, Plus, UserPlus, ArrowLeft } from 'lucide-react';
 import { useClient } from '../../contexts/ClientContext';
 import { useService } from '../../contexts/ServiceContext';
 
@@ -8,13 +8,15 @@ interface ClientSelectionProps {
   onSelectClient: (client: any) => void;
   onShowForm: () => void;
   onToggleService: (serviceId: string) => void;
+  onBack?: () => void;
 }
 
 export default function ClientSelection({
   selectedServices,
   onSelectClient,
   onShowForm,
-  onToggleService
+  onToggleService,
+  onBack
 }: ClientSelectionProps) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const { clients } = useClient();
@@ -58,7 +60,18 @@ export default function ClientSelection({
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Selecionar cliente</h2>
+          <div className="flex items-center space-x-3 mb-4">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Voltar"
+              >
+                <ArrowLeft size={20} className="text-gray-500" />
+              </button>
+            )}
+            <h2 className="text-xl font-semibold text-gray-900">Selecionar cliente</h2>
+          </div>
           
           {/* Barra de busca */}
           <div className="relative">

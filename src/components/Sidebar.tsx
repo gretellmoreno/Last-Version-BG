@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Calendar, Users, UserCheck, Scissors, DollarSign, LogOut, User } from 'lucide-react';
+import { Calendar, Users, UserCheck, Scissors, DollarSign, LogOut, User, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 
 interface SidebarProps {
   activeMenu: string;
   onMenuChange: (menu: string) => void;
+  isMobile?: boolean;
+  onClose?: () => void;
 }
 
 const menuItems = [
@@ -16,7 +18,7 @@ const menuItems = [
   { id: 'financeiro', name: 'Financeiro', icon: DollarSign },
 ];
 
-export default function Sidebar({ activeMenu, onMenuChange }: SidebarProps) {
+export default function Sidebar({ activeMenu, onMenuChange, isMobile = false, onClose }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { signOut } = useAuth();
   const { currentUser, currentSalon } = useApp();
@@ -25,6 +27,109 @@ export default function Sidebar({ activeMenu, onMenuChange }: SidebarProps) {
     await signOut();
   };
 
+  const handleMenuChange = (menu: string) => {
+    onMenuChange(menu);
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
+  // Versão Mobile
+  if (isMobile) {
+    return (
+      <div className="h-full bg-white flex flex-col">
+        {/* Header Mobile */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">
+                {currentSalon?.name?.charAt(0)?.toUpperCase() || 'S'}
+              </span>
+            </div>
+            <div className="ml-3">
+              <h2 className="font-semibold text-gray-900 text-lg">
+                {currentSalon?.name || 'Salão'}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {currentSalon?.phone || 'Gestão'}
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+
+        {/* Menu Items Mobile */}
+        <nav className="flex-1 p-4">
+          <div className="space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeMenu === item.id;
+              
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleMenuChange(item.id)}
+                  className={`
+                    w-full flex items-center px-4 py-3 rounded-lg
+                    transition-all duration-200 text-left
+                    ${isActive 
+                      ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <Icon size={20} className={isActive ? 'text-indigo-600' : 'text-gray-500'} />
+                  <span className="ml-3 font-medium">
+                    {item.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* User Info & Logout Mobile */}
+        <div className="p-4 border-t border-gray-200 space-y-4">
+          {/* User Info */}
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <User className="w-5 h-5 text-gray-600" />
+            </div>
+            <div className="ml-3">
+              <p className="font-medium text-gray-900">
+                {currentUser?.name || 'Usuário'}
+              </p>
+              <p className="text-sm text-gray-500">
+                {currentUser?.email}
+              </p>
+            </div>
+          </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+          >
+            <LogOut size={20} />
+            <span className="ml-3 font-medium">Sair</span>
+          </button>
+
+          {/* Version Info */}
+          <div className="text-center">
+            <p className="text-xs text-gray-400">Versão 1.0.0</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Versão Desktop (original)
   return (
     <div 
       className={`

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import LoginForm from './components/LoginForm';
 import LoadingScreen from './components/LoadingScreen';
@@ -19,7 +19,25 @@ import { TaxasProvider } from './contexts/TaxasContext';
 
 function AppContent() {
   const [activeMenu, setActiveMenu] = useState('agenda');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { isAuthenticated, loading, userContext } = useAuth();
+
+  // Hook para detectar mobile
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+      // Fechar sidebar quando mudar para desktop
+      if (window.innerWidth > 768) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   // Mostrar tela de loading durante a verificação inicial de autenticação
   if (loading) {
@@ -77,12 +95,39 @@ function AppContent() {
             <ServiceProvider>
                 <ClientProvider>
                   <BookingProvider>
-                    <div className="flex h-screen bg-gray-50 overflow-hidden">
-                      <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+                    <div className={`flex h-screen bg-gray-50 overflow-hidden ${isMobile ? 'mobile-app-layout' : ''}`}>
+                      {/* Desktop Sidebar */}
+                      <div className={isMobile ? 'hidden' : 'block'}>
+                        <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+                      </div>
+                      
+                      {/* Mobile Sidebar Overlay */}
+                      {isMobile && isMobileSidebarOpen && (
+                        <div className="fixed inset-0 z-50 lg:hidden">
+                          <div 
+                            className="fixed inset-0 bg-black bg-opacity-50"
+                            onClick={() => setIsMobileSidebarOpen(false)}
+                          />
+                          <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
+                            <Sidebar 
+                              activeMenu={activeMenu} 
+                              onMenuChange={(menu) => {
+                                setActiveMenu(menu);
+                                setIsMobileSidebarOpen(false);
+                              }}
+                              isMobile={true}
+                              onClose={() => setIsMobileSidebarOpen(false)}
+                            />
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Main Content */}
-                      <div className="flex-1 ml-16 transition-all duration-300">
-                        {renderContent()}
+                      <div className={`flex-1 transition-all duration-300 ${isMobile ? 'ml-0' : 'ml-16'}`}>
+                        {React.cloneElement(renderContent() as React.ReactElement, {
+                          onToggleMobileSidebar: () => setIsMobileSidebarOpen(!isMobileSidebarOpen),
+                          isMobile
+                        })}
                       </div>
                     </div>
                   </BookingProvider>

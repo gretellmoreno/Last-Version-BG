@@ -223,6 +223,7 @@ export interface AppointmentDetails {
       name: string;
       price: number;
       duration: number;
+      appointment_service_id?: string;
     }>;
     start_time: string;
     professional: {

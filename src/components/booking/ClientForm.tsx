@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, User } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
 import { formatPhone, isValidPhone } from '../../utils/phoneUtils';
 import DatePickerCalendar from '../DatePickerCalendar';
 
@@ -44,8 +44,9 @@ export default function ClientForm({
             <button
               onClick={onCancel}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Voltar"
             >
-              <X size={20} className="text-gray-500" />
+              <ArrowLeft size={20} className="text-gray-500" />
             </button>
             <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
               <User size={16} className="text-indigo-600" />

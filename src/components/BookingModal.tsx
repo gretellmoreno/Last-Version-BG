@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { X } from 'lucide-react';
 import ServiceSelection from './booking/ServiceSelection';
+import ProductSelection from './booking/ProductSelection';
 import ServiceConfirmation from './booking/ServiceConfirmation';
 import DateTimeSelection from './booking/DateTimeSelection';
 import ClientSelection from './booking/ClientSelection';
@@ -41,7 +42,8 @@ export default function BookingModal({
   selectedProfessional 
 }: BookingModalProps) {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [currentStep, setCurrentStep] = useState<'service' | 'confirmation' | 'datetime'>('service');
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [currentStep, setCurrentStep] = useState<'service' | 'product' | 'confirmation' | 'datetime'>('service');
   const [showClientSelection, setShowClientSelection] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any>(null);
@@ -294,6 +296,37 @@ export default function BookingModal({
     setCurrentStep('service');
   }, []);
 
+  // Função para navegar para seleção de produtos
+  const handleShowProductSelection = useCallback(() => {
+    setCurrentStep('product');
+  }, []);
+
+  // Função para alternar seleção de produto
+  const toggleProduct = useCallback((productId: string) => {
+    setSelectedProducts(prev => {
+      const newProducts = prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId];
+      
+      // Voltar automaticamente para a tela de confirmação após selecionar/desselecionar
+      setTimeout(() => {
+        setCurrentStep('confirmation');
+      }, 100);
+      
+      return newProducts;
+    });
+  }, []);
+
+  // Função para voltar da seleção de produtos
+  const handleBackFromProducts = useCallback(() => {
+    setCurrentStep('confirmation');
+  }, []);
+
+  // Função para voltar da seleção de serviços
+  const handleBackFromServices = useCallback(() => {
+    setCurrentStep('confirmation');
+  }, []);
+
   const handleUpdateServiceProfessionals = useCallback((professionals: ServiceProfessional[]) => {
     setServiceProfessionals(professionals);
   }, []);
@@ -332,6 +365,10 @@ export default function BookingModal({
     setShowClientSelection(true);
   }, []);
 
+  const handleBackFromClientSelection = useCallback(() => {
+    setShowClientSelection(false);
+  }, []);
+
   const handleShowClientForm = useCallback(() => {
     setShowClientForm(true);
   }, []);
@@ -343,6 +380,7 @@ export default function BookingModal({
   // Função para resetar o modal
   const resetModal = useCallback(() => {
     setSelectedServices([]);
+    setSelectedProducts([]);
     setCurrentStep('service');
     setShowClientSelection(false);
     setShowClientForm(false);
@@ -374,7 +412,7 @@ export default function BookingModal({
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={handleClose} />
       
       {/* Painel lateral direito */}
-      <div className="absolute right-0 top-0 h-full w-2/3 max-w-4xl bg-white shadow-xl flex flex-col">
+      <div className="absolute right-0 top-0 h-full w-1/2 max-w-2xl bg-white shadow-xl flex flex-col">
         {/* Header do modal */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h1 className="text-lg font-semibold text-gray-900">Novo Agendamento</h1>
@@ -435,6 +473,7 @@ export default function BookingModal({
               onSelectClient={handleSelectClient}
               onShowForm={handleShowClientForm}
               onToggleService={toggleService}
+              onBack={handleBackFromClientSelection}
             />
           ) : currentStep === 'datetime' ? (
             <DateTimeSelection
@@ -449,17 +488,30 @@ export default function BookingModal({
               onFinish={handleFinishBooking}
               isLoading={isCreatingAppointment}
             />
+          ) : currentStep === 'product' ? (
+            <ProductSelection
+              selectedClient={selectedClient}
+              selectedProducts={selectedProducts}
+              onToggleProduct={toggleProduct}
+              onShowClientSelection={handleShowClientSelection}
+              onBack={handleBackFromProducts}
+            />
           ) : currentStep === 'confirmation' ? (
             <ServiceConfirmation
               selectedClient={selectedClient}
               selectedServices={selectedServices}
+              selectedProducts={selectedProducts}
               serviceProfessionals={serviceProfessionals}
               onShowClientSelection={handleShowClientSelection}
               onBackToServices={handleBackToServices}
+              onShowProductSelection={handleShowProductSelection}
               onUpdateServiceProfessionals={handleUpdateServiceProfessionals}
               onContinue={handleContinueFromConfirmation}
+              onToggleService={toggleService}
+              onToggleProduct={toggleProduct}
               hasPreselectedDateTime={hasPreselectedDateTime}
               isLoading={isCreatingAppointment}
+              isNewAppointment={true}
             />
           ) : (
             <ServiceSelection
@@ -467,9 +519,42 @@ export default function BookingModal({
               selectedServices={selectedServices}
               onToggleService={toggleService}
               onShowClientSelection={handleShowClientSelection}
+              onBack={selectedServices.length > 0 ? handleBackFromServices : undefined}
             />
           )}
         </div>
+
+        {/* Footer com botões condicionais */}
+        {currentStep === 'confirmation' && (
+          <div className="p-4 border-t border-gray-200 bg-white">
+            <div className="flex justify-end">
+              {hasPreselectedDateTime ? (
+                <button
+                  onClick={handleContinueFromConfirmation}
+                  disabled={isCreatingAppointment || serviceProfessionals.length === 0}
+                  className="flex items-center space-x-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  {isCreatingAppointment ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <span>Salvar Agendamento</span>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleContinueFromConfirmation}
+                  disabled={isCreatingAppointment || serviceProfessionals.length === 0}
+                  className="flex items-center space-x-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  <span>Continuar</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

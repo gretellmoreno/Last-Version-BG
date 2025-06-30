@@ -83,7 +83,7 @@ export default function VendaModal({
     setShowClientSelection(false);
   }, []);
 
-  const handleUpdateClientForm = useCallback((field: keyof ClientFormData, value: string) => {
+  const handleUpdateClientForm = useCallback((field: string, value: string) => {
     setClientForm(prev => ({
       ...prev,
       [field]: value
@@ -110,6 +110,10 @@ export default function VendaModal({
 
   const handleShowClientSelection = useCallback(() => {
     setShowClientSelection(true);
+  }, []);
+
+  const handleBackFromClientSelection = useCallback(() => {
+    setShowClientSelection(false);
   }, []);
 
   const handleShowClientForm = useCallback(() => {
@@ -172,11 +176,11 @@ export default function VendaModal({
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={handleClose} />
       
       {/* Painel lateral direito */}
-      <div className="absolute right-0 top-0 h-full w-2/3 max-w-4xl bg-white shadow-xl flex flex-col">
+      <div className="absolute right-0 top-0 h-full w-1/2 max-w-2xl bg-white shadow-xl flex flex-col">
         {/* Header do modal */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-4">
-            <h1 className="text-lg font-semibold text-gray-900">Nova Venda</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Nova Venda</h1>
             {currentStep === 'payment' && (
               <div className="text-sm text-gray-500">
                 {selectedProducts.length} produto(s) selecionado(s)
@@ -207,6 +211,7 @@ export default function VendaModal({
               onSelectClient={handleSelectClient}
               onShowForm={handleShowClientForm}
               onSelectProduct={handleSelectProduct}
+              onBack={handleBackFromClientSelection}
             />
           ) : currentStep === 'payment' ? (
             <PaymentMethodSelection

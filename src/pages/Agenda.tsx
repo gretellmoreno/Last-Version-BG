@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
+import { Menu, ChevronDown, Plus } from 'lucide-react';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,11 +13,12 @@ import AddActionModal from '../components/AddActionModal';
 import VendaModal from '../components/VendaModal';
 import AppointmentTooltip from '../components/AppointmentTooltip';
 import EditAppointmentModal from '../components/EditAppointmentModal';
+import FecharComandaModal from '../components/FecharComandaModal';
 import { useBooking } from '../contexts/BookingContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
 import { useApp } from '../contexts/AppContext';
 import { supabaseService } from '../lib/supabaseService';
-import { Appointment, CalendarEvent } from '../types';
+import { Appointment, CalendarEvent, AppointmentDetails } from '../types';
 
 // Configuração do localizador em português
 const locales = { 'pt-BR': ptBR };
@@ -114,9 +116,87 @@ const ProfessionalsHeader = ({ professionals }: { professionals: any[] }) => {
   );
 };
 
-export default function Agenda() {
+// Componente do header mobile
+const MobileHeader = ({ 
+  selectedDate, 
+  onDateChange, 
+  selectedProfessional, 
+  onProfessionalClick,
+  onAddClick,
+  onToggleSidebar
+}: {
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  selectedProfessional: any;
+  onProfessionalClick: () => void;
+  onAddClick: () => void;
+  onToggleSidebar?: () => void;
+}) => {
+  return (
+    <div className="mobile-agenda-header bg-white border-b border-gray-200 p-4">
+      {/* Primeira linha - Menu, Data e Adicionar */}
+      <div className="flex items-center justify-between mb-3">
+        <button 
+          onClick={onToggleSidebar}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <Menu size={20} className="text-gray-600" />
+        </button>
+        
+        <div className="text-center">
+          <h1 className="text-lg font-semibold text-gray-900">Agenda do Dia</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {format(selectedDate, "dd 'de' MMMM yyyy", { locale: ptBR })}
+          </p>
+        </div>
+        
+        <button
+          onClick={onAddClick}
+          className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          <Plus size={20} />
+        </button>
+      </div>
+      
+      {/* Segunda linha - Seletor de Profissional */}
+      <div className="flex justify-center">
+        <button
+          onClick={onProfessionalClick}
+          className="flex items-center space-x-3 px-5 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all duration-200 border-2 border-gray-200 hover:border-indigo-300 shadow-sm"
+        >
+          <div 
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md"
+            style={{ backgroundColor: selectedProfessional?.color || '#6366f1' }}
+          >
+            {(() => {
+              const name = selectedProfessional?.name?.replace('[Exemplo] ', '') || 'P';
+              const names = name.split(' ');
+              if (names.length === 1) {
+                return names[0].substring(0, 1).toUpperCase();
+              }
+              return (names[0][0] + (names[names.length - 1]?.[0] || '')).toUpperCase();
+            })()}
+          </div>
+          <div className="flex flex-col items-start">
+            <span className="text-sm font-semibold text-gray-900">
+              {selectedProfessional?.name?.replace('[Exemplo] ', '') || 'Selecionar Profissional'}
+            </span>
+            <span className="text-xs text-gray-500">
+              Toque para trocar
+            </span>
+          </div>
+          <ChevronDown size={18} className="text-gray-400" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }: { onToggleMobileSidebar?: () => void; isMobile?: boolean } = {}) {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<View>(Views.DAY);
+  const [isMobile, setIsMobile] = useState(false);
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>('');
+  const [showProfessionalSelector, setShowProfessionalSelector] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isVendaModalOpen, setIsVendaModalOpen] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -126,13 +206,13 @@ export default function Agenda() {
   } | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
-  
-  // Estados para o modal de edição de agendamento
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<CalendarEvent | null>(null);
-  
-  // ID do agendamento selecionado para buscar detalhes via RPC
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  
+  // Estados para o modal de fechar comanda
+  const [isFecharComandaModalOpen, setIsFecharComandaModalOpen] = useState(false);
+  const [fecharComandaAppointment, setFecharComandaAppointment] = useState<CalendarEvent | null>(null);
+  const [fecharComandaDetails, setFecharComandaDetails] = useState<AppointmentDetails | null>(null);
   
   // Estados para o tooltip
   const [tooltip, setTooltip] = useState<{
@@ -151,6 +231,28 @@ export default function Agenda() {
   const { appointments, refreshAppointments } = useBooking();
   const { professionals } = useProfessional();
   const { currentSalon } = useApp();
+
+  // Hook para detectar mobile
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // Inicializar primeiro profissional em mobile
+  useEffect(() => {
+    if (professionals && professionals.length > 0 && !selectedProfessionalId) {
+      setSelectedProfessionalId(professionals[0].id);
+    }
+  }, [professionals, selectedProfessionalId]);
+
+  // Obter profissional selecionado
+  const selectedProfessional = professionals?.find(prof => prof.id === selectedProfessionalId);
 
   // Funções para drag-and-drop
   const handleEventResize = useCallback(async ({ event, start, end }: any) => {
@@ -230,82 +332,7 @@ export default function Agenda() {
     }
   }, [refreshAppointments]);
 
-  // Funções para controlar o tooltip
-  const handleEventMouseEnter = useCallback((event: CalendarEvent, mouseEvent: React.MouseEvent) => {
-    // Não mostrar tooltip se estiver arrastando
-    if (isDragging) {
-      return;
-    }
-    
-    // Limpar timeouts anteriores
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-    }
-
-    // Definir novo timeout muito rápido para mostrar tooltip
-    hoverTimeoutRef.current = setTimeout(() => {
-      // Verificar novamente se não está arrastando antes de mostrar
-      if (isDragging) {
-        return;
-      }
-      
-      const professional = professionals?.find(p => p.id === event.resourceId);
-      
-      // Calcular posição baseada no elemento do agendamento, não no mouse
-      const eventElement = (mouseEvent.currentTarget || mouseEvent.target) as HTMLElement;
-      const rect = eventElement.getBoundingClientRect();
-      
-      // Calcular posicionamento seguro para evitar sair da tela
-      const tooltipWidth = 320;
-      const tooltipHeight = 300; // altura estimada do tooltip
-      const margin = 15;
-      
-      let x = rect.right + margin; // Posição padrão: à direita do evento
-      let y = rect.top;
-      
-      // Se não cabe à direita, posicionar à esquerda
-      if (x + tooltipWidth > window.innerWidth) {
-        x = rect.left - tooltipWidth - margin;
-      }
-      
-      // Se ainda não cabe à esquerda, centralizar horizontalmente
-      if (x < 0) {
-        x = Math.max(margin, (window.innerWidth - tooltipWidth) / 2);
-      }
-      
-      // Garantir que não saia da parte superior da tela
-      y = Math.max(margin, y);
-      
-      // Garantir que não saia da parte inferior da tela
-      if (y + tooltipHeight > window.innerHeight) {
-        y = window.innerHeight - tooltipHeight - margin;
-      }
-      
-      setTooltip({
-        isVisible: true,
-        appointment: {
-          ...event,
-          professionalName: professional ? professional.name.replace('[Exemplo] ', '') : 'Profissional'
-        },
-        position: { x, y }
-      });
-    }, 200); // 200ms de delay para aparecer mais rápido
-  }, [professionals, isDragging]);
-
-  const handleEventMouseLeave = useCallback(() => {
-    // Limpar timeout de mostrar
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-
-    // Aumentar delay para esconder o tooltip (500ms para dar tempo de ler)
-    hideTimeoutRef.current = setTimeout(() => {
-      setTooltip(prev => ({ ...prev, isVisible: false }));
-    }, 500);
-  }, []);
+  // Função para controlar o tooltip (consolidada no CustomEvent)
 
   // Limpar timeouts quando componente for desmontado
   useEffect(() => {
@@ -322,18 +349,49 @@ export default function Agenda() {
   // Converter profissionais para recursos do calendário
   useEffect(() => {
     if (professionals) {
-      const calendarResources = professionals.map(prof => ({
-        id: prof.id,
-        title: prof.name.replace('[Exemplo] ', '')
-      }));
-      setResources(calendarResources);
+      if (isMobile && selectedProfessionalId) {
+        // Em mobile, mostrar apenas o profissional selecionado
+        const selectedProfessional = professionals.find(prof => prof.id === selectedProfessionalId);
+        if (selectedProfessional) {
+          setResources([{
+            id: selectedProfessional.id,
+            title: selectedProfessional.name.replace('[Exemplo] ', '')
+          }]);
+        }
+      } else {
+        // Desktop - mostrar todos os profissionais
+        const calendarResources = professionals.map(prof => ({
+          id: prof.id,
+          title: prof.name.replace('[Exemplo] ', '')
+        }));
+        setResources(calendarResources);
+      }
     }
-  }, [professionals]);
+  }, [professionals, isMobile, selectedProfessionalId]);
 
   // Converter agendamentos para eventos do calendário
   useEffect(() => {
     if (appointments && appointments.length > 0 && professionals) {
-      const calendarEvents: CalendarEvent[] = appointments.map((appointment: any) => {
+      // Filtrar agendamentos cancelados
+      let activeAppointments = appointments.filter((appointment: any) => 
+        appointment.status !== 'cancelado'
+      );
+      
+      // Filtrar agendamentos apenas para a data selecionada
+      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      activeAppointments = activeAppointments.filter((appointment: any) => 
+        appointment.date === selectedDateStr
+      );
+      
+      // Em mobile, filtrar apenas agendamentos do profissional selecionado
+      if (isMobile && selectedProfessionalId) {
+        activeAppointments = activeAppointments.filter((appointment: any) => 
+          appointment.professional?.id === selectedProfessionalId || 
+          appointment.professional_id === selectedProfessionalId
+        );
+      }
+      
+      const calendarEvents: CalendarEvent[] = activeAppointments.map((appointment: any) => {
         // Encontrar profissional
         const professional = professionals.find(p => p.id === appointment.professional?.id);
         const professionalName = professional ? professional.name.replace('[Exemplo] ', '') : appointment.professional?.name || 'Profissional';
@@ -341,13 +399,18 @@ export default function Agenda() {
         // Nome do cliente (pode ser null no novo formato)
         const clientName = appointment.client?.name || 'Cliente não definido';
 
-        // Criar data/hora de início e fim usando os valores do banco de dados
-        const startDateTime = new Date(`${appointment.date}T${appointment.start_time}`);
+        // Criar data/hora de início e fim garantindo timezone correto
+        // Usar parseISO ou construir data manualmente para evitar problemas de timezone
+        const [year, month, day] = appointment.date.split('-').map(Number);
+        const [startHour, startMinute] = appointment.start_time.split(':').map(Number);
+        
+        const startDateTime = new Date(year, month - 1, day, startHour, startMinute);
         
         // Se end_time for null, calcular baseado na duração dos serviços
         let endDateTime: Date;
         if (appointment.end_time) {
-          endDateTime = new Date(`${appointment.date}T${appointment.end_time}`);
+          const [endHour, endMinute] = appointment.end_time.split(':').map(Number);
+          endDateTime = new Date(year, month - 1, day, endHour, endMinute);
         } else if (appointment.services && appointment.services.length > 0) {
           // Calcular duração total dos serviços
           const totalDuration = appointment.services.reduce((total: number, service: any) => total + (service.duration || 30), 0);
@@ -378,7 +441,7 @@ export default function Agenda() {
 
       setEvents(calendarEvents);
     }
-  }, [appointments, professionals]);
+  }, [appointments, professionals, isMobile, selectedProfessionalId, selectedDate]);
 
   // Função para converter cor hex para versão mais clara
   const lightenColor = (color: string, amount: number = 0.7) => {
@@ -497,6 +560,13 @@ export default function Agenda() {
     // Recarregar agendamentos após fechar modal
     refreshAppointments();
   };
+  
+  // Função para abrir modal de fechar comanda
+  const handleOpenFecharComanda = useCallback((appointment: CalendarEvent | null, appointmentDetails: AppointmentDetails | null) => {
+    setFecharComandaAppointment(appointment);
+    setFecharComandaDetails(appointmentDetails);
+    setIsFecharComandaModalOpen(true);
+  }, []);
 
   // Componente customizado para slots de tempo com atributo data-time
   const TimeSlotWrapper = ({ children, value, resource }: any) => {
@@ -596,19 +666,15 @@ export default function Agenda() {
     };
 
     const handleEventClickLocal = (e: React.MouseEvent) => {
-      // Verificar se o click foi na área de resize (parte inferior)
       const target = e.target as HTMLElement;
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const clickY = e.clientY - rect.top;
       const eventHeight = rect.height;
       
       // Se o click foi nos últimos 12px (área de resize), não abrir modal
-      if (clickY > eventHeight - 12) {
-        return;
-      }
+      if (clickY > eventHeight - 12) return;
       
-      e.stopPropagation(); // Impedir duplo click
-      console.log('CustomEvent click - abrindo modal de detalhes para:', event.id);
+      e.stopPropagation();
       setSelectedAppointmentId(event.id);
       setIsEditModalOpen(true);
     };
@@ -670,54 +736,67 @@ export default function Agenda() {
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className={`flex-1 flex flex-col h-full ${isMobile ? 'mobile-agenda-container' : ''}`}>
       <Toaster position="top-right" />
       
-      <Header 
-        title="Agenda do Dia"
-        hasDateNavigation={true}
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
-        onAddClick={handleAddClick}
-      />
-      
-      {/* Cabeçalho fixo dos profissionais */}
-      {professionals && professionals.length > 0 && (
-        <ProfessionalsHeader professionals={professionals} />
+      {isMobile ? (
+        <MobileHeader
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+          selectedProfessional={selectedProfessional}
+          onProfessionalClick={() => setShowProfessionalSelector(true)}
+          onAddClick={handleAddClick}
+          onToggleSidebar={onToggleMobileSidebar}
+        />
+      ) : (
+        <>
+          <Header 
+            title="Agenda do Dia"
+            hasDateNavigation={true}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            onAddClick={handleAddClick}
+          />
+          
+          {/* Cabeçalho fixo dos profissionais - apenas desktop */}
+          {professionals && professionals.length > 0 && (
+            <ProfessionalsHeader professionals={professionals} />
+          )}
+        </>
       )}
       
       {/* Calendário */}
-      <div className="flex-1 bg-white overflow-auto">
-        <div className="h-full min-h-[600px]">
-          <DragAndDropCalendar
-            localizer={localizer}
-            events={events}
-            view={currentView}
-            onView={setCurrentView}
-            date={selectedDate}
-            defaultView={Views.DAY}
-            views={['day']}
-            step={15}
-            timeslots={4}
-            min={minTime}
-            max={maxTime}
-            resources={resources}
-            resourceIdAccessor="id"
-            resourceTitleAccessor="title"
-            rtl={false}
-            className="barber-calendar"
-            
-            // Funcionalidades de Interação
-            selectable
-            resizable // Habilita redimensionamento - controlado pelo CSS para apenas parte inferior
-            
-            // Event Handlers
-            onSelectSlot={handleSelectSlot}
-            onSelectEvent={handleSelectEvent}
-            onNavigate={handleNavigate}
-            onEventDrop={handleEventMove}
-            onEventResize={handleEventResize}
-            onDragStart={() => handleDragStart()}
+      <div className={`flex-1 bg-white overflow-auto ${isMobile ? 'mobile-calendar-container' : ''}`}>
+        <div className={`h-full ${isMobile ? 'h-full' : 'min-h-[600px]'}`}>
+                      <DragAndDropCalendar
+              localizer={localizer}
+              events={events}
+              view={Views.DAY}
+              onView={() => {}} // Sempre usa DAY view
+              date={selectedDate}
+              defaultView={Views.DAY}
+              views={['day']}
+              step={15}
+              timeslots={isMobile ? 4 : 4} // Manter 4 slots para precisão de horário
+              min={minTime}
+              max={maxTime}
+              resources={resources}
+              resourceIdAccessor="id"
+              resourceTitleAccessor="title"
+              rtl={false}
+              className={`barber-calendar ${isMobile ? 'mobile-calendar' : ''}`}
+              
+              // Funcionalidades de Interação - ajustadas para mobile
+              selectable
+              resizable={!isMobile} // Desabilitar resize em mobile
+              
+              // Event Handlers
+              onSelectSlot={handleSelectSlot}
+              onSelectEvent={handleSelectEvent}
+              onNavigate={handleNavigate}
+              onEventDrop={isMobile ? undefined : handleEventMove} // Desabilitar drag em mobile
+              onEventResize={isMobile ? undefined : handleEventResize} // Desabilitar resize em mobile
+              onDragStart={isMobile ? undefined : () => handleDragStart()}
             
             // Personalização Visual
             eventPropGetter={eventStyleGetter}
@@ -794,9 +873,84 @@ export default function Agenda() {
             // Atualizar agendamentos quando fechar o modal
             refreshAppointments();
           }}
-          appointment={selectedAppointment}
+          appointment={null}
           appointmentId={selectedAppointmentId}
         />
+      )}
+      
+      {/* Modal de fechar comanda */}
+      {isFecharComandaModalOpen && (
+        <FecharComandaModal
+          isOpen={isFecharComandaModalOpen}
+          onClose={() => setIsFecharComandaModalOpen(false)}
+          appointment={fecharComandaAppointment}
+          appointmentDetails={fecharComandaDetails}
+        />
+      )}
+
+      {/* Modal de seleção de profissional (mobile) */}
+      {showProfessionalSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 mobile-professional-selector">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 max-h-96 overflow-hidden">
+            <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+              <h3 className="text-lg font-bold text-gray-900">Selecionar Profissional</h3>
+              <p className="text-sm text-gray-600 mt-1">Escolha um profissional para ver sua agenda</p>
+            </div>
+            
+            <div className="max-h-80 overflow-y-auto">
+              {professionals?.map((professional) => (
+                <button
+                  key={professional.id}
+                  onClick={() => {
+                    setSelectedProfessionalId(professional.id);
+                    setShowProfessionalSelector(false);
+                  }}
+                  className={`w-full flex items-center space-x-4 p-4 transition-all duration-200 mobile-professional-option ${
+                    selectedProfessionalId === professional.id 
+                      ? 'bg-indigo-50 border-r-4 border-indigo-500' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-white shadow-lg"
+                    style={{ backgroundColor: professional.color || '#6366f1' }}
+                  >
+                    {(() => {
+                      const name = professional.name.replace('[Exemplo] ', '');
+                      const names = name.split(' ');
+                      if (names.length === 1) {
+                        return names[0].substring(0, 2).toUpperCase();
+                      }
+                      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+                    })()}
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-semibold text-gray-900 text-base">
+                      {professional.name.replace('[Exemplo] ', '')}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Profissional
+                    </p>
+                  </div>
+                  {selectedProfessionalId === professional.id && (
+                    <div className="ml-auto flex items-center">
+                      <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            
+            <div className="p-5 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowProfessionalSelector(false)}
+                className="w-full px-4 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-100 transition-all duration-200 font-semibold border border-gray-200 shadow-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
