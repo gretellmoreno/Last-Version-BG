@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { X, Plus, User } from 'lucide-react';
 import ProductSelection from './venda/ProductSelection';
 import PaymentMethodSelection from './venda/PaymentMethodSelection';
 import ClientSelectionVenda from './venda/ClientSelectionVenda';
@@ -8,6 +8,7 @@ import ClientForm from './booking/ClientForm';
 interface VendaModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isMobile?: boolean;
 }
 
 interface SelectedProduct {
@@ -26,7 +27,8 @@ interface ClientFormData {
 
 export default function VendaModal({ 
   isOpen, 
-  onClose
+  onClose,
+  isMobile = false
 }: VendaModalProps) {
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [currentStep, setCurrentStep] = useState<'products' | 'payment'>('products');
@@ -42,6 +44,28 @@ export default function VendaModal({
     dataNascimento: '',
     ano: ''
   });
+
+  // Detectar se está em mobile (se não foi passado via props)
+  const [internalIsMobile, setInternalIsMobile] = useState(false);
+  
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setInternalIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const isMobileDevice = isMobile || internalIsMobile;
+
+  // Calcular se deve mostrar o painel de produtos baseado no estado mobile
+  const shouldShowProductsPanel = useMemo(() => {
+    if (!isMobileDevice) return true; // Desktop sempre mostra
+    // Mobile: não mostrar produtos quando estiver selecionando cliente ou preenchendo formulário
+    return !showClientSelection && !showClientForm;
+  }, [isMobileDevice, showClientSelection, showClientForm]);
 
   const handleSelectProduct = useCallback((productId: string, quantity: number) => {
     setSelectedProducts(prev => {
@@ -175,18 +199,24 @@ export default function VendaModal({
       {/* Overlay */}
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={handleClose} />
       
-      {/* Painel lateral direito */}
-      <div className="absolute right-0 top-0 h-full w-1/2 max-w-2xl bg-white shadow-xl flex flex-col">
+      {/* Modal - Layout responsivo */}
+      <div className={`
+        absolute bg-white shadow-xl flex
+        ${isMobileDevice 
+          ? 'inset-x-0 bottom-0 top-16 rounded-t-xl flex-col' // Mobile: fullscreen com cantos arredondados no topo
+          : 'right-0 top-0 h-full w-1/2 max-w-2xl flex-col' // Desktop: painel lateral
+        }
+      `}>
         {/* Header do modal */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-900">Nova Venda</h1>
-            {currentStep === 'payment' && (
-              <div className="text-sm text-gray-500">
-                {selectedProducts.length} produto(s) selecionado(s)
-              </div>
+        <div className={`flex items-center justify-between border-b border-gray-200 ${isMobileDevice ? 'p-3' : 'p-4'}`}>
+          <h1 className={`font-semibold text-gray-900 ${isMobileDevice ? 'text-base' : 'text-lg'}`}>
+            Nova Venda
+            {currentStep === 'payment' && shouldShowProductsPanel && (
+              <span className={`text-gray-500 ml-2 ${isMobileDevice ? 'text-xs' : 'text-sm'}`}>
+                ({selectedProducts.length} produto{selectedProducts.length !== 1 ? 's' : ''})
+              </span>
             )}
-          </div>
+          </h1>
           
           <button
             onClick={handleClose}
@@ -196,8 +226,12 @@ export default function VendaModal({
           </button>
         </div>
 
-        {/* Conteúdo do modal */}
+        {/* Layout do conteúdo - Responsivo */}
         <div className="flex-1 overflow-hidden">
+          {/* Conteúdo condicionalmente renderizado baseado no mobile e estado de seleção */}
+          {shouldShowProductsPanel ? (
+            // Painel principal com conteúdo dos produtos/steps
+            <>
           {showClientForm ? (
             <ClientForm
               clientForm={clientForm}
@@ -212,6 +246,7 @@ export default function VendaModal({
               onShowForm={handleShowClientForm}
               onSelectProduct={handleSelectProduct}
               onBack={handleBackFromClientSelection}
+                  hideProductsSidebar={isMobileDevice}
             />
           ) : currentStep === 'payment' ? (
             <PaymentMethodSelection
@@ -228,7 +263,31 @@ export default function VendaModal({
               onContinue={handleContinueToPayment}
               selectedClient={selectedClient}
               onShowClientSelection={handleShowClientSelection}
-            />
+                  hideClientSection={isMobileDevice}
+                />
+              )}
+            </>
+          ) : (
+            // Mobile: Mostra apenas seleção de cliente quando shouldShowProductsPanel é false
+            <>
+              {showClientForm ? (
+                <ClientForm
+                  clientForm={clientForm}
+                  onUpdateForm={handleUpdateClientForm}
+                  onSave={handleSaveClient}
+                  onCancel={handleCancelClientForm}
+                />
+              ) : (
+                <ClientSelectionVenda
+                  selectedProducts={selectedProducts}
+                  onSelectClient={handleSelectClient}
+                  onShowForm={handleShowClientForm}
+                  onSelectProduct={handleSelectProduct}
+                  onBack={handleBackFromClientSelection}
+                  hideProductsSidebar={isMobileDevice}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

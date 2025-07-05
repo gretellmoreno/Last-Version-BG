@@ -47,17 +47,21 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
     setError(null);
     
     try {
+      console.log('🔍 Carregando profissionais para o salão:', currentSalon.id);
       const { data, error } = await supabaseService.professionals.list(currentSalon.id);
       
       if (error) {
+        console.error('❌ Erro ao carregar profissionais:', error);
         setError(error);
         return;
       }
       
+      console.log('✅ Profissionais carregados:', data?.length || 0, 'profissionais encontrados');
+      console.log('📋 Dados dos profissionais:', data);
       setProfessionals(data || []);
     } catch (err) {
+      console.error('💥 Erro inesperado ao carregar profissionais:', err);
       setError('Erro inesperado ao carregar profissionais');
-      console.error('Erro ao carregar profissionais:', err);
     } finally {
       setLoading(false);
     }

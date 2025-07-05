@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { X, User } from 'lucide-react';
-import { formatPhone, isValidPhone } from '../utils/phoneUtils';
+import { X, User, Trash2, Phone, Mail, Hash, Calendar } from 'lucide-react';
+import { formatPhone, isValidPhone, formatCPF } from '../utils/phoneUtils';
 import { Client } from '../types';
-import DatePickerCalendar from './DatePickerCalendar';
 
 interface ClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (clientData: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => Promise<void>;
   editingClient?: Client | null;
+  onDelete?: () => void;
   loading?: boolean;
+  isMobile?: boolean;
 }
 
 interface ClientFormData {
@@ -20,12 +21,20 @@ interface ClientFormData {
   birth_date: string;
 }
 
+interface FormErrors {
+  name?: string;
+  phone?: string;
+  email?: string;
+}
+
 export default function ClientModal({
   isOpen,
   onClose,
   onSave,
   editingClient,
-  loading = false
+  onDelete,
+  loading = false,
+  isMobile = false
 }: ClientModalProps) {
   const [clientForm, setClientForm] = useState<ClientFormData>({
     name: '',
@@ -34,6 +43,21 @@ export default function ClientModal({
     cpf: '',
     birth_date: ''
   });
+
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [internalIsMobile, setInternalIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setInternalIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const isMobileDevice = isMobile || internalIsMobile;
 
   // Preencher formulário quando editando
   useEffect(() => {
@@ -54,15 +78,38 @@ export default function ClientModal({
         birth_date: ''
       });
     }
+    setErrors({});
   }, [editingClient, isOpen]);
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    
+    if (!clientForm.name.trim()) {
+      newErrors.name = 'Nome é obrigatório';
+    }
+    
+    if (!clientForm.phone.trim()) {
+      newErrors.phone = 'Telefone é obrigatório';
+    } else if (!isValidPhone(clientForm.phone)) {
+      newErrors.phone = 'Telefone deve ter 10 ou 11 dígitos';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleUpdateForm = (field: keyof ClientFormData, value: string) => {
     if (field === 'phone') {
-      // Aplicar máscara no telefone
       const formattedPhone = formatPhone(value);
       setClientForm(prev => ({
         ...prev,
         [field]: formattedPhone
+      }));
+    } else if (field === 'cpf') {
+      const formattedCPF = formatCPF(value);
+      setClientForm(prev => ({
+        ...prev,
+        [field]: formattedCPF
       }));
     } else {
       setClientForm(prev => ({
@@ -70,16 +117,25 @@ export default function ClientModal({
         [field]: value
       }));
     }
+    
+    // Limpar erro do campo quando user começar a digitar
+    if (errors[field as keyof FormErrors]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: undefined
+      }));
+    }
   };
 
   const isFormValid = () => {
     return clientForm.name.trim() !== '' && 
            clientForm.phone.trim() !== '' && 
-           isValidPhone(clientForm.phone);
+           isValidPhone(clientForm.phone) &&
+           Object.keys(errors).length === 0;
   };
 
   const handleSave = async () => {
-    if (!isFormValid() || loading) return;
+    if (!validateForm() || loading) return;
     
     const clientData = {
       name: clientForm.name.trim(),
@@ -92,6 +148,13 @@ export default function ClientModal({
     await onSave(clientData);
   };
 
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete();
+      onClose();
+    }
+  };
+
   const handleCancel = () => {
     onClose();
   };
@@ -101,147 +164,176 @@ export default function ClientModal({
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       
-      {/* Modal */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] bg-white rounded-lg shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+      {/* Modal - responsivo e compacto */}
+      <div className={`
+        absolute bg-white shadow-2xl
+        ${isMobileDevice 
+          ? 'inset-x-4 top-1/2 transform -translate-y-1/2 rounded-2xl' 
+          : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[380px] rounded-2xl'
+        }
+      `}>
+        {/* Header compacto */}
+        <div className="flex items-center justify-between p-3 border-b border-gray-100">
           <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center">
-              <User size={12} className="text-indigo-600" />
+            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <User size={16} className="text-indigo-600" />
             </div>
-            <h2 className="text-sm font-medium text-gray-900">
-              {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
-            </h2>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">
+                {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+              </h2>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
-            disabled={loading}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <X size={16} className="text-gray-500" />
+            <X size={18} className="text-gray-400" />
           </button>
         </div>
 
         {/* Conteúdo */}
-        <div className="p-4">
-          <div className="grid grid-cols-2 gap-6">
-            {/* Coluna esquerda */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-medium text-gray-900">
-                Informações Pessoais
-              </h3>
-              
-              {/* Nome */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Nome <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="ex.: João Silva"
-                  value={clientForm.name}
-                  onChange={(e) => handleUpdateForm('name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  disabled={loading}
-                />
-              </div>
+        <div className="p-4 space-y-3">
+          {/* Nome */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Nome Completo
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: João Silva"
+              value={clientForm.name}
+              onChange={(e) => handleUpdateForm('name', e.target.value)}
+              className={`w-full px-3 py-2.5 border rounded-lg text-sm transition-colors ${
+                errors.name 
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
+                  : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500/20'
+              } focus:ring-2 focus:outline-none`}
+              style={{ fontSize: isMobileDevice ? '16px' : '14px' }}
+              disabled={loading}
+            />
+            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          </div>
 
-              {/* E-mail */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  E-mail
-                </label>
-                <input
-                  type="email"
-                  placeholder="exemplo@dominio.com"
-                  value={clientForm.email}
-                  onChange={(e) => handleUpdateForm('email', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  disabled={loading}
-                />
-              </div>
-
-              {/* Telefone */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Telefone <span className="text-red-500">*</span>
-                </label>
-                <div className="flex space-x-2">
-                  <select className="px-2 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-sm w-16" disabled={loading}>
-                    <option>+55</option>
-                  </select>
-                  <input
-                    type="tel"
-                    placeholder="(11) 99999-9999"
-                    value={clientForm.phone}
-                    onChange={(e) => handleUpdateForm('phone', e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    disabled={loading}
-                  />
-                </div>
-                {clientForm.phone && !isValidPhone(clientForm.phone) && (
-                  <p className="text-xs text-red-500 mt-1">
-                    Formato inválido. Use (11) 99999-9999
-                  </p>
-                )}
-              </div>
+          {/* Grid compacto para telefone e email */}
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <Phone size={12} className="inline mr-1" />
+                Telefone
+              </label>
+              <input
+                type="tel"
+                placeholder="(11) 99999-9999"
+                value={clientForm.phone}
+                onChange={(e) => handleUpdateForm('phone', e.target.value)}
+                className={`w-full px-3 py-2.5 border rounded-lg text-sm transition-colors ${
+                  errors.phone 
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
+                    : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500/20'
+                } focus:ring-2 focus:outline-none`}
+                style={{ fontSize: isMobileDevice ? '16px' : '14px' }}
+                disabled={loading}
+              />
+              {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
             </div>
 
-            {/* Coluna direita */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-medium text-gray-900">
-                Informações Adicionais
-              </h3>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <Mail size={12} className="inline mr-1" />
+                E-mail (opcional)
+              </label>
+              <input
+                type="email"
+                placeholder="exemplo@email.com"
+                value={clientForm.email}
+                onChange={(e) => handleUpdateForm('email', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm transition-colors focus:border-indigo-500 focus:ring-indigo-500/20 focus:ring-2 focus:outline-none"
+                style={{ fontSize: isMobileDevice ? '16px' : '14px' }}
+                disabled={loading}
+              />
+            </div>
+          </div>
 
-              {/* CPF */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  CPF
-                </label>
-                <input
-                  type="text"
-                  placeholder="000.000.000-00"
-                  value={clientForm.cpf}
-                  onChange={(e) => handleUpdateForm('cpf', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  disabled={loading}
-                />
-              </div>
-
-              {/* Data de Nascimento */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Data de Nascimento
-                </label>
-                <input
-                  type="date"
-                  value={clientForm.birth_date}
-                  onChange={(e) => handleUpdateForm('birth_date', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  disabled={loading}
-                />
-              </div>
+          {/* Grid para CPF e Data de Nascimento */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <Hash size={12} className="inline mr-1" />
+                CPF
+              </label>
+              <input
+                type="text"
+                placeholder="000.000.000-00"
+                value={clientForm.cpf}
+                onChange={(e) => handleUpdateForm('cpf', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm transition-colors focus:border-indigo-500 focus:ring-indigo-500/20 focus:ring-2 focus:outline-none"
+                style={{ fontSize: isMobileDevice ? '16px' : '14px' }}
+                disabled={loading}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <Calendar size={12} className="inline mr-1" />
+                Nascimento (opcional)
+              </label>
+              <input
+                type="date"
+                value={clientForm.birth_date}
+                onChange={(e) => handleUpdateForm('birth_date', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm transition-all duration-200 focus:border-indigo-500 focus:ring-indigo-500/20 focus:ring-2 focus:outline-none bg-white text-gray-900 hover:border-gray-400"
+                style={{ 
+                  fontSize: isMobileDevice ? '16px' : '14px',
+                  colorScheme: 'light'
+                }}
+                disabled={loading}
+                max={new Date().toISOString().split('T')[0]}
+              />
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end space-x-2 px-4 py-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-          <button
-            onClick={handleCancel}
-            className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-            disabled={loading}
-          >
-            Cancelar
-          </button>
+        {/* Footer fixo e compacto */}
+        <div className="flex items-center justify-between p-3 border-t border-gray-100 bg-white rounded-b-2xl">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 transition-colors"
+              disabled={loading}
+            >
+              Cancelar
+            </button>
+            {editingClient && onDelete && (
+              <button
+                onClick={handleDelete}
+                className="px-3 py-2 text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                disabled={loading}
+              >
+                <Trash2 size={14} />
+                Deletar
+              </button>
+            )}
+          </div>
           <button
             onClick={handleSave}
             disabled={!isFormValid() || loading}
-            className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className={`px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center space-x-2 ${
+              isFormValid() && !loading
+                ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
           >
-            {loading ? 'Salvando...' : 'Salvar'}
+            {loading ? (
+              <>
+                <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+                <span>Salvando...</span>
+              </>
+            ) : (
+              <span>{editingClient ? 'Atualizar' : 'Criar Cliente'}</span>
+            )}
           </button>
         </div>
       </div>

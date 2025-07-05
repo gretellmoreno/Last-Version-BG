@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { Search, Scissors, Package, MoreVertical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Scissors, Package, Edit3, Trash2 } from 'lucide-react';
 import Header from '../components/Header';
 import ServiceModal from '../components/ServiceModal';
 import ProductModal from '../components/ProductModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
-import ActionModal from '../components/ActionModal';
+
 import { useService } from '../contexts/ServiceContext';
 import { useProduct } from '../contexts/ProductContext';
 import { Service, Product, Servico, Produto } from '../types';
 
-export default function Servicos() {
+export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSidebar?: () => void } = {}) {
   const [activeTab, setActiveTab] = useState<'servicos' | 'produtos'>('servicos');
-  const [searchTerm, setSearchTerm] = useState('');
+
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -19,20 +19,25 @@ export default function Servicos() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const [actionModalOpen, setActionModalOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const [isMobile, setIsMobile] = useState(false);
   
   const { services, addService, updateService, removeService } = useService();
   const { products, addProduct, updateProduct, removeProduct } = useProduct();
 
-  const filteredServices = services?.filter(service =>
-    service.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
 
-  const filteredProducts = products?.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const filteredServices = services || [];
+
+  const filteredProducts = products || [];
 
   const handleNew = () => {
     if (activeTab === 'servicos') {
@@ -47,13 +52,11 @@ export default function Servicos() {
   const handleEditService = (service: Service) => {
     setEditingService(service);
     setIsServiceModalOpen(true);
-    setActionModalOpen(false);
   };
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setIsProductModalOpen(true);
-    setActionModalOpen(false);
   };
 
   const handleSaveService = async (service: Omit<Service, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => {
@@ -81,7 +84,6 @@ export default function Servicos() {
       setProductToDelete(item as Product);
     }
     setDeleteModalOpen(true);
-    setActionModalOpen(false);
   };
 
   const handleConfirmDelete = async () => {
@@ -100,17 +102,6 @@ export default function Servicos() {
     setDeleteModalOpen(false);
     setServiceToDelete(null);
     setProductToDelete(null);
-  };
-
-  const handleActionsClick = (item: Service | Product) => {
-    if (activeTab === 'servicos') {
-      setSelectedService(item as Service);
-      setSelectedProduct(null);
-    } else {
-      setSelectedProduct(item as Product);
-      setSelectedService(null);
-    }
-    setActionModalOpen(true);
   };
 
   const formatDuration = (minutes: number) => {
@@ -159,236 +150,283 @@ export default function Servicos() {
     estoque: product.stock
   });
 
+  const handleMenuClick = () => {
+    if (onToggleMobileSidebar) {
+      onToggleMobileSidebar();
+    }
+  };
+
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0">
       <Header 
         title="Serviços e Produtos" 
         onAddClick={handleNew}
+        onMenuClick={handleMenuClick}
       />
       
-      <div className="flex-1 bg-gray-50">
-        <div className="border-b border-gray-200 bg-white">
-          <nav className="flex px-6">
+      <div className="flex-1 bg-gray-50 min-h-0">
+        {/* Tabs */}
+        <div className="border-b border-gray-200 bg-white p-2">
+          <nav className="flex bg-gray-100 rounded-xl p-1">
             <button
               onClick={() => setActiveTab('servicos')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm mr-8 ${
+              className={`flex-1 py-2.5 px-4 font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg ${
                 activeTab === 'servicos'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'text-purple-600 bg-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <Scissors size={16} />
-                <span>Serviços</span>
-              </div>
+              <Scissors size={16} />
+              <span>Serviços</span>
             </button>
             <button
               onClick={() => setActiveTab('produtos')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`flex-1 py-2.5 px-4 font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg ${
                 activeTab === 'produtos'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'text-green-600 bg-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <Package size={16} />
-                <span>Produtos</span>
-              </div>
+              <Package size={16} />
+              <span>Produtos</span>
             </button>
           </nav>
         </div>
 
-        <div className="p-6">
+        {/* Content */}
+        <div className="flex-1 p-4 md:p-6 overflow-hidden">
+          {/* Serviços */}
           {activeTab === 'servicos' && (
-            <div className="bg-white rounded-lg shadow-sm">
-              {/* Barra de busca */}
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Buscar Serviços</h3>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Busque por nome do serviço..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* Lista de serviços em formato tabular */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Serviço
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Preço
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Duração
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Comissão
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredServices.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center">
-                          <p className="text-gray-500">Nenhum serviço encontrado</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredServices.map((service) => (
-                        <tr key={service.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                                <Scissors className="h-4 w-4 text-indigo-600" />
-                              </div>
-                              <div className="ml-4">
-                              <span className="text-sm font-medium text-gray-900">
-                                  {service.name}
-                              </span>
-                                {service.description && (
-                                  <p className="text-xs text-gray-500">{service.description}</p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-semibold text-gray-900">
+            <>
+              {isMobile ? (
+                // Cards para mobile
+                <div className="space-y-1.5 h-[calc(100vh-180px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
+                  {filteredServices.length === 0 ? (
+                    <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                      <p className="text-gray-500">Nenhum serviço encontrado</p>
+                    </div>
+                  ) : (
+                    filteredServices.map((service) => (
+                      <div 
+                        key={service.id} 
+                        onClick={() => handleEditService(service)}
+                        className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-purple-200 transition-all duration-200 cursor-pointer active:scale-95"
+                      >
+                        {/* Ponto colorido no canto superior direito */}
+                        <div className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full"></div>
+                        
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex-1 pr-4">
+                            <h3 className="font-medium text-gray-900 text-xs">{service.name}</h3>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div>
+                            <p className="font-semibold text-xs text-gray-900">
                               R$ {service.price.toFixed(2).replace('.', ',')}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-600">
-                              {formatDuration(service.estimated_time)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-indigo-600 font-medium">
-                              {service.commission_rate}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <button
-                              onClick={() => handleActionsClick(service)}
-                              className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                            >
-                              <MoreVertical size={16} className="text-gray-500" />
-                            </button>
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs text-gray-600">{formatDuration(service.estimated_time)}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs text-purple-600">{service.commission_rate}%</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                // Tabela para desktop
+                <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Serviço
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Preço
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Duração
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Comissão
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredServices.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-12 text-center">
+                            <p className="text-gray-500">Nenhum serviço encontrado</p>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'produtos' && (
-            <div className="bg-white rounded-lg shadow-sm">
-              {/* Barra de busca */}
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Buscar Produtos</h3>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Busque por nome do produto..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* Lista de produtos em formato tabular */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Produto
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Preço
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estoque
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Margem
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredProducts.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center">
-                          <p className="text-gray-500">Nenhum produto encontrado</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredProducts.map((product) => (
-                        <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                      ) : (
+                        filteredServices.map((service) => (
+                          <tr 
+                            key={service.id} 
+                            onClick={() => handleEditService(service)}
+                            className="hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                              <div className="flex-shrink-0 h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                                <Package className="h-4 w-4 text-indigo-600" />
+                                <div className="flex-shrink-0 h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                  <Scissors className="h-4 w-4 text-purple-600" />
                                 </div>
-                              <div className="ml-4">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {product.name}
-                                </span>
-                                {product.description && (
-                                  <p className="text-xs text-gray-500">{product.description}</p>
-                                )}
-                              </div>
+                                <div className="ml-4">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {service.name}
+                                  </span>
+                                  {service.description && (
+                                    <p className="text-xs text-gray-500">{service.description}</p>
+                                  )}
+                                </div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="text-sm font-semibold text-gray-900">
-                              R$ {product.price.toFixed(2).replace('.', ',')}
+                                R$ {service.price.toFixed(2).replace('.', ',')}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="text-sm text-gray-600">
-                              {product.stock} und.
+                                {formatDuration(service.estimated_time)}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-indigo-600 font-medium">
-                              {product.profit_margin}%
+                              <span className="text-sm text-purple-600 font-medium">
+                                {service.commission_rate}%
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                              <button
-                              onClick={() => handleActionsClick(product)}
-                                className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                              >
-                              <MoreVertical size={16} className="text-gray-500" />
-                              </button>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Produtos */}
+          {activeTab === 'produtos' && (
+            <>
+              {isMobile ? (
+                // Cards para mobile
+                <div className="space-y-1.5 h-[calc(100vh-180px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
+                  {filteredProducts.length === 0 ? (
+                    <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                      <p className="text-gray-500">Nenhum produto encontrado</p>
+                    </div>
+                  ) : (
+                    filteredProducts.map((product) => (
+                      <div 
+                        key={product.id} 
+                        onClick={() => handleEditProduct(product)}
+                        className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-green-200 transition-all duration-200 cursor-pointer active:scale-95"
+                      >
+                        {/* Ponto colorido no canto superior direito */}
+                        <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full"></div>
+                        
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex-1 pr-4">
+                            <h3 className="font-medium text-gray-900 text-xs">{product.name}</h3>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div>
+                            <p className="font-semibold text-xs text-gray-900">
+                              R$ {product.price.toFixed(2).replace('.', ',')}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs text-gray-600">{product.stock} und.</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs text-green-600">{product.profit_margin.toFixed(1)}%</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                // Tabela para desktop
+                <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Produto
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Preço
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Estoque
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Margem
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-12 text-center">
+                            <p className="text-gray-500">Nenhum produto encontrado</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredProducts.map((product) => (
+                          <tr 
+                            key={product.id} 
+                            onClick={() => handleEditProduct(product)}
+                            className="hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                                  <Package className="h-4 w-4 text-green-600" />
+                                </div>
+                                <div className="ml-4">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {product.name}
+                                  </span>
+                                  {product.description && (
+                                    <p className="text-xs text-gray-500">{product.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-sm font-semibold text-gray-900">
+                                R$ {product.price.toFixed(2).replace('.', ',')}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-sm text-gray-600">
+                                {product.stock} und.
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-sm text-green-600 font-medium">
+                                {product.profit_margin.toFixed(1)}%
+                              </span>
                             </td>
                           </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -399,6 +437,7 @@ export default function Servicos() {
         onClose={() => setIsServiceModalOpen(false)}
         onSave={(servico) => handleSaveService(convertServicoToService(servico))}
         editingService={editingService ? convertServiceToServico(editingService) : null}
+        onDelete={editingService ? () => handleDeleteClick(editingService) : undefined}
       />
 
       <ProductModal
@@ -406,6 +445,7 @@ export default function Servicos() {
         onClose={() => setIsProductModalOpen(false)}
         onSave={(produto) => handleSaveProduct(convertProdutoToProduct(produto))}
         editingProduct={editingProduct ? convertProductToProduto(editingProduct) : null}
+        onDelete={editingProduct ? () => handleDeleteClick(editingProduct) : undefined}
       />
 
       <DeleteConfirmationModal
@@ -414,15 +454,6 @@ export default function Servicos() {
         onConfirm={handleConfirmDelete}
         title={`Excluir ${activeTab === 'servicos' ? 'Serviço' : 'Produto'}`}
         message={`Tem certeza que deseja excluir este ${activeTab === 'servicos' ? 'serviço' : 'produto'}? Esta ação não pode ser desfeita.`}
-      />
-
-      <ActionModal
-        isOpen={actionModalOpen}
-        onClose={() => setActionModalOpen(false)}
-        onEdit={activeTab === 'servicos' ? handleEditService : handleEditProduct}
-        onDelete={handleDeleteClick}
-        item={selectedService || selectedProduct}
-        type={activeTab === 'servicos' ? 'service' : 'product'}
       />
     </div>
   );

@@ -9,6 +9,7 @@ interface ClientSelectionProps {
   onShowForm: () => void;
   onToggleService: (serviceId: string) => void;
   onBack?: () => void;
+  hideServicesSidebar?: boolean;
 }
 
 export default function ClientSelection({
@@ -16,7 +17,8 @@ export default function ClientSelection({
   onSelectClient,
   onShowForm,
   onToggleService,
-  onBack
+  onBack,
+  hideServicesSidebar = false
 }: ClientSelectionProps) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const { clients } = useClient();
@@ -55,11 +57,11 @@ export default function ClientSelection({
   };
 
   return (
-    <div className="flex h-full">
+    <div className={`flex h-full ${hideServicesSidebar ? 'w-full' : ''}`}>
       {/* Conteúdo principal da seleção de cliente */}
-      <div className="flex-1 flex flex-col">
+      <div className={`flex flex-col ${hideServicesSidebar ? 'w-full' : 'flex-1'}`}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className={`border-b border-gray-200 ${hideServicesSidebar ? 'p-4' : 'p-6'}`}>
           <div className="flex items-center space-x-3 mb-4">
             {onBack && (
               <button
@@ -70,7 +72,9 @@ export default function ClientSelection({
                 <ArrowLeft size={20} className="text-gray-500" />
               </button>
             )}
-            <h2 className="text-xl font-semibold text-gray-900">Selecionar cliente</h2>
+            <h2 className={`font-semibold text-gray-900 ${hideServicesSidebar ? 'text-lg' : 'text-xl'}`}>
+              Selecionar cliente
+            </h2>
           </div>
           
           {/* Barra de busca */}
@@ -81,37 +85,52 @@ export default function ClientSelection({
               placeholder="Pesquisar cliente ou deixar em branco"
               value={clientSearchTerm}
               onChange={(e) => setClientSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className={`w-full pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                hideServicesSidebar ? 'py-2.5 text-base' : 'py-3'
+              }`}
+              style={hideServicesSidebar ? { fontSize: '16px' } : {}} // Evita zoom no iOS
             />
           </div>
         </div>
 
         {/* Lista de opções */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className={`flex-1 overflow-y-auto ${hideServicesSidebar ? 'p-4' : 'p-6'}`}>
           <div className="space-y-3">
             {/* Cadastrar cliente */}
             <div 
               onClick={onShowForm}
-              className="flex items-center space-x-4 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition-colors"
+              className={`flex items-center space-x-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition-colors ${
+                hideServicesSidebar ? 'p-3 mobile-client-list-item' : 'p-4'
+              }`}
             >
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <Plus size={20} className="text-purple-600" />
+              <div className={`bg-purple-100 rounded-full flex items-center justify-center ${
+                hideServicesSidebar ? 'w-10 h-10' : 'w-12 h-12'
+              }`}>
+                <Plus size={hideServicesSidebar ? 18 : 20} className="text-purple-600" />
               </div>
               <div>
-                <h3 className="font-medium text-gray-900">Cadastrar cliente</h3>
+                <h3 className={`font-medium text-gray-900 ${hideServicesSidebar ? 'text-sm' : ''}`}>
+                  Cadastrar cliente
+                </h3>
               </div>
             </div>
 
             {/* Sem reserva */}
             <div 
               onClick={() => onSelectClient({ nome: 'Sem reserva', id: 'no-reservation' })}
-              className="flex items-center space-x-4 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition-colors"
+              className={`flex items-center space-x-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition-colors ${
+                hideServicesSidebar ? 'p-3 mobile-client-list-item' : 'p-4'
+              }`}
             >
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <UserPlus size={20} className="text-purple-600" />
+              <div className={`bg-purple-100 rounded-full flex items-center justify-center ${
+                hideServicesSidebar ? 'w-10 h-10' : 'w-12 h-12'
+              }`}>
+                <UserPlus size={hideServicesSidebar ? 18 : 20} className="text-purple-600" />
               </div>
               <div>
-                <h3 className="font-medium text-gray-900">Sem reserva</h3>
+                <h3 className={`font-medium text-gray-900 ${hideServicesSidebar ? 'text-sm' : ''}`}>
+                  Sem reserva
+                </h3>
               </div>
             </div>
 
@@ -127,16 +146,24 @@ export default function ClientSelection({
                   phone: cliente.phone,
                   email: cliente.email
                 })}
-                className="flex items-center space-x-4 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition-colors"
+                className={`flex items-center space-x-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition-colors ${
+                  hideServicesSidebar ? 'p-3 mobile-client-list-item' : 'p-4'
+                }`}
               >
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 font-medium text-lg">
+                <div className={`bg-purple-100 rounded-full flex items-center justify-center ${
+                  hideServicesSidebar ? 'w-10 h-10' : 'w-12 h-12'
+                }`}>
+                  <span className={`text-purple-600 font-medium ${hideServicesSidebar ? 'text-sm' : 'text-lg'}`}>
                     {cliente.name?.charAt(0).toUpperCase() || 'C'}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900">{getClientDisplayName(cliente)}</h3>
-                  <p className="text-sm text-gray-500">{cliente.email || cliente.phone}</p>
+                  <h3 className={`font-medium text-gray-900 ${hideServicesSidebar ? 'text-sm' : ''}`}>
+                    {getClientDisplayName(cliente)}
+                  </h3>
+                  <p className={`text-gray-500 ${hideServicesSidebar ? 'text-xs' : 'text-sm'}`}>
+                    {cliente.email || cliente.phone}
+                  </p>
                 </div>
               </div>
             ))}
@@ -144,7 +171,8 @@ export default function ClientSelection({
         </div>
       </div>
 
-      {/* Sidebar direita com serviços */}
+      {/* Sidebar direita com serviços - condicional */}
+      {!hideServicesSidebar && (
       <div className="w-72 bg-gray-50 border-l border-gray-200 p-4">
         <h3 className="font-semibold text-gray-900 mb-3 text-sm">Selecionar um serviço</h3>
         
@@ -183,6 +211,7 @@ export default function ClientSelection({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

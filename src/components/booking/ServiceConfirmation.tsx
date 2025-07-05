@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Plus, Trash2, Package, Edit2, Check, X as XIcon } from 'lucide-react';
+import { User, Plus, Trash2, Package, Edit2, Check, X as XIcon, UserCheck } from 'lucide-react';
 import { useService } from '../../contexts/ServiceContext';
 import { useProfessional } from '../../contexts/ProfessionalContext';
 import { useProduct } from '../../contexts/ProductContext';
@@ -10,6 +10,7 @@ interface ServiceConfirmationProps {
   selectedProducts: string[];
   serviceProfessionals: { serviceId: string; professionalId: string }[];
   onShowClientSelection: () => void;
+  onShowProfessionalSelection: () => void;
   onBackToServices: () => void;
   onShowProductSelection: () => void;
   onUpdateServiceProfessionals: (professionals: { serviceId: string; professionalId: string }[]) => void;
@@ -19,6 +20,7 @@ interface ServiceConfirmationProps {
   hasPreselectedDateTime?: boolean;
   isLoading?: boolean;
   isNewAppointment?: boolean; // Nova prop para distinguir novo agendamento vs edição
+  hideClientSection?: boolean; // Prop para esconder seção de cliente em mobile
 }
 
 export default function ServiceConfirmation({
@@ -27,6 +29,7 @@ export default function ServiceConfirmation({
   selectedProducts,
   serviceProfessionals,
   onShowClientSelection,
+  onShowProfessionalSelection,
   onBackToServices,
   onShowProductSelection,
   onUpdateServiceProfessionals,
@@ -35,7 +38,8 @@ export default function ServiceConfirmation({
   onToggleProduct,
   hasPreselectedDateTime = false,
   isLoading = false,
-  isNewAppointment = false
+  isNewAppointment = false,
+  hideClientSection = false
 }: ServiceConfirmationProps) {
   const { services } = useService();
   const { products } = useProduct();
@@ -56,16 +60,7 @@ export default function ServiceConfirmation({
 
   // Obter profissional selecionado (assumindo que todos os serviços têm o mesmo profissional)
   const selectedProfessionalId = serviceProfessionals.length > 0 ? serviceProfessionals[0].professionalId : '';
-  
-  // Handler para mudança de profissional
-  const handleProfessionalChange = (professionalId: string) => {
-    // Aplicar o profissional selecionado a todos os serviços
-    const newServiceProfessionals = selectedServices.map(serviceId => ({
-      serviceId,
-      professionalId
-    }));
-    onUpdateServiceProfessionals(newServiceProfessionals);
-  };
+  const selectedProfessional = professionals?.find(p => p.id === selectedProfessionalId);
 
   // Função para obter preço atual do serviço (editado ou original)
   const getServicePrice = (service: any) => {
@@ -189,8 +184,9 @@ export default function ServiceConfirmation({
   };
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar esquerda com cliente */}
+    <div className={`flex h-full ${hideClientSection ? 'w-full' : ''}`}>
+      {/* Sidebar esquerda com cliente - condicional */}
+      {!hideClientSection && (
       <div 
         className={`w-48 bg-gray-50 border-r border-gray-200 flex flex-col ${selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
         onClick={selectedClient ? onShowClientSelection : undefined}
@@ -230,9 +226,10 @@ export default function ServiceConfirmation({
           )}
         </div>
       </div>
+      )}
 
       {/* Conteúdo principal */}
-      <div className="flex-1 flex flex-col">
+      <div className={`flex flex-col ${hideClientSection ? 'w-full' : 'flex-1'}`}>
 
         {/* Lista de serviços */}
         <div className="flex-1 overflow-y-auto p-6">
@@ -309,34 +306,68 @@ export default function ServiceConfirmation({
               ))}
             </div>
 
-            {/* Seletor de Profissional - só aparece em novo agendamento quando não há profissional pré-selecionado */}
+            {/* Seletores de Cliente e Profissional - só aparece em novo agendamento quando não há profissional pré-selecionado */}
             {isNewAppointment && !hasPreselectedDateTime && (
-              <div className="space-y-4 mt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Profissional</h3>
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Profissional responsável
-                  </label>
-                  <select
-                    value={selectedProfessionalId}
-                    onChange={(e) => handleProfessionalChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              <div className="space-y-3 mt-6">
+                <h3 className="text-base font-medium text-gray-900 mb-2">Cliente e Profissional</h3>
+                
+                {/* Grid com os dois botões */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Botão de Selecionar Cliente */}
+                  <button
+                    onClick={onShowClientSelection}
+                    className="bg-white border-2 border-purple-200 rounded-lg p-3 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200 text-left group"
                   >
-                    <option value="">Selecionar profissional</option>
-                    {professionals?.map((professional) => (
-                      <option key={professional.id} value={professional.id}>
-                        {professional.name.replace('[Exemplo] ', '')}
-                      </option>
-                    ))}
-                  </select>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                        {selectedClient ? (
+                          <UserCheck size={16} className="text-purple-600" />
+                        ) : (
+                          <User size={16} className="text-purple-600" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 text-sm">
+                          {selectedClient ? selectedClient.nome : 'Selecionar Cliente'}
+                        </h4>
+                        {selectedClient && (
+                          <p className="text-xs text-gray-500">Cliente selecionado</p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Botão de Selecionar Profissional */}
+                  <button
+                    onClick={onShowProfessionalSelection}
+                    className="bg-white border-2 border-blue-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 text-left group"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                        {selectedProfessional ? (
+                          <UserCheck size={16} className="text-blue-600" />
+                        ) : (
+                          <User size={16} className="text-blue-600" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 text-sm">
+                          {selectedProfessional ? selectedProfessional.name.replace('[Exemplo] ', '') : 'Selecionar Profissional'}
+                        </h4>
+                        {selectedProfessional && (
+                          <p className="text-xs text-gray-500">Profissional selecionado</p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
                 </div>
               </div>
             )}
 
             {/* Produtos selecionados */}
             {selectedProducts.length > 0 && (
-              <div className="space-y-4 mt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Produtos</h3>
+              <div className="space-y-3 mt-6">
+                <h3 className="text-base font-medium text-gray-900 mb-2">Produtos</h3>
                 {products?.filter(product => selectedProducts.includes(product.id)).map((product) => (
                   <div key={product.id} className="bg-white border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">

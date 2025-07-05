@@ -15,15 +15,72 @@
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
+@keyframes strongPulse {
+  0%, 100% { 
+    opacity: 1; 
+    box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+  }
+  50% { 
+    opacity: 0.4; 
+    box-shadow: 0 0 0 6px rgba(147, 51, 234, 0);
+  }
+}
+@keyframes gentlePulse {
+  0%, 100% { 
+    opacity: 1; 
+    border-color: rgba(147, 51, 234, 0.3);
+  }
+  50% { 
+    opacity: 0.8; 
+    border-color: rgba(147, 51, 234, 0.6);
+  }
+}
 .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
 .animate-slideIn { animation: slideIn 0.3s ease-out; }
 .animate-scaleIn { animation: scaleIn 0.2s ease-out; }
+.animate-strong-pulse { animation: strongPulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-gentle-pulse { animation: gentlePulse 3s ease-in-out infinite; }
 
 /* Scrollbar customizada */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Scrollbar ultra fina que desaparece */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 0;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+  transition: background-color 0.3s ease, opacity 0.3s ease;
+}
+
+.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.7);
+}
+
+.scrollbar-thin::-webkit-scrollbar-corner {
+  background: transparent;
+}
 
 /* Utilitários de Estilo (Mantidos como estavam) */
 .transition-smooth { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -58,19 +115,50 @@
 .barber-calendar .rbc-time-content { border-top: none; }
 .barber-calendar .rbc-day-slot { border-left: 1px solid #e2e8f0; }
 
-/* Coluna de Horários (Gutter) */
-.barber-calendar .rbc-time-gutter { background-color: #f8fafc; border-right: 1px solid #e2e8f0; }
-.barber-calendar .rbc-time-gutter .rbc-timeslot-group { border-bottom: 1px solid #f1f5f9; }
-.barber-calendar .rbc-time-gutter .rbc-time-slot { border-top: none !important; min-height: 20px; color: #6b7280; font-size: 12px; font-weight: 500; text-align: center; padding: 4px; }
+/* Coluna de Horários (Gutter) - Compacta e Alinhada */
+.barber-calendar .rbc-time-gutter { 
+  background-color: #f8fafc; 
+  border-right: 1px solid #e2e8f0; 
+  width: 60px !important; /* Reduzido de 80px para 60px - mais compacto */
+  min-width: 60px !important;
+}
 
-/* Slots de Tempo na Agenda */
-.barber-calendar .rbc-day-slot .rbc-timeslot-group { border-bottom: 1px solid #e2e8f0; }
+.barber-calendar .rbc-time-gutter .rbc-timeslot-group { 
+  border-bottom: 1px solid #f1f5f9; 
+  min-height: var(--rbc-timeslot-group-height) !important;
+  height: var(--rbc-timeslot-group-height) !important;
+}
+
+.barber-calendar .rbc-time-gutter .rbc-time-slot { 
+  border-top: none !important; 
+  min-height: var(--rbc-slot-height) !important; 
+  height: var(--rbc-slot-height) !important;
+  color: #374151; 
+  font-size: 11px; 
+  font-weight: 600; 
+  text-align: center; 
+  padding: 2px 1px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+/* Slots de Tempo na Agenda - Sincronizados com Horários */
+.barber-calendar .rbc-day-slot .rbc-timeslot-group { 
+  border-bottom: 1px solid #e2e8f0; 
+  min-height: var(--rbc-timeslot-group-height) !important;
+  height: var(--rbc-timeslot-group-height) !important;
+}
+
 .barber-calendar .rbc-day-slot .rbc-time-slot {
   border-top: 1px solid #f8fafc;
-  min-height: 20px;
-  position: relative; /* Mantido sem !important para permitir que a biblioteca o sobrescreva */
+  min-height: var(--rbc-slot-height) !important;
+  height: var(--rbc-slot-height) !important;
+  position: relative;
   cursor: pointer;
-  padding: 0 !important; /* Remover padding dos slots para eventos ocuparem toda largura */
+  padding: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* Eventos (Agendamentos) */
@@ -263,7 +351,7 @@
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 .professionals-header .flex { display: flex; }
-.professionals-header .time-column { width: 80px; /* Deve corresponder à largura do rbc-time-gutter */ }
+.professionals-header .time-column { width: 60px; /* Deve corresponder à largura do rbc-time-gutter */ }
 .professional-column {
   flex: 1;
   padding: 16px 8px;
@@ -295,7 +383,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.barber-calendar .rbc-time-gutter { width: 80px !important; }
+.barber-calendar .rbc-time-gutter { width: 60px !important; }
 .barber-calendar .rbc-time-header-gutter,
 .barber-calendar .rbc-time-header .rbc-header,
 .barber-calendar .rbc-time-header-content {
@@ -316,8 +404,8 @@
 
 /* Tablets */
 @media (max-width: 1024px) {
-  .barber-calendar .rbc-time-gutter { width: 70px !important; }
-  .professionals-header .time-column { width: 70px; }
+  .barber-calendar .rbc-time-gutter { width: 55px !important; }
+  .professionals-header .time-column { width: 55px; }
   .professional-avatar { width: 48px; height: 48px; font-size: 14px; }
   .professional-name { font-size: 13px; }
   .professional-column { padding: 12px 6px; }
@@ -439,30 +527,32 @@
     font-family: inherit;
   }
   
-  /* Coluna de horários mobile - mais compacta */
+  /* Coluna de horários mobile - compacta e alinhada */
   .mobile-calendar-container .rbc-time-gutter {
-    width: 70px !important;
-    min-width: 70px !important;
+    width: 50px !important; /* Ainda mais compacto para mobile */
+    min-width: 50px !important;
     background-color: #f8fafc;
     border-right: 2px solid #e2e8f0;
   }
   
   .mobile-calendar-container .rbc-time-gutter .rbc-time-slot {
-    font-size: 10px;
-    padding: 1px 2px;
-    min-height: 25px;
-    height: 25px;
+    font-size: 9px; /* Fonte menor para mobile */
+    padding: 1px !important; /* Padding mínimo */
+    min-height: 25px !important; /* Altura para melhor toque */
+    height: 25px !important;
     color: #374151;
     font-weight: 600;
     text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
   }
   
   .mobile-calendar-container .rbc-time-gutter .rbc-timeslot-group {
-    min-height: 100px;
-    height: 100px;
+    min-height: 100px !important; /* 4 slots × 25px = 100px */
+    height: 100px !important;
     border-bottom: 1px solid #e2e8f0;
   }
   
@@ -483,24 +573,30 @@
     min-width: 0; /* Permite que o conteúdo se ajuste */
   }
   
-  /* Slots de tempo mobile */
+  /* Slots de tempo mobile - sincronizados com horários */
   .mobile-calendar-container .rbc-day-slot .rbc-time-slot {
-    min-height: 25px; /* Reduzido para mobile */
-    height: 25px;
+    min-height: 25px !important; /* Altura exata igual aos horários mobile */
+    height: 25px !important;
     touch-action: manipulation;
     border-top: 1px solid #f8fafc;
     position: relative;
     cursor: pointer;
+    pointer-events: auto !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
   }
   
   .mobile-calendar-container .rbc-day-slot .rbc-timeslot-group {
     border-bottom: 1px solid #e2e8f0;
-    min-height: 100px; /* Correspondente aos 4 slots de 25px cada */
-    height: 100px;
+    min-height: 100px !important; /* Igual aos grupos de horários mobile */
+    height: 100px !important;
   }
   
-  /* Eventos mobile - otimizados para toque */
+  /* Eventos mobile - simplificado para garantir visibilidade */
   .mobile-calendar-container .rbc-event {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     font-size: 10px !important;
     padding: 3px 5px !important;
     border-radius: 6px !important;
@@ -511,6 +607,7 @@
     transition: all 0.2s ease !important;
     cursor: pointer;
     border: 1px solid transparent !important;
+    position: relative !important;
   }
   
   .mobile-calendar-container .rbc-event:active {
@@ -529,12 +626,14 @@
     margin: 0 !important;
     z-index: 15 !important;
     position: relative !important;
+    pointer-events: auto !important;
   }
   
   /* Área de eventos mobile */
   .mobile-calendar-container .rbc-events-container {
     margin: 0 !important;
     padding: 0 !important;
+    pointer-events: none !important; /* Não bloquear cliques nos slots vazios */
   }
   
   /* Hover effects mobile - otimizados para toque */
@@ -550,32 +649,12 @@
     transition: background-color 0.15s ease;
     border-radius: 4px;
     margin: 1px;
+    pointer-events: none; /* Não bloquear cliques */
   }
   
   .mobile-calendar-container .rbc-day-slot .rbc-time-slot:active::after {
-    background-color: #dbeafe !important;
+    background-color: transparent !important;
     z-index: 6;
-    border: 2px solid #3b82f6;
-  }
-  
-  .mobile-calendar-container .rbc-day-slot .rbc-time-slot:active::before {
-    content: '+ Agendar ' attr(data-time);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 11px;
-    font-weight: 600;
-    color: #1d4ed8;
-    background-color: rgba(255, 255, 255, 0.95);
-    padding: 4px 8px;
-    border-radius: 6px;
-    z-index: 25;
-    pointer-events: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    display: block;
-    white-space: nowrap;
-    border: 1px solid #3b82f6;
   }
   
   /* Touch-friendly para eventos */
@@ -598,7 +677,7 @@
   }
   
   .mobile-calendar-container .rbc-day-slot .rbc-events-container {
-    position: relative !important;
+    
     height: 100% !important;
   }
   
@@ -648,6 +727,93 @@
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
     transform: translateZ(0); /* Força aceleração de hardware */
   }
+
+  /* Mobile Modals Responsivos */
+  .mobile-modal-enter {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  
+  .mobile-modal-enter-active {
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 300ms ease-in-out, opacity 300ms ease-in-out;
+  }
+  
+  .mobile-modal-exit {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  
+  .mobile-modal-exit-active {
+    transform: translateY(100%);
+    opacity: 0;
+    transition: transform 300ms ease-in-out, opacity 300ms ease-in-out;
+  }
+
+  /* Garantir que os modais mobile ocupem toda a largura */
+  .mobile-modal-container {
+    position: fixed;
+    inset-left: 0;
+    inset-right: 0;
+    bottom: 0;
+    top: 4rem; /* 64px */
+    background: white;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+  }
+
+  /* Ajustes específicos para componentes de formulário em mobile */
+  .mobile-form-container {
+    padding: 0.75rem;
+  }
+
+  .mobile-form-container input,
+  .mobile-form-container select,
+  .mobile-form-container textarea {
+    padding: 0.75rem;
+    font-size: 16px; /* Evita zoom no iOS */
+  }
+
+  /* Botões mais acessíveis em mobile */
+  .mobile-button {
+    min-height: 44px; /* Tamanho mínimo recomendado para toque */
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Lista de seleção de clientes mais acessível */
+  .mobile-client-list-item {
+    padding: 0.875rem;
+    min-height: 44px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  /* Evitar problemas de scroll em modais mobile */
+  .mobile-modal-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Header mais compacto em mobile */
+  .mobile-modal-header {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* Fix para garantir que o modal não interfira com a navegação */
+  body.modal-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
 }
 
 /* Mobile muito pequeno (< 480px) */
@@ -665,6 +831,8 @@
   .barber-calendar .rbc-time-gutter .rbc-time-slot {
     font-size: 8px;
     padding: 1px;
+    min-height: 20px !important; /* Altura compacta para móveis muito pequenos */
+    height: 20px !important;
   }
   
   .professional-column {
@@ -868,4 +1036,186 @@
 .barber-calendar .rbc-day-slot .rbc-events-container {
   margin: 0 !important;
   padding: 0 !important;
+}
+
+/* ========================================================================
+   ALINHAMENTO PERFEITO DOS HORÁRIOS - CONFIGURAÇÃO CRÍTICA
+======================================================================== */
+
+/* Garantir que horários e slots tenham exatamente a mesma altura */
+.barber-calendar .rbc-time-view .rbc-time-gutter .rbc-time-slot,
+.barber-calendar .rbc-time-view .rbc-day-slot .rbc-time-slot {
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+  vertical-align: top !important;
+  margin: 0 !important;
+  border-spacing: 0 !important;
+}
+
+/* Forçar alinhamento entre grupos de horários e slots */
+.barber-calendar .rbc-time-view .rbc-time-gutter .rbc-timeslot-group,
+.barber-calendar .rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Garantir que o container principal tenha altura consistente */
+.barber-calendar .rbc-time-view .rbc-time-content {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+/* Variáveis CSS para controle preciso do posicionamento */
+.barber-calendar {
+  --rbc-slot-height: 20px; /* Desktop */
+  --rbc-timeslot-group-height: 80px; /* 4 × 20px */
+}
+
+/* Garantir que o React Big Calendar use as alturas corretas */
+.barber-calendar .rbc-time-view .rbc-time-gutter .rbc-time-slot {
+  height: var(--rbc-slot-height) !important;
+  min-height: var(--rbc-slot-height) !important;
+}
+
+.barber-calendar .rbc-time-view .rbc-day-slot .rbc-time-slot {
+  height: var(--rbc-slot-height) !important;
+  min-height: var(--rbc-slot-height) !important;
+}
+
+.barber-calendar .rbc-time-view .rbc-timeslot-group {
+  height: var(--rbc-timeslot-group-height) !important;
+  min-height: var(--rbc-timeslot-group-height) !important;
+}
+
+/* Mobile: Garantir alinhamento em todos os breakpoints */
+@media (max-width: 768px) {
+  .mobile-calendar-container .rbc-time-view .rbc-time-gutter .rbc-time-slot,
+  .mobile-calendar-container .rbc-time-view .rbc-day-slot .rbc-time-slot {
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    border-spacing: 0 !important;
+  }
+  
+  .mobile-calendar-container .rbc-time-view .rbc-time-gutter .rbc-timeslot-group,
+  .mobile-calendar-container .rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .mobile-calendar-container .rbc-event {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Garantir que o posicionamento seja baseado na altura correta */
+  .mobile-calendar-container {
+    --rbc-slot-height: 25px; /* Altura mobile */
+    --rbc-timeslot-group-height: 100px; /* 4 × 25px */
+  }
+
+  /* Aplicar variáveis mobile */
+  .mobile-calendar-container .rbc-time-view .rbc-time-gutter .rbc-time-slot {
+    height: var(--rbc-slot-height) !important;
+    min-height: var(--rbc-slot-height) !important;
+  }
+
+  .mobile-calendar-container .rbc-time-view .rbc-day-slot .rbc-time-slot {
+    height: var(--rbc-slot-height) !important;
+    min-height: var(--rbc-slot-height) !important;
+  }
+
+  .mobile-calendar-container .rbc-time-view .rbc-timeslot-group {
+    height: var(--rbc-timeslot-group-height) !important;
+    min-height: var(--rbc-timeslot-group-height) !important;
+  }
+
+  .mobile-calendar-container .rbc-day-slot {
+    /* Garantir que cada slot ocupe exatamente 25px */
+    position: relative !important;
+  }
+
+     /* Forçar altura consistente em todos os elementos mobile */
+   .mobile-calendar-container .rbc-time-view .rbc-time-gutter,
+   .mobile-calendar-container .rbc-time-view .rbc-day-slot {
+     table-layout: fixed !important;
+     border-collapse: separate !important;
+     border-spacing: 0 !important;
+   }
+
+   /* Garantir que os eventos sejam visíveis em mobile */
+   .mobile-responsive .rbc-event {
+     display: block !important;
+     visibility: visible !important;
+     opacity: 1 !important;
+     position: absolute !important;
+   }
+
+   .mobile-responsive .rbc-events-container {
+     display: block !important;
+     visibility: visible !important;
+   }
+ }
+
+/* CSS específico para iOS */
+@supports (-webkit-touch-callout: none) {
+  /* Melhorar a aparência do campo de data no iOS */
+  input[type="date"] {
+    color: #1f2937;
+    font-weight: 500;
+  }
+  
+  /* Melhorar o foco no iOS */
+  input[type="date"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  }
+}
+
+/* Animações customizadas */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-from-top {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-top-2 {
+  animation-name: slide-in-from-top;
+}
+
+.duration-200 {
+  animation-duration: 200ms;
+}
+
+.duration-300 {
+  animation-duration: 300ms;
 }

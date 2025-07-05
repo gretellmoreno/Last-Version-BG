@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CreditCard, Plus, Edit, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CreditCard, Plus, Edit, Trash2, Edit3 } from 'lucide-react';
 import TaxaModal from '../TaxaModal';
 import DeleteConfirmationModal from '../DeleteConfirmationModal';
 import { useTaxas } from '../../contexts/TaxasContext';
@@ -9,6 +9,18 @@ export default function TaxasSection() {
   const [editingTaxa, setEditingTaxa] = useState<any>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [taxaToDelete, setTaxaToDelete] = useState<any>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Detectar mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   const { taxas, loading, error, addTaxa, updateTaxa, removeTaxa } = useTaxas();
 
@@ -69,11 +81,15 @@ export default function TaxasSection() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Taxas de Pagamento</h2>
-            <p className="text-gray-600 mt-1">Configure métodos de pagamento e suas taxas</p>
+            <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-lg' : 'text-xl'}`}>
+              Taxas de Pagamento
+            </h2>
+            <p className={`text-gray-600 mt-1 ${isMobile ? 'text-sm' : ''}`}>
+              Configure métodos de pagamento e suas taxas
+            </p>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 text-center ${isMobile ? 'p-8' : 'p-12'}`}>
           <p className="text-gray-500">Carregando métodos de pagamento...</p>
         </div>
       </div>
@@ -85,11 +101,15 @@ export default function TaxasSection() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Taxas de Pagamento</h2>
-            <p className="text-gray-600 mt-1">Configure métodos de pagamento e suas taxas</p>
+            <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-lg' : 'text-xl'}`}>
+              Taxas de Pagamento
+            </h2>
+            <p className={`text-gray-600 mt-1 ${isMobile ? 'text-sm' : ''}`}>
+              Configure métodos de pagamento e suas taxas
+            </p>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 text-center ${isMobile ? 'p-8' : 'p-12'}`}>
           <p className="text-red-500">Erro: {error}</p>
         </div>
       </div>
@@ -98,90 +118,146 @@ export default function TaxasSection() {
 
   return (
     <div className="space-y-6">
-      {/* Header da seção */}
-      <div className="flex items-center justify-between">
+      {/* Header da seção responsivo */}
+      <div className={`flex items-center justify-between ${isMobile ? 'flex-col space-y-4' : ''}`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Taxas de Pagamento</h2>
-          <p className="text-gray-600 mt-1">Configure métodos de pagamento e suas taxas</p>
+          <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-lg' : 'text-xl'}`}>
+            Taxas de Pagamento
+          </h2>
+          <p className={`text-gray-600 mt-1 ${isMobile ? 'text-sm' : ''}`}>
+            Configure métodos de pagamento e suas taxas
+          </p>
         </div>
         <button
           onClick={handleNewTaxa}
-          className="flex items-center space-x-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+          className={`flex items-center space-x-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl ${isMobile ? 'px-4 py-2.5 text-sm' : 'px-6 py-3'}`}
         >
-          <Plus size={20} />
-          <span className="font-semibold">Novo Método de Pagamento</span>
+          <Plus size={isMobile ? 18 : 20} />
+          <span className="font-semibold">{isMobile ? 'Novo Método' : 'Novo Método de Pagamento'}</span>
         </button>
       </div>
 
-      {/* Lista de métodos de pagamento */}
+      {/* Lista de métodos de pagamento responsiva */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {taxas.length === 0 ? (
-          <div className="p-12 text-center">
-            <CreditCard size={48} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum método cadastrado</h3>
-            <p className="text-gray-600 mb-6">Comece adicionando seu primeiro método de pagamento.</p>
+          <div className={`text-center ${isMobile ? 'p-8' : 'p-12'}`}>
+            <CreditCard size={isMobile ? 40 : 48} className="mx-auto text-gray-400 mb-4" />
+            <h3 className={`font-semibold text-gray-900 mb-2 ${isMobile ? 'text-base' : 'text-lg'}`}>
+              Nenhum método cadastrado
+            </h3>
+            <p className={`text-gray-600 mb-6 ${isMobile ? 'text-sm' : ''}`}>
+              Comece adicionando seu primeiro método de pagamento.
+            </p>
             <button
               onClick={handleNewTaxa}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className={`bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors ${isMobile ? 'px-4 py-2.5 text-sm' : 'px-6 py-3'}`}
             >
               Adicionar Primeiro Método
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Método
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Taxa (%)
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+          <>
+            {isMobile ? (
+              /* Cards Mobile */
+              <div className="divide-y divide-gray-200">
                 {taxas.map((taxa) => (
-                  <tr key={taxa.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                          <CreditCard size={16} className="text-indigo-600" />
+                  <div key={taxa.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                          <CreditCard size={18} className="text-indigo-600" />
                         </div>
-                        <span className="text-sm font-medium text-gray-900">{taxa.nome}</span>
+                        <div>
+                          <p className="font-medium text-gray-900">{taxa.nome}</p>
+                          <p className="text-xs text-gray-500">Método de pagamento</p>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900 font-semibold">
-                        {taxa.taxa.toFixed(2).replace('.', ',')}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button 
-                          onClick={() => handleEditTaxa(taxa)}
-                          className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Editar"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteClick(taxa)}
-                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Excluir"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      <div className="text-right">
+                        <p className="font-bold text-lg text-gray-900">
+                          {taxa.taxa.toFixed(2).replace('.', ',')}%
+                        </p>
+                        <p className="text-xs text-gray-500">Taxa</p>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                    
+                    {/* Botões de ação */}
+                    <div className="flex justify-end space-x-2 mt-3">
+                      <button 
+                        onClick={() => handleEditTaxa(taxa)}
+                        className="flex items-center space-x-1 px-3 py-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      >
+                        <Edit3 size={14} />
+                        <span className="text-sm font-medium">Editar</span>
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteClick(taxa)}
+                        className="flex items-center space-x-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={14} />
+                        <span className="text-sm font-medium">Excluir</span>
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            ) : (
+              /* Tabela Desktop */
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Método
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Taxa (%)
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {taxas.map((taxa) => (
+                      <tr key={taxa.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                              <CreditCard size={16} className="text-indigo-600" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{taxa.nome}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-900 font-semibold">
+                            {taxa.taxa.toFixed(2).replace('.', ',')}%
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button 
+                              onClick={() => handleEditTaxa(taxa)}
+                              className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              title="Editar"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteClick(taxa)}
+                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 

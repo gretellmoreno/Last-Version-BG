@@ -8,6 +8,7 @@ interface ServiceSelectionProps {
   onToggleService: (serviceId: string) => void;
   onShowClientSelection: () => void;
   onBack?: () => void;
+  hideClientSection?: boolean;
 }
 
 export default function ServiceSelection({
@@ -15,7 +16,8 @@ export default function ServiceSelection({
   selectedServices,
   onToggleService,
   onShowClientSelection,
-  onBack
+  onBack,
+  hideClientSection = false
 }: ServiceSelectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { services } = useService();
@@ -48,26 +50,27 @@ export default function ServiceSelection({
   }, []);
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar esquerda */}
+    <div className={`flex h-full ${hideClientSection ? 'w-full' : ''}`}>
+      {/* Sidebar esquerda - condicional */}
+      {!hideClientSection && (
       <div 
-        className={`w-48 bg-gray-50 border-r border-gray-200 flex flex-col ${
+          className={`w-44 bg-gray-50 border-r border-gray-200 flex flex-col ${
           !selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''
         }`}
         onClick={!selectedClient ? onShowClientSelection : undefined}
       >
-        <div className="p-6 flex flex-col items-center text-center">
+          <div className="p-4 flex flex-col items-center text-center">
           {selectedClient ? (
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <span className="text-green-600 font-semibold text-lg">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                <span className="text-green-600 font-semibold text-base">
                 {selectedClient.nome?.charAt(0).toUpperCase() || 'C'}
               </span>
             </div>
           ) : (
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4 hover:bg-purple-200 transition-colors relative group">
-              <User size={28} className="text-purple-600" />
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                <Plus size={14} className="text-white" />
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3 hover:bg-purple-200 transition-colors relative group">
+                <User size={22} className="text-purple-600" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
+                  <Plus size={12} className="text-white" />
               </div>
             </div>
           )}
@@ -75,60 +78,62 @@ export default function ServiceSelection({
           <div>
             {selectedClient ? (
               <>
-                <h3 className="font-semibold text-gray-900 text-base mb-1">{selectedClient.nome || 'Cliente'}</h3>
-                <p className="text-sm text-gray-500">Cliente selecionado</p>
+                  <h3 className="font-semibold text-gray-900 text-sm mb-1">{selectedClient.nome || 'Cliente'}</h3>
+                  <p className="text-xs text-gray-500">Cliente selecionado</p>
                 <button
                   onClick={onShowClientSelection}
-                  className="text-xs text-indigo-600 hover:text-indigo-700 mt-2"
+                    className="text-xs text-indigo-600 hover:text-indigo-700 mt-1"
                 >
                   Alterar cliente
                 </button>
               </>
             ) : (
               <>
-                <h3 className="font-semibold text-gray-900 text-base mb-1">Adicionar cliente</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
+                  <h3 className="font-semibold text-gray-900 text-sm mb-1">Adicionar cliente</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
               </>
             )}
           </div>
         </div>
       </div>
+      )}
 
       {/* Conteúdo principal */}
-      <div className="flex-1 flex flex-col">
+      <div className={`flex flex-col ${hideClientSection ? 'w-full' : 'flex-1'}`}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center mb-4">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center mb-3">
             {onBack && (
               <button
                 onClick={onBack}
                 className="mr-3 p-1 hover:bg-gray-100 rounded-md transition-colors"
                 title="Voltar"
               >
-                <ArrowLeft size={20} className="text-gray-600" />
+                <ArrowLeft size={18} className="text-gray-600" />
               </button>
             )}
-            <h2 className="text-xl font-semibold text-gray-900">Selecionar um serviço</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Selecionar um serviço</h2>
           </div>
           
           {/* Barra de busca */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Buscar serviço por nome"
               value={searchTerm}
               onChange={handleSearchChange}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              style={{ fontSize: '16px' }}
             />
           </div>
         </div>
 
         {/* Lista de serviços */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4">
           {filteredServices.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-gray-500">
+            <div className="text-center py-6">
+              <div className="text-gray-500 text-sm">
                 {services?.length === 0 
                   ? 'Nenhum serviço cadastrado' 
                   : searchTerm 
@@ -138,13 +143,13 @@ export default function ServiceSelection({
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {filteredServices.map((service) => (
                 <div
                   key={service.id}
                   onClick={() => onToggleService(service.id)}
                   className={`
-                    p-4 border rounded-lg cursor-pointer transition-all
+                    p-3 border rounded-lg cursor-pointer transition-all
                     ${selectedServices.includes(service.id)
                       ? 'border-indigo-500 bg-indigo-50'
                       : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -153,13 +158,13 @@ export default function ServiceSelection({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{service.name}</h4>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <h4 className="font-medium text-gray-900 text-sm">{service.name}</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">
                         {formatDuration(service.estimated_time)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">R$ {service.price.toFixed(2).replace('.', ',')}</p>
+                      <p className="font-semibold text-gray-900 text-sm">R$ {service.price.toFixed(2).replace('.', ',')}</p>
                     </div>
                   </div>
                 </div>

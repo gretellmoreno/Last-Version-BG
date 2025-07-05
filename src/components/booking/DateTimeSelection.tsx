@@ -15,6 +15,7 @@ interface DateTimeSelectionProps {
   onShowClientSelection: () => void;
   onFinish: () => void;
   isLoading?: boolean;
+  hideClientSection?: boolean;
 }
 
 const MONTHS = [
@@ -34,7 +35,8 @@ export default function DateTimeSelection({
   onTimeChange,
   onShowClientSelection,
   onFinish,
-  isLoading = false
+  isLoading = false,
+  hideClientSection = false
 }: DateTimeSelectionProps) {
   const { addAgendamento } = useBooking();
   const { professionals } = useProfessional();
@@ -130,8 +132,9 @@ export default function DateTimeSelection({
   }, [bookingTime, selectedServices, onFinish]);
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar esquerda - mais compacta */}
+    <div className={`flex h-full ${hideClientSection ? 'w-full' : ''}`}>
+      {/* Sidebar esquerda - mais compacta - condicional */}
+      {!hideClientSection && (
       <div className="w-36 bg-gray-50 border-r border-gray-200 flex flex-col">
         <div className="p-4 flex flex-col items-center text-center">
           {selectedClient ? (
@@ -172,9 +175,10 @@ export default function DateTimeSelection({
           </div>
         </div>
       </div>
+      )}
 
       {/* Conteúdo principal */}
-      <div className="flex-1 flex flex-col">
+      <div className={`flex flex-col ${hideClientSection ? 'w-full' : 'flex-1'}`}>
         {/* Header compacto */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Selecionar data e horário</h2>

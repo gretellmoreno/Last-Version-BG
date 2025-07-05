@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { X, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { X, CheckCircle, XCircle, ArrowLeft, User, UserCheck, Plus } from 'lucide-react';
 import ServiceSelection from './booking/ServiceSelection';
 import ProductSelection from './booking/ProductSelection';
 import ServiceConfirmation from './booking/ServiceConfirmation';
@@ -60,6 +60,19 @@ export default function EditAppointmentModal({
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  // Detectar se está em mobile
+  const [isMobile, setIsMobile] = useState(false);
+  
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Contexts
   const { refreshAppointments } = useBooking();
@@ -451,40 +464,106 @@ export default function EditAppointmentModal({
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={handleClose} />
       
-      <div className="absolute right-0 top-0 h-full w-1/2 max-w-2xl bg-white shadow-xl flex flex-col">
+      <div className={`absolute ${isMobile ? 'inset-x-0 bottom-0 top-16 rounded-xl' : 'right-0 top-0 h-full w-1/2 max-w-2xl rounded-xl'} bg-white shadow-xl flex flex-col overflow-hidden`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h1 className="text-lg font-semibold text-gray-900">
+        <div className={`flex items-center border-b border-gray-200 ${isMobile ? 'p-3' : 'p-4'} ${currentStep === 'payment' ? 'justify-between' : 'justify-between'}`}>
+          {/* Lado esquerdo - Botão voltar (só no payment) */}
+          <div className="flex items-center">
+            {currentStep === 'payment' && (
+              <button
+                onClick={() => setCurrentStep('confirmation')}
+                disabled={isUpdatingAppointment}
+                className="mr-3 p-1 hover:bg-gray-100 rounded-md transition-colors"
+                title="Voltar"
+              >
+                <ArrowLeft size={20} className="text-gray-600" />
+              </button>
+            )}
+          </div>
+          
+          {/* Centro - Título */}
+          <h1 className={`font-semibold text-gray-900 ${isMobile ? 'text-base' : 'text-lg'} ${currentStep === 'payment' ? 'flex-1 text-center' : ''}`}>
             {currentStep === 'payment' ? 'Fechar Comanda' : 'Comanda'}
           </h1>
+          
+          {/* Lado direito - Botão fechar */}
           <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
 
         {/* Info Card */}
-        <div className="mx-4 mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <div className="flex items-center justify-center space-x-6">
-              <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-700 font-semibold text-sm">
-                  {professionalName?.charAt(0).toUpperCase() || 'P'}
-                </span>
+        <div className={`mx-3 mt-3 py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg ${isMobile ? 'mx-3' : 'mx-4'}`}>
+          {/* Linha única: Cliente | Profissional | Data | Horário */}
+          <div className={`flex items-center ${isMobile ? 'justify-center space-x-3' : 'justify-center space-x-4'}`}>
+            
+            {/* Cliente (sempre primeiro) */}
+            <button
+              onClick={handleShowClientSelection}
+              className={`bg-white border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 hover:shadow-sm transition-all duration-200 group flex items-center ${
+                isMobile ? 'px-2 py-1.5 space-x-1' : 'px-2 py-1.5 space-x-1.5'
+              } ${!(selectedClient && selectedClient.nome && selectedClient.nome !== 'Sem reserva') ? 'animate-strong-pulse' : ''}`}
+              title={selectedClient && selectedClient.nome && selectedClient.nome !== 'Sem reserva' ? "Alterar cliente" : "Selecionar cliente"}
+            >
+              {/* Ícone do cliente */}
+              <div className={`bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors relative ${
+                isMobile ? 'w-4 h-4' : 'w-5 h-5'
+              }`}>
+                {selectedClient && selectedClient.nome && selectedClient.nome !== 'Sem reserva' ? (
+                  <UserCheck size={isMobile ? 10 : 12} className="text-purple-600" />
+                ) : (
+                  <>
+                    <User size={isMobile ? 10 : 12} className="text-purple-600" />
+                    {/* + pequenininho */}
+                    <div className={`absolute -bottom-0.5 -right-0.5 bg-purple-600 rounded-full flex items-center justify-center ${
+                      isMobile ? 'w-2 h-2' : 'w-2.5 h-2.5'
+                    }`}>
+                      <Plus size={isMobile ? 6 : 8} className="text-white" />
+                    </div>
+                  </>
+                )}
               </div>
+              
+              {/* Texto do cliente */}
               <div className="text-center">
-                <p className="text-sm font-medium text-gray-900">{professionalName}</p>
-                <p className="text-xs text-gray-500">Profissional</p>
+                <p className={`font-medium text-gray-900 leading-none ${isMobile ? 'text-xs' : 'text-xs'}`}>
+                  {selectedClient && selectedClient.nome && selectedClient.nome !== 'Sem reserva' 
+                    ? selectedClient.nome.split(' ')[0]
+                    : 'Cliente'
+                  }
+                </p>
               </div>
-            </div>
-            <div className="h-6 w-px bg-gray-300"></div>
+            </button>
+
+            <div className={`w-px bg-gray-300 ${isMobile ? 'h-5' : 'h-6'}`}></div>
+            
+            {/* Profissional */}
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-900">{bookingDate.toLocaleDateString('pt-BR')}</p>
-              <p className="text-xs text-gray-500">Data</p>
+              <p className={`font-medium text-gray-900 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                {isMobile ? professionalName.split(' ')[0] : professionalName}
+              </p>
+              <p className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-xs'}`}>Profissional</p>
             </div>
-            <div className="h-6 w-px bg-gray-300"></div>
+            
+            <div className={`w-px bg-gray-300 ${isMobile ? 'h-5' : 'h-6'}`}></div>
+            
+            {/* Data */}
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-900">{bookingTime}</p>
-              <p className="text-xs text-gray-500">Horário</p>
+              <p className={`font-medium text-gray-900 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                {isMobile 
+                  ? bookingDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+                  : bookingDate.toLocaleDateString('pt-BR')
+                }
+              </p>
+              <p className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-xs'}`}>Data</p>
+            </div>
+            
+            <div className={`w-px bg-gray-300 ${isMobile ? 'h-5' : 'h-6'}`}></div>
+            
+            {/* Horário */}
+            <div className="text-center">
+              <p className={`font-medium text-gray-900 ${isMobile ? 'text-xs' : 'text-sm'}`}>{bookingTime}</p>
+              <p className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-xs'}`}>Horário</p>
             </div>
           </div>
         </div>
@@ -505,6 +584,7 @@ export default function EditAppointmentModal({
               onShowForm={handleShowClientForm}
               onToggleService={toggleService}
               onBack={handleBackFromClientSelection}
+              hideServicesSidebar={isMobile}
             />
           ) : currentStep === 'datetime' ? (
             <DateTimeSelection
@@ -518,6 +598,7 @@ export default function EditAppointmentModal({
               onShowClientSelection={handleShowClientSelection}
               onFinish={handleFinishBooking}
               isLoading={isUpdatingAppointment}
+              hideClientSection={isMobile}
             />
           ) : currentStep === 'product' ? (
             <ProductSelection
@@ -526,36 +607,18 @@ export default function EditAppointmentModal({
               onToggleProduct={toggleProduct}
               onShowClientSelection={handleShowClientSelection}
               onBack={handleBackFromProductSelection}
+              hideClientSection={isMobile}
+              isCompact={true}
             />
           ) : currentStep === 'payment' ? (
             <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center">
-                  <button
-                    onClick={handleBackFromPayment}
-                    disabled={isUpdatingAppointment}
-                    className="mr-3 p-1 hover:bg-gray-100 rounded-md transition-colors"
-                    title="Voltar"
-                  >
-                    <ArrowLeft size={20} className="text-gray-600" />
-                  </button>
-                  <h2 className="text-xl font-semibold text-gray-900">Método de Pagamento</h2>
-                </div>
-              </div>
+              {/* Header removido da seção interna */}
               
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className={`flex-1 overflow-y-auto space-y-6 ${isMobile ? 'p-4' : 'p-6'}`}>
                 {/* Resumo da Comanda */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo da Comanda</h3>
-                
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-600 mb-1">Cliente:</p>
-                  <p className="text-base font-semibold text-gray-900">
-                    {selectedClient?.nome || appointmentDetails?.appointment?.client?.name || 'Cliente'}
-                  </p>
-                </div>
                 
                 <div className="mb-4">
                   <p className="text-sm font-medium text-gray-600 mb-2">Serviços:</p>
@@ -623,7 +686,7 @@ export default function EditAppointmentModal({
               </div>
               
               {/* Footer */}
-              <div className="p-6 border-t border-gray-200">
+              <div className={`border-t border-gray-200 ${isMobile ? 'p-4' : 'p-6'}`}>
                 <div className="flex justify-end">
                   <button
                     onClick={handleConfirmFinalization}
@@ -652,6 +715,7 @@ export default function EditAppointmentModal({
               selectedProducts={selectedProducts}
               serviceProfessionals={serviceProfessionals}
               onShowClientSelection={handleShowClientSelection}
+              onShowProfessionalSelection={() => {}}
               onBackToServices={() => setCurrentStep('service')}
               onShowProductSelection={() => setCurrentStep('product')}
               onUpdateServiceProfessionals={handleUpdateServiceProfessionals}
@@ -661,6 +725,7 @@ export default function EditAppointmentModal({
               hasPreselectedDateTime={false}
               isLoading={isUpdatingAppointment}
               isNewAppointment={false}
+              hideClientSection={isMobile}
             />
           ) : (
             <ServiceSelection
@@ -669,18 +734,21 @@ export default function EditAppointmentModal({
               onToggleService={toggleService}
               onShowClientSelection={handleShowClientSelection}
               onBack={handleBackFromServiceSelection}
+              hideClientSection={isMobile}
             />
           )}
         </div>
 
         {/* Footer */}
         {currentStep === 'confirmation' && (
-          <div className="p-4 border-t border-gray-200 bg-white">
+          <div className={`border-t border-gray-200 bg-white ${isMobile ? 'p-3' : 'p-4'}`}>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={handleOpenCancelModal}
                 disabled={isUpdatingAppointment}
-                className="flex items-center space-x-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                className={`flex items-center space-x-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${
+                  isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
+                }`}
               >
                 {isUpdatingAppointment ? (
                   <>
@@ -698,7 +766,9 @@ export default function EditAppointmentModal({
           <button
                 onClick={handleCompleteAppointment}
                 disabled={isUpdatingAppointment}
-                className="flex items-center space-x-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                className={`flex items-center space-x-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${
+                  isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
+                }`}
           >
                 {isUpdatingAppointment ? (
                   <>

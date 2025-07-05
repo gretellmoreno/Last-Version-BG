@@ -102,6 +102,7 @@ export interface Professional {
   color: string;
   commission_rate: number;
   active: boolean;
+  photo?: string; // URL ou base64 da foto
   created_at: string;
   updated_at: string;
 }

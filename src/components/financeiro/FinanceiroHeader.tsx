@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Menu, MoreVertical, ChevronDown } from 'lucide-react';
 
 interface MenuItem {
   id: string;
@@ -12,72 +13,128 @@ interface FinanceiroHeaderProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   currentDate: string;
+  onMenuClick?: () => void;
+  isMobile?: boolean;
 }
 
 export default function FinanceiroHeader({
   menuItems,
   activeSection,
   onSectionChange,
-  currentDate
+  currentDate,
+  onMenuClick,
+  isMobile: isMobileProp
 }: FinanceiroHeaderProps) {
-  return (
-    <div className="bg-white border-b border-gray-200">
-      <div className="px-6 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
-            <p className="text-gray-600 mt-1">Gerencie suas finanças e relatórios</p>
-          </div>
-          {/* REMOVIDO: Card de data duplicado */}
-        </div>
+  const [internalIsMobile, setInternalIsMobile] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Detectar mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setInternalIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-        {/* Menu de navegação moderno - reordenado com Histórico primeiro */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeSection === item.id;
-            
-            return (
+  const isMobile = isMobileProp !== undefined ? isMobileProp : internalIsMobile;
+
+  // Filtrar apenas Histórico e Taxas
+  const filteredMenuItems = menuItems.filter(item => 
+    item.id === 'historico' || item.id === 'taxas'
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleItemClick = (itemId: string) => {
+    onSectionChange(itemId);
+    setIsDropdownOpen(false);
+  };
+
+  const getActiveItem = () => {
+    return filteredMenuItems.find(item => item.id === activeSection) || filteredMenuItems[0];
+  };
+
+  const activeItem = getActiveItem();
+
+  return (
+    <div className={`flex items-center justify-between bg-white border-b border-gray-200 ${isMobile ? 'px-4 py-3' : 'px-6 py-4'}`}>
+      {/* Lado esquerdo: Menu mobile + Título */}
+      <div className="flex items-center space-x-3">
+        {isMobile && (
+          <button
+            onClick={onMenuClick}
+            className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <Menu size={20} className="text-gray-600" />
+          </button>
+        )}
+        
+        <div>
+          <h1 className={`font-bold text-gray-900 ${isMobile ? 'text-lg' : 'text-xl'}`}>
+            Financeiro
+          </h1>
+          <p className={`text-gray-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+            {currentDate}
+          </p>
+        </div>
+      </div>
+
+      {/* Lado direito: Dropdown */}
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className={`flex items-center space-x-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg ${isMobile ? 'px-3 py-2 text-sm' : 'px-4 py-2'}`}
+        >
+          {activeItem && <activeItem.icon size={isMobile ? 14 : 16} />}
+          <span className="font-medium">{activeItem?.name}</span>
+          <ChevronDown 
+            size={isMobile ? 14 : 16} 
+            className={`transform transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} 
+          />
+        </button>
+
+        {/* Dropdown Menu */}
+        {isDropdownOpen && (
+          <div className={`absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200 ${isMobile ? 'w-56' : 'w-64'}`}>
+            {filteredMenuItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => onSectionChange(item.id)}
-                className={`
-                  p-4 rounded-xl border-2 transition-all duration-200 text-left group
-                  ${isActive 
-                    ? 'border-indigo-500 bg-indigo-50 shadow-md' 
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-                  }
-                `}
+                onClick={() => handleItemClick(item.id)}
+                className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-start space-x-3 ${
+                  item.id === activeSection ? 'bg-indigo-50 border-r-2 border-indigo-500' : ''
+                }`}
               >
-                <div className="flex items-start space-x-3">
-                  <div className={`
-                    p-2 rounded-lg transition-colors
-                    ${isActive 
-                      ? 'bg-indigo-100 text-indigo-600' 
-                      : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
-                    }
-                  `}>
-                    <Icon size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`
-                      font-semibold text-sm mb-1 transition-colors
-                      ${isActive ? 'text-indigo-900' : 'text-gray-900'}
-                    `}>
-                      {item.name}
-                    </h3>
-                    <p className={`
-                      text-xs leading-relaxed transition-colors
-                      ${isActive ? 'text-indigo-700' : 'text-gray-500'}
-                    `}>
-                      {item.description}
-                    </p>
-                  </div>
+                <item.icon 
+                  size={18} 
+                  className={`mt-0.5 ${item.id === activeSection ? 'text-indigo-600' : 'text-gray-400'}`} 
+                />
+                <div>
+                  <p className={`font-medium ${item.id === activeSection ? 'text-indigo-900' : 'text-gray-900'} ${isMobile ? 'text-sm' : ''}`}>
+                    {item.name}
+                  </p>
+                  <p className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                    {item.description}
+                  </p>
                 </div>
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ interface ClientSelectionVendaProps {
   onShowForm: () => void;
   onSelectProduct: (productId: string, quantity: number) => void;
   onBack?: () => void;
+  hideProductsSidebar?: boolean;
 }
 
 export default function ClientSelectionVenda({
@@ -16,7 +17,8 @@ export default function ClientSelectionVenda({
   onSelectClient,
   onShowForm,
   onSelectProduct,
-  onBack
+  onBack,
+  hideProductsSidebar = false
 }: ClientSelectionVendaProps) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const { clients } = useClient();
@@ -52,11 +54,11 @@ export default function ClientSelectionVenda({
   };
 
   return (
-    <div className="flex h-full">
+    <div className={`flex h-full ${hideProductsSidebar ? 'w-full' : ''}`}>
       {/* Área principal */}
-      <div className="flex-1 flex flex-col">
+      <div className={`flex flex-col ${hideProductsSidebar ? 'w-full' : 'flex-1'}`}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className={`border-b border-gray-200 ${hideProductsSidebar ? 'p-4' : 'p-6'}`}>
           <div className="flex items-center space-x-3 mb-4">
             {onBack && (
               <button
@@ -67,7 +69,9 @@ export default function ClientSelectionVenda({
                 <ArrowLeft size={20} className="text-gray-500" />
               </button>
             )}
-            <h2 className="text-xl font-semibold text-gray-900">Selecionar cliente</h2>
+            <h2 className={`font-semibold text-gray-900 ${hideProductsSidebar ? 'text-lg' : 'text-xl'}`}>
+              Selecionar cliente
+            </h2>
           </div>
           
           {/* Barra de busca */}
@@ -78,26 +82,37 @@ export default function ClientSelectionVenda({
               placeholder="Buscar cliente por nome, telefone ou email"
               value={clientSearchTerm}
               onChange={(e) => setClientSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className={`w-full pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                hideProductsSidebar ? 'py-2.5 text-base' : 'py-3'
+              }`}
+              style={hideProductsSidebar ? { fontSize: '16px' } : {}} // Evita zoom no iOS
             />
           </div>
         </div>
 
         {/* Lista de clientes */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className={`flex-1 overflow-y-auto ${hideProductsSidebar ? 'p-4' : 'p-6'}`}>
           <div className="space-y-3">
             {/* Opção para novo cliente */}
             <div 
               onClick={onShowForm}
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer transition-all hover:border-indigo-400 hover:bg-indigo-50"
+              className={`border-2 border-dashed border-gray-300 rounded-lg cursor-pointer transition-all hover:border-indigo-400 hover:bg-indigo-50 ${
+                hideProductsSidebar ? 'p-3 mobile-client-list-item' : 'p-4'
+              }`}
             >
               <div className="flex items-center space-x-3 text-indigo-600">
-                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <UserPlus size={20} />
+                <div className={`bg-indigo-100 rounded-full flex items-center justify-center ${
+                  hideProductsSidebar ? 'w-8 h-8' : 'w-10 h-10'
+                }`}>
+                  <UserPlus size={hideProductsSidebar ? 16 : 20} />
                 </div>
                 <div>
-                  <h3 className="font-medium">Novo cliente</h3>
-                  <p className="text-sm text-gray-500">Criar um novo cliente</p>
+                  <h3 className={`font-medium ${hideProductsSidebar ? 'text-sm' : ''}`}>
+                    Novo cliente
+                  </h3>
+                  <p className={`text-gray-500 ${hideProductsSidebar ? 'text-xs' : 'text-sm'}`}>
+                    Criar um novo cliente
+                  </p>
                 </div>
               </div>
             </div>
@@ -105,7 +120,7 @@ export default function ClientSelectionVenda({
             {/* Lista de clientes existentes */}
             {filteredClients.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-gray-500">
+                <div className={`text-gray-500 ${hideProductsSidebar ? 'text-sm' : ''}`}>
                   {clientSearchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
                 </div>
               </div>
@@ -114,17 +129,23 @@ export default function ClientSelectionVenda({
                 <div
                   key={cliente.id}
                   onClick={() => onSelectClient(cliente)}
-                  className="p-4 border border-gray-200 rounded-lg cursor-pointer transition-all hover:border-indigo-300 hover:bg-indigo-50"
+                  className={`border border-gray-200 rounded-lg cursor-pointer transition-all hover:border-indigo-300 hover:bg-indigo-50 ${
+                    hideProductsSidebar ? 'p-3 mobile-client-list-item' : 'p-4'
+                  }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span className="text-gray-600 font-medium text-sm">
+                    <div className={`bg-gray-100 rounded-full flex items-center justify-center ${
+                      hideProductsSidebar ? 'w-8 h-8' : 'w-10 h-10'
+                    }`}>
+                      <span className={`text-gray-600 font-medium ${hideProductsSidebar ? 'text-xs' : 'text-sm'}`}>
                         {getClientDisplayName(cliente).charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{getClientDisplayName(cliente)}</h3>
-                      <div className="flex items-center space-x-2 text-sm text-gray-500">
+                      <h3 className={`font-medium text-gray-900 ${hideProductsSidebar ? 'text-sm' : ''}`}>
+                        {getClientDisplayName(cliente)}
+                      </h3>
+                      <div className={`flex items-center space-x-2 text-gray-500 ${hideProductsSidebar ? 'text-xs' : 'text-sm'}`}>
                         <span>{cliente.phone}</span>
                         {cliente.email && (
                           <>
@@ -142,7 +163,8 @@ export default function ClientSelectionVenda({
         </div>
       </div>
 
-      {/* Sidebar direita com produtos */}
+      {/* Sidebar direita com produtos - condicional */}
+      {!hideProductsSidebar && (
       <div className="w-72 bg-gray-50 border-l border-gray-200 p-4">
         <h3 className="font-semibold text-gray-900 mb-3 text-sm">Selecionar produtos</h3>
         
@@ -183,6 +205,7 @@ export default function ClientSelectionVenda({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 } 

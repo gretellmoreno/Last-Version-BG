@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus, User, UserCheck } from 'lucide-react';
 import ServiceSelection from './booking/ServiceSelection';
 import ProductSelection from './booking/ProductSelection';
 import ServiceConfirmation from './booking/ServiceConfirmation';
 import DateTimeSelection from './booking/DateTimeSelection';
 import ClientSelection from './booking/ClientSelection';
 import ClientForm from './booking/ClientForm';
+import ProfessionalSelection from './booking/ProfessionalSelection';
 import { useBooking } from '../contexts/BookingContext';
 import { useService } from '../contexts/ServiceContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
@@ -18,6 +19,7 @@ interface BookingModalProps {
   selectedDate: Date;
   selectedTime?: string;
   selectedProfessional?: string;
+  isMobile?: boolean;
 }
 
 interface ClientFormData {
@@ -39,13 +41,15 @@ export default function BookingModal({
   onClose, 
   selectedDate, 
   selectedTime, 
-  selectedProfessional 
+  selectedProfessional,
+  isMobile = false
 }: BookingModalProps) {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<'service' | 'product' | 'confirmation' | 'datetime'>('service');
   const [showClientSelection, setShowClientSelection] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
+  const [showProfessionalSelection, setShowProfessionalSelection] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [serviceProfessionals, setServiceProfessionals] = useState<ServiceProfessional[]>([]);
   const [isCreatingAppointment, setIsCreatingAppointment] = useState(false);
@@ -70,11 +74,33 @@ export default function BookingModal({
     ano: ''
   });
 
+  // Detectar se está em mobile (se não foi passado via props)
+  const [internalIsMobile, setInternalIsMobile] = useState(false);
+  
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setInternalIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const isMobileDevice = isMobile || internalIsMobile;
+
   // Memoizar se tem data/horário pré-selecionados
   const hasPreselectedDateTime = useMemo(() => 
     Boolean(selectedTime && selectedProfessional), 
     [selectedTime, selectedProfessional]
   );
+
+  // Calcular se deve mostrar o painel de serviços baseado no estado mobile
+  const shouldShowServicesPanel = useMemo(() => {
+    if (!isMobileDevice) return true; // Desktop sempre mostra
+    // Mobile: não mostrar serviços quando estiver selecionando cliente, profissional ou preenchendo formulário
+    return !showClientSelection && !showClientForm && !showProfessionalSelection;
+  }, [isMobileDevice, showClientSelection, showClientForm, showProfessionalSelection]);
 
   // Effect para pré-selecionar profissional quando modal é aberto via agenda
   React.useEffect(() => {
@@ -377,6 +403,24 @@ export default function BookingModal({
     setShowClientForm(false);
   }, []);
 
+  const handleShowProfessionalSelection = useCallback(() => {
+    setShowProfessionalSelection(true);
+  }, []);
+
+  const handleBackFromProfessionalSelection = useCallback(() => {
+    setShowProfessionalSelection(false);
+  }, []);
+
+  const handleSelectProfessional = useCallback((professional: any) => {
+    // Aplicar o profissional selecionado a todos os serviços
+    const newServiceProfessionals = selectedServices.map(serviceId => ({
+      serviceId,
+      professionalId: professional.id
+    }));
+    setServiceProfessionals(newServiceProfessionals);
+    setShowProfessionalSelection(false);
+  }, [selectedServices]);
+
   // Função para resetar o modal
   const resetModal = useCallback(() => {
     setSelectedServices([]);
@@ -384,6 +428,7 @@ export default function BookingModal({
     setCurrentStep('service');
     setShowClientSelection(false);
     setShowClientForm(false);
+    setShowProfessionalSelection(false);
     setSelectedClient(null);
     setServiceProfessionals([]);
     setBookingTime('');
@@ -411,11 +456,19 @@ export default function BookingModal({
       {/* Overlay */}
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={handleClose} />
       
-      {/* Painel lateral direito */}
-      <div className="absolute right-0 top-0 h-full w-1/2 max-w-2xl bg-white shadow-xl flex flex-col">
+      {/* Modal - Layout responsivo */}
+      <div className={`
+        absolute bg-white shadow-xl flex
+        ${isMobileDevice 
+          ? 'inset-x-0 bottom-0 top-16 rounded-t-xl flex-col' // Mobile: fullscreen com cantos arredondados no topo
+          : 'right-0 top-0 h-full w-1/2 max-w-2xl flex-col' // Desktop: painel lateral
+        }
+      `}>
         {/* Header do modal */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h1 className="text-lg font-semibold text-gray-900">Novo Agendamento</h1>
+        <div className={`flex items-center justify-between border-b border-gray-200 ${isMobileDevice ? 'p-3' : 'p-4'}`}>
+          <h1 className={`font-semibold text-gray-900 ${isMobileDevice ? 'text-base' : 'text-lg'}`}>
+            Novo Agendamento
+          </h1>
           
           <button
             onClick={handleClose}
@@ -427,39 +480,88 @@ export default function BookingModal({
 
         {/* Card de informações pré-selecionadas */}
         {selectedTime && selectedProfessional && (
-          <div className="mx-4 mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-            <div className="flex items-center justify-center space-x-8">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-700 font-semibold text-base">
-                    {selectedProfessional.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-gray-900">{selectedProfessional}</p>
-                  <p className="text-xs text-gray-500">Profissional</p>
-                </div>
+          <div className={`mx-3 mt-3 py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg ${isMobileDevice ? 'mx-3' : 'mx-4'}`}>
+            {/* Linha única: Cliente | Profissional | Data | Horário */}
+            <div className={`flex items-center ${isMobileDevice ? 'justify-center space-x-3' : 'justify-center space-x-4'}`}>
+              
+              {/* Cliente (apenas mobile) */}
+              {isMobileDevice && (
+                <>
+                  <button
+                    onClick={handleShowClientSelection}
+                    className={`bg-white border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 hover:shadow-sm transition-all duration-200 group flex items-center px-2 py-1.5 space-x-1 ${
+                      !selectedClient ? 'animate-gentle-pulse' : ''
+                    }`}
+                    title={selectedClient ? "Alterar cliente" : "Selecionar cliente"}
+                  >
+                    {/* Ícone do cliente */}
+                    <div className="bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors relative w-4 h-4">
+                      {selectedClient ? (
+                        <UserCheck size={10} className="text-purple-600" />
+                      ) : (
+                        <>
+                          <User size={10} className="text-purple-600" />
+                          {/* + pequenininho */}
+                          <div className="absolute -bottom-0.5 -right-0.5 bg-purple-600 rounded-full flex items-center justify-center w-2 h-2">
+                            <Plus size={6} className="text-white" />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Texto do cliente */}
+                    <div className="text-center">
+                      <p className="font-medium text-gray-900 leading-none text-xs">
+                        {selectedClient 
+                          ? selectedClient.nome?.split(' ')[0] || 'Cliente'
+                          : 'Cliente'
+                        }
+                      </p>
+                    </div>
+                  </button>
+
+                  <div className="w-px bg-gray-300 h-5"></div>
+                </>
+              )}
+              
+              {/* Profissional */}
+              <div className="text-center">
+                <p className={`font-medium text-gray-900 ${isMobileDevice ? 'text-xs' : 'text-sm'}`}>
+                  {isMobileDevice ? selectedProfessional.split(' ')[0] : selectedProfessional}
+                </p>
+                <p className={`text-gray-500 ${isMobileDevice ? 'text-xs' : 'text-xs'}`}>Profissional</p>
               </div>
               
-              <div className="h-8 w-px bg-gray-300"></div>
+              <div className={`w-px bg-gray-300 ${isMobileDevice ? 'h-5' : 'h-6'}`}></div>
               
+              {/* Data */}
               <div className="text-center">
-                <p className="text-sm font-medium text-gray-900">{selectedDate.toLocaleDateString('pt-BR')}</p>
-                <p className="text-xs text-gray-500">Data</p>
+                <p className={`font-medium text-gray-900 ${isMobileDevice ? 'text-xs' : 'text-sm'}`}>
+                  {isMobileDevice 
+                    ? selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+                    : selectedDate.toLocaleDateString('pt-BR')
+                  }
+                </p>
+                <p className={`text-gray-500 ${isMobileDevice ? 'text-xs' : 'text-xs'}`}>Data</p>
               </div>
               
-              <div className="h-8 w-px bg-gray-300"></div>
+              <div className={`w-px bg-gray-300 ${isMobileDevice ? 'h-5' : 'h-6'}`}></div>
               
+              {/* Horário */}
               <div className="text-center">
-                <p className="text-sm font-medium text-gray-900">{selectedTime}</p>
-                <p className="text-xs text-gray-500">Horário</p>
+                <p className={`font-medium text-gray-900 ${isMobileDevice ? 'text-xs' : 'text-sm'}`}>{selectedTime}</p>
+                <p className={`text-gray-500 ${isMobileDevice ? 'text-xs' : 'text-xs'}`}>Horário</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Conteúdo do modal */}
+        {/* Layout do conteúdo - Responsivo */}
         <div className={`flex-1 overflow-hidden ${selectedTime && selectedProfessional ? 'mt-0' : ''}`}>
+          {/* Conteúdo condicionalmente renderizado baseado no mobile e estado de seleção */}
+          {shouldShowServicesPanel ? (
+            // Painel principal com conteúdo dos serviços/steps
+            <>
           {showClientForm ? (
             <ClientForm
               clientForm={clientForm}
@@ -474,6 +576,13 @@ export default function BookingModal({
               onShowForm={handleShowClientForm}
               onToggleService={toggleService}
               onBack={handleBackFromClientSelection}
+                  hideServicesSidebar={isMobileDevice}
+                />
+              ) : showProfessionalSelection ? (
+                <ProfessionalSelection
+                  selectedServices={selectedServices}
+                  onSelectProfessional={handleSelectProfessional}
+                  onBack={handleBackFromProfessionalSelection}
             />
           ) : currentStep === 'datetime' ? (
             <DateTimeSelection
@@ -487,6 +596,7 @@ export default function BookingModal({
               onShowClientSelection={handleShowClientSelection}
               onFinish={handleFinishBooking}
               isLoading={isCreatingAppointment}
+                  hideClientSection={isMobileDevice}
             />
           ) : currentStep === 'product' ? (
             <ProductSelection
@@ -495,6 +605,7 @@ export default function BookingModal({
               onToggleProduct={toggleProduct}
               onShowClientSelection={handleShowClientSelection}
               onBack={handleBackFromProducts}
+                  hideClientSection={isMobileDevice}
             />
           ) : currentStep === 'confirmation' ? (
             <ServiceConfirmation
@@ -503,6 +614,7 @@ export default function BookingModal({
               selectedProducts={selectedProducts}
               serviceProfessionals={serviceProfessionals}
               onShowClientSelection={handleShowClientSelection}
+                  onShowProfessionalSelection={handleShowProfessionalSelection}
               onBackToServices={handleBackToServices}
               onShowProductSelection={handleShowProductSelection}
               onUpdateServiceProfessionals={handleUpdateServiceProfessionals}
@@ -512,6 +624,7 @@ export default function BookingModal({
               hasPreselectedDateTime={hasPreselectedDateTime}
               isLoading={isCreatingAppointment}
               isNewAppointment={true}
+                  hideClientSection={isMobileDevice}
             />
           ) : (
             <ServiceSelection
@@ -520,19 +633,51 @@ export default function BookingModal({
               onToggleService={toggleService}
               onShowClientSelection={handleShowClientSelection}
               onBack={selectedServices.length > 0 ? handleBackFromServices : undefined}
-            />
+                  hideClientSection={isMobileDevice}
+                />
+              )}
+            </>
+          ) : (
+            // Mobile: Mostra apenas seleção de cliente/profissional quando shouldShowServicesPanel é false
+            <>
+              {showClientForm ? (
+                <ClientForm
+                  clientForm={clientForm}
+                  onUpdateForm={handleUpdateClientForm}
+                  onSave={handleSaveClient}
+                  onCancel={handleCancelClientForm}
+                />
+              ) : showProfessionalSelection ? (
+                <ProfessionalSelection
+                  selectedServices={selectedServices}
+                  onSelectProfessional={handleSelectProfessional}
+                  onBack={handleBackFromProfessionalSelection}
+                />
+              ) : (
+                <ClientSelection
+                  selectedServices={selectedServices}
+                  onSelectClient={handleSelectClient}
+                  onShowForm={handleShowClientForm}
+                  onToggleService={toggleService}
+                  onBack={handleBackFromClientSelection}
+                  hideServicesSidebar={isMobileDevice}
+                />
+              )}
+            </>
           )}
         </div>
 
-        {/* Footer com botões condicionais */}
-        {currentStep === 'confirmation' && (
-          <div className="p-4 border-t border-gray-200 bg-white">
+        {/* Footer com botões condicionais - responsivo */}
+        {currentStep === 'confirmation' && shouldShowServicesPanel && (
+          <div className={`border-t border-gray-200 bg-white ${isMobileDevice ? 'p-3' : 'p-4'}`}>
             <div className="flex justify-end">
               {hasPreselectedDateTime ? (
                 <button
                   onClick={handleContinueFromConfirmation}
                   disabled={isCreatingAppointment || serviceProfessionals.length === 0}
-                  className="flex items-center space-x-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                  className={`flex items-center space-x-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium ${
+                    isMobileDevice ? 'px-4 py-2 text-sm' : 'px-6 py-2 text-sm'
+                  }`}
                 >
                   {isCreatingAppointment ? (
                     <>
@@ -547,7 +692,9 @@ export default function BookingModal({
                 <button
                   onClick={handleContinueFromConfirmation}
                   disabled={isCreatingAppointment || serviceProfessionals.length === 0}
-                  className="flex items-center space-x-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                  className={`flex items-center space-x-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium ${
+                    isMobileDevice ? 'px-4 py-2 text-sm' : 'px-6 py-2 text-sm'
+                  }`}
                 >
                   <span>Continuar</span>
                 </button>

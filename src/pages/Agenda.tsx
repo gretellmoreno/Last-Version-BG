@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
-import { Menu, ChevronDown, Plus } from 'lucide-react';
+import { Menu, ChevronDown, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -14,6 +14,7 @@ import VendaModal from '../components/VendaModal';
 import AppointmentTooltip from '../components/AppointmentTooltip';
 import EditAppointmentModal from '../components/EditAppointmentModal';
 import FecharComandaModal from '../components/FecharComandaModal';
+
 import { useBooking } from '../contexts/BookingContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
 import { useApp } from '../contexts/AppContext';
@@ -116,6 +117,127 @@ const ProfessionalsHeader = ({ professionals }: { professionals: any[] }) => {
   );
 };
 
+// Componente simples do DatePicker para mobile
+const DatePickerModal = ({ selectedDate, onDateSelect }: { selectedDate: Date, onDateSelect: (date: Date) => void }) => {
+  const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
+  const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
+
+  const months = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  const previousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const nextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const getDaysInMonth = () => {
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
+    }
+    return days;
+  };
+
+  const isSelectedDay = (day: number | null) => {
+    if (!day) return false;
+    return day === selectedDate.getDate() && 
+           currentMonth === selectedDate.getMonth() && 
+           currentYear === selectedDate.getFullYear();
+  };
+
+  const isToday = (day: number | null) => {
+    if (!day) return false;
+    const today = new Date();
+    return day === today.getDate() && 
+           currentMonth === today.getMonth() && 
+           currentYear === today.getFullYear();
+  };
+
+  const selectDate = (day: number) => {
+    const newDate = new Date(currentYear, currentMonth, day);
+    onDateSelect(newDate);
+  };
+
+  return (
+    <div className="w-full">
+      {/* Header do calendário */}
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={previousMonth} className="p-2 hover:bg-gray-100 rounded-lg">
+          <ChevronLeft size={16} className="text-gray-600" />
+        </button>
+        
+        <h3 className="text-base font-medium text-gray-900">
+          {months[currentMonth]} {currentYear}
+        </h3>
+        
+        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg">
+          <ChevronRight size={16} className="text-gray-600" />
+        </button>
+      </div>
+
+      {/* Dias da semana */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {weekDays.map((day) => (
+          <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Dias do mês */}
+      <div className="grid grid-cols-7 gap-1">
+        {getDaysInMonth().map((day, index) => (
+          <div key={index} className="aspect-square">
+            {day ? (
+              <button
+                onClick={() => selectDate(day)}
+                className={`
+                  w-full h-full flex items-center justify-center text-sm rounded-lg transition-all
+                  ${isSelectedDay(day)
+                    ? 'bg-indigo-600 text-white font-medium'
+                    : isToday(day)
+                    ? 'bg-indigo-100 text-indigo-700 font-medium'
+                    : 'text-gray-700 hover:bg-gray-100'
+                  }
+                `}
+              >
+                {day}
+              </button>
+            ) : (
+              <div></div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Componente do header mobile
 const MobileHeader = ({ 
   selectedDate, 
@@ -132,62 +254,150 @@ const MobileHeader = ({
   onAddClick: () => void;
   onToggleSidebar?: () => void;
 }) => {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const goToPreviousDay = () => {
+    const previousDay = new Date(selectedDate);
+    previousDay.setDate(previousDay.getDate() - 1);
+    onDateChange(previousDay);
+  };
+
+  const goToNextDay = () => {
+    const nextDay = new Date(selectedDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    onDateChange(nextDay);
+  };
+
+  const handleDateSelect = (date: Date) => {
+    onDateChange(date);
+    setShowDatePicker(false);
+  };
+
+  const goToToday = () => {
+    onDateChange(new Date());
+  };
+
+  const isToday = () => {
+    const today = new Date();
+    return selectedDate.getDate() === today.getDate() &&
+           selectedDate.getMonth() === today.getMonth() &&
+           selectedDate.getFullYear() === today.getFullYear();
+  };
+
   return (
     <div className="mobile-agenda-header bg-white border-b border-gray-200 p-4">
-      {/* Primeira linha - Menu, Data e Adicionar */}
-      <div className="flex items-center justify-between mb-3">
+      {/* Linha única - Menu, Navegação de Data, Profissional e Adicionar */}
+      <div className="flex items-center justify-between">
         <button 
           onClick={onToggleSidebar}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
         >
           <Menu size={20} className="text-gray-600" />
         </button>
         
-        <div className="text-center">
-          <h1 className="text-lg font-semibold text-gray-900">Agenda do Dia</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {format(selectedDate, "dd 'de' MMMM yyyy", { locale: ptBR })}
-          </p>
+        {/* Navegação de Data */}
+        <div className="flex items-center space-x-1 flex-1 justify-center">
+          <button
+            onClick={goToPreviousDay}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ChevronLeft size={18} className="text-gray-600" />
+          </button>
+          
+          <button
+            onClick={() => setShowDatePicker(true)}
+            className="px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors text-center"
+          >
+            <div className="flex flex-col">
+              <span className="text-xs text-gray-500 font-medium">
+                {format(selectedDate, "EEEE", { locale: ptBR })}
+              </span>
+              <span className="text-sm font-semibold text-gray-900">
+                {format(selectedDate, "dd 'de' MMM", { locale: ptBR })}
+              </span>
         </div>
+          </button>
         
         <button
-          onClick={onAddClick}
-          className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            onClick={goToNextDay}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
         >
-          <Plus size={20} />
+            <ChevronRight size={18} className="text-gray-600" />
         </button>
+          
+          {!isToday() && (
+            <button
+              onClick={goToToday}
+              className="ml-2 px-2 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-xs font-medium"
+            >
+              Hoje
+            </button>
+          )}
       </div>
       
-      {/* Segunda linha - Seletor de Profissional */}
-      <div className="flex justify-center">
+        {/* Seletor de Profissional e Botão Adicionar */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
         <button
           onClick={onProfessionalClick}
-          className="flex items-center space-x-3 px-5 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all duration-200 border-2 border-gray-200 hover:border-indigo-300 shadow-sm"
+            className="flex items-center space-x-1.5 px-2 py-1.5 bg-white rounded-lg hover:bg-gray-50 transition-all duration-200 border border-gray-200 hover:border-indigo-300 shadow-sm"
         >
           <div 
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md"
+              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
             style={{ backgroundColor: selectedProfessional?.color || '#6366f1' }}
           >
-            {(() => {
-              const name = selectedProfessional?.name?.replace('[Exemplo] ', '') || 'P';
-              const names = name.split(' ');
-              if (names.length === 1) {
-                return names[0].substring(0, 1).toUpperCase();
-              }
-              return (names[0][0] + (names[names.length - 1]?.[0] || '')).toUpperCase();
-            })()}
+              {(() => {
+                const name = selectedProfessional?.name?.replace('[Exemplo] ', '') || 'P';
+                const names = name.split(' ');
+                if (names.length === 1) {
+                  return names[0].substring(0, 1).toUpperCase();
+                }
+                return (names[0][0] + (names[names.length - 1]?.[0] || '')).toUpperCase();
+              })()}
           </div>
-          <div className="flex flex-col items-start">
-            <span className="text-sm font-semibold text-gray-900">
-              {selectedProfessional?.name?.replace('[Exemplo] ', '') || 'Selecionar Profissional'}
-            </span>
-            <span className="text-xs text-gray-500">
-              Toque para trocar
-            </span>
-          </div>
-          <ChevronDown size={18} className="text-gray-400" />
+            <ChevronDown size={12} className="text-gray-400" />
+          </button>
+          
+          <button
+            onClick={onAddClick}
+            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus size={20} />
         </button>
       </div>
+      </div>
+      
+      {/* Modal do DatePicker */}
+      {showDatePicker && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => setShowDatePicker(false)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 text-center">Selecionar Data</h3>
+            </div>
+            
+            <div className="p-4">
+              <DatePickerModal 
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+              />
+            </div>
+            
+            <div className="p-3 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="w-full py-2 px-3 bg-gray-200 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -542,16 +752,29 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
 
   // Manipuladores dos modais
   const handleAddClick = () => {
+    console.log('➕ Botão Adicionar clicado - abrindo AddActionModal');
     setIsActionModalOpen(true);
   };
 
   const handleAgendamentoSelect = () => {
+    console.log('🔵 Agendamento selecionado - fechando AddActionModal e abrindo BookingModal');
+    // Primeiro fechar o modal de ação
+    setIsActionModalOpen(false);
+    // Depois abrir o modal de agendamento
+    setTimeout(() => {
     setSelectedBookingSlot(null);
     setIsBookingModalOpen(true);
+    }, 100);
   };
 
   const handleVendaSelect = () => {
+    console.log('🟢 Venda selecionada - fechando AddActionModal e abrindo VendaModal');
+    // Primeiro fechar o modal de ação
+    setIsActionModalOpen(false);
+    // Depois abrir o modal de venda
+    setTimeout(() => {
     setIsVendaModalOpen(true);
+    }, 100);
   };
 
   const handleCloseBookingModal = () => {
@@ -579,7 +802,8 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
           width: '100%',
           height: '100%',
           position: 'relative',
-          display: 'block'
+          display: 'block',
+          pointerEvents: 'auto' // Garantir cliques
         }}
       >
         {children}
@@ -735,6 +959,14 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
     setIsDragging(false);
   }, []);
 
+  // Log para debug - verificar se events está chegando
+  useEffect(() => {
+    console.log('Eventos carregados:', events.length);
+    if (events.length > 0) {
+      console.log('Primeiro evento:', events[0]);
+    }
+  }, [events]);
+
   return (
     <div className={`flex-1 flex flex-col h-full ${isMobile ? 'mobile-agenda-container' : ''}`}>
       <Toaster position="top-right" />
@@ -766,8 +998,8 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
       )}
       
       {/* Calendário */}
-      <div className={`flex-1 bg-white overflow-auto ${isMobile ? 'mobile-calendar-container' : ''}`}>
-        <div className={`h-full ${isMobile ? 'h-full' : 'min-h-[600px]'}`}>
+      <div className={`flex-1 bg-white overflow-auto ${isMobile ? 'mobile-calendar-container' : ''} ${isActionModalOpen ? 'pointer-events-none' : ''}`}>
+        <div className={`h-full ${isMobile ? 'h-full' : 'min-h-[600px]'} ${isActionModalOpen ? 'pointer-events-none' : ''}`}>
                       <DragAndDropCalendar
               localizer={localizer}
               events={events}
@@ -777,17 +1009,18 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
               defaultView={Views.DAY}
               views={['day']}
               step={15}
-              timeslots={isMobile ? 4 : 4} // Manter 4 slots para precisão de horário
+              timeslots={4} // 4 slots por hora = 15 min cada slot
+              showMultiDayTimes={false}
               min={minTime}
               max={maxTime}
               resources={resources}
               resourceIdAccessor="id"
               resourceTitleAccessor="title"
               rtl={false}
-              className={`barber-calendar ${isMobile ? 'mobile-calendar' : ''}`}
+              className={`barber-calendar ${isMobile ? 'mobile-calendar mobile-responsive' : ''}`}
               
               // Funcionalidades de Interação - ajustadas para mobile
-              selectable
+              selectable={true}
               resizable={!isMobile} // Desabilitar resize em mobile
               
               // Event Handlers
@@ -797,6 +1030,9 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
               onEventDrop={isMobile ? undefined : handleEventMove} // Desabilitar drag em mobile
               onEventResize={isMobile ? undefined : handleEventResize} // Desabilitar resize em mobile
               onDragStart={isMobile ? undefined : () => handleDragStart()}
+              
+              // Configurações adicionais para garantir seleção
+              longPressThreshold={50} // Tempo curto para mobile
             
             // Personalização Visual
             eventPropGetter={eventStyleGetter}
@@ -826,11 +1062,13 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
         onClose={() => setIsActionModalOpen(false)}
         onSelectAgendamento={handleAgendamentoSelect}
         onSelectVenda={handleVendaSelect}
+        isMobile={isMobile}
       />
 
       <VendaModal
         isOpen={isVendaModalOpen}
         onClose={() => setIsVendaModalOpen(false)}
+        isMobile={isMobile}
       />
 
       <BookingModal
@@ -839,6 +1077,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
         selectedDate={selectedDate}
         selectedTime={selectedBookingSlot?.time}
         selectedProfessional={selectedBookingSlot?.professional}
+        isMobile={isMobile}
       />
 
       {/* Tooltip de detalhes do agendamento */}
@@ -890,14 +1129,19 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
 
       {/* Modal de seleção de profissional (mobile) */}
       {showProfessionalSelector && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 mobile-professional-selector">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 max-h-96 overflow-hidden">
-            <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-              <h3 className="text-lg font-bold text-gray-900">Selecionar Profissional</h3>
-              <p className="text-sm text-gray-600 mt-1">Escolha um profissional para ver sua agenda</p>
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 mobile-professional-selector"
+          onClick={() => setShowProfessionalSelector(false)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl max-w-xs w-full mx-4 max-h-80 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+              <h3 className="text-base font-bold text-gray-900 text-center">Selecionar Profissional</h3>
             </div>
             
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-64 overflow-y-auto">
               {professionals?.map((professional) => (
                 <button
                   key={professional.id}
@@ -905,14 +1149,14 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
                     setSelectedProfessionalId(professional.id);
                     setShowProfessionalSelector(false);
                   }}
-                  className={`w-full flex items-center space-x-4 p-4 transition-all duration-200 mobile-professional-option ${
+                  className={`w-full flex items-center space-x-3 p-3 transition-all duration-200 mobile-professional-option ${
                     selectedProfessionalId === professional.id 
                       ? 'bg-indigo-50 border-r-4 border-indigo-500' 
                       : 'hover:bg-gray-50'
                   }`}
                 >
                   <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-white shadow-lg"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md"
                     style={{ backgroundColor: professional.color || '#6366f1' }}
                   >
                     {(() => {
@@ -925,26 +1169,23 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
                     })()}
                   </div>
                   <div className="text-left flex-1">
-                    <p className="font-semibold text-gray-900 text-base">
+                    <p className="font-semibold text-gray-900 text-sm">
                       {professional.name.replace('[Exemplo] ', '')}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Profissional
                     </p>
                   </div>
                   {selectedProfessionalId === professional.id && (
-                    <div className="ml-auto flex items-center">
-                      <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                    <div className="ml-auto">
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
                     </div>
                   )}
                 </button>
               ))}
             </div>
             
-            <div className="p-5 border-t border-gray-200 bg-gray-50">
+            <div className="p-2 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={() => setShowProfessionalSelector(false)}
-                className="w-full px-4 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-100 transition-all duration-200 font-semibold border border-gray-200 shadow-sm"
+                className="w-full px-3 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-all duration-200 font-medium text-sm border border-gray-200"
               >
                 Cancelar
               </button>
