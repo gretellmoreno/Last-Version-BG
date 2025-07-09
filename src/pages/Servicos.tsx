@@ -170,25 +170,25 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
           <nav className="flex bg-gray-100 rounded-xl p-1">
             <button
               onClick={() => setActiveTab('servicos')}
-              className={`flex-1 py-2.5 px-4 font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg ${
+              className={`flex-1 ${isMobile ? 'py-2.5 px-2' : 'py-2.5 px-4'} font-medium ${isMobile ? 'text-xs' : 'text-sm'} flex items-center justify-center ${isMobile ? 'space-x-1' : 'space-x-2'} transition-all duration-200 rounded-lg ${
                 activeTab === 'servicos'
                   ? 'text-purple-600 bg-white shadow-sm'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
               }`}
             >
-              <Scissors size={16} />
-              <span>Serviços</span>
+              <Scissors size={isMobile ? 14 : 16} />
+                <span>Serviços</span>
             </button>
             <button
               onClick={() => setActiveTab('produtos')}
-              className={`flex-1 py-2.5 px-4 font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg ${
+              className={`flex-1 ${isMobile ? 'py-2.5 px-2' : 'py-2.5 px-4'} font-medium ${isMobile ? 'text-xs' : 'text-sm'} flex items-center justify-center ${isMobile ? 'space-x-1' : 'space-x-2'} transition-all duration-200 rounded-lg ${
                 activeTab === 'produtos'
                   ? 'text-green-600 bg-white shadow-sm'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
               }`}
             >
-              <Package size={16} />
-              <span>Produtos</span>
+              <Package size={isMobile ? 14 : 16} />
+                <span>Produtos</span>
             </button>
           </nav>
         </div>
@@ -218,9 +218,9 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
                         <div className="flex items-start justify-between mb-1.5">
                           <div className="flex-1 pr-4">
                             <h3 className="font-medium text-gray-900 text-xs">{service.name}</h3>
-                          </div>
-                        </div>
-                        
+                </div>
+              </div>
+
                         <div className="grid grid-cols-3 gap-1.5">
                           <div>
                             <p className="font-semibold text-xs text-gray-900">
@@ -241,73 +241,73 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
               ) : (
                 // Tabela para desktop
                 <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Serviço
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Preço
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Duração
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Comissão
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredServices.length === 0 ? (
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Serviço
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Preço
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Duração
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Comissão
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredServices.length === 0 ? (
-                        <tr>
                           <td colSpan={4} className="px-6 py-12 text-center">
-                            <p className="text-gray-500">Nenhum serviço encontrado</p>
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredServices.map((service) => (
+                          <p className="text-gray-500">Nenhum serviço encontrado</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredServices.map((service) => (
                           <tr 
                             key={service.id} 
                             onClick={() => handleEditService(service)}
                             className="hover:bg-gray-50 transition-colors cursor-pointer"
                           >
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
                                 <div className="flex-shrink-0 h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
                                   <Scissors className="h-4 w-4 text-purple-600" />
-                                </div>
-                                <div className="ml-4">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {service.name}
-                                  </span>
-                                  {service.description && (
-                                    <p className="text-xs text-gray-500">{service.description}</p>
-                                  )}
-                                </div>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm font-semibold text-gray-900">
-                                R$ {service.price.toFixed(2).replace('.', ',')}
+                              <div className="ml-4">
+                              <span className="text-sm font-medium text-gray-900">
+                                  {service.name}
                               </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm text-gray-600">
-                                {formatDuration(service.estimated_time)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                                {service.description && (
+                                  <p className="text-xs text-gray-500">{service.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-semibold text-gray-900">
+                              R$ {service.price.toFixed(2).replace('.', ',')}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600">
+                              {formatDuration(service.estimated_time)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                               <span className="text-sm text-purple-600 font-medium">
-                                {service.commission_rate}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                              {service.commission_rate}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
               )}
             </>
           )}
@@ -335,9 +335,9 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
                         <div className="flex items-start justify-between mb-1.5">
                           <div className="flex-1 pr-4">
                             <h3 className="font-medium text-gray-900 text-xs">{product.name}</h3>
-                          </div>
-                        </div>
-                        
+                </div>
+              </div>
+
                         <div className="grid grid-cols-3 gap-1.5">
                           <div>
                             <p className="font-semibold text-xs text-gray-900">
@@ -358,32 +358,32 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
               ) : (
                 // Tabela para desktop
                 <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Produto
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Preço
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Estoque
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Margem
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredProducts.length === 0 ? (
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Produto
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Preço
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Estoque
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Margem
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredProducts.length === 0 ? (
-                        <tr>
                           <td colSpan={4} className="px-6 py-12 text-center">
-                            <p className="text-gray-500">Nenhum produto encontrado</p>
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredProducts.map((product) => (
+                          <p className="text-gray-500">Nenhum produto encontrado</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProducts.map((product) => (
                           <tr 
                             key={product.id} 
                             onClick={() => handleEditProduct(product)}
@@ -394,24 +394,24 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
                                 <div className="flex-shrink-0 h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
                                   <Package className="h-4 w-4 text-green-600" />
                                 </div>
-                                <div className="ml-4">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {product.name}
-                                  </span>
-                                  {product.description && (
-                                    <p className="text-xs text-gray-500">{product.description}</p>
-                                  )}
-                                </div>
+                              <div className="ml-4">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {product.name}
+                                </span>
+                                {product.description && (
+                                  <p className="text-xs text-gray-500">{product.description}</p>
+                                )}
+                              </div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="text-sm font-semibold text-gray-900">
-                                R$ {product.price.toFixed(2).replace('.', ',')}
+                              R$ {product.price.toFixed(2).replace('.', ',')}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="text-sm text-gray-600">
-                                {product.stock} und.
+                              {product.stock} und.
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -420,11 +420,11 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
                               </span>
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
               )}
             </>
           )}

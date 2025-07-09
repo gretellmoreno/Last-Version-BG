@@ -750,6 +750,37 @@ export const appointmentService = {
     }
   },
 
+  // Atualizar item da comanda (serviço ou produto)
+  async updateComandaItem(params: {
+    salonId: string
+    appointmentId: string
+    itemType: 'service' | 'product'
+    itemRecordId: string
+    customPrice?: number
+    quantity?: number
+    paymentMethodId?: string
+  }): Promise<RPCResponse<RPCSuccessResponse>> {
+    try {
+      const { data, error } = await supabase.rpc('update_comanda_item', {
+        p_salon_id: params.salonId,
+        p_appointment_id: params.appointmentId,
+        p_item_type: params.itemType,
+        p_item_record_id: params.itemRecordId,
+        p_custom_price: params.customPrice || null,
+        p_quantity: params.quantity || null,
+        p_payment_method_id: params.paymentMethodId || null
+      });
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data?.[0] || { success: false }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao atualizar item da comanda: ${err}` }
+    }
+  },
+
   // Atualizar agendamento (função legada - manter para compatibilidade)
   async updateAppointment(params: {
     appointmentId: string
@@ -764,6 +795,13 @@ export const appointmentService = {
     servicesToRemove?: Array<{
       appointment_service_id: string
     }>
+    productsToAdd?: Array<{
+      product_id: string
+      quantity: number
+    }>
+    productsToRemove?: Array<{
+      product_sale_id: string
+    }>
   }): Promise<RPCResponse<AppointmentDetails>> {
     try {
       // Preparar parâmetros da RPC (só enviar os que foram fornecidos)
@@ -773,7 +811,9 @@ export const appointmentService = {
         p_new_status: params.newStatus || null,
         p_new_notes: params.newNotes || null,
         p_services_to_add: params.servicesToAdd || null,
-        p_services_to_remove: params.servicesToRemove || null
+        p_services_to_remove: params.servicesToRemove || null,
+        p_products_to_add: params.productsToAdd || null,
+        p_products_to_remove: params.productsToRemove || null
       };
 
       // Só incluir p_new_client_id se foi fornecido

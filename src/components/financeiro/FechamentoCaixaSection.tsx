@@ -42,7 +42,7 @@ export default function FechamentoCaixaSection({
   onHistoricoModalOpen,
   onFechamentoCaixaModalOpen,
   formatPeriodDisplay,
-  getProfessionalName
+  getProfessionalName,
 }: FechamentoCaixaSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
   
@@ -59,25 +59,6 @@ export default function FechamentoCaixaSection({
 
   return (
     <div className="space-y-6">
-      {/* Header da seção responsivo */}
-      <div className={`flex items-center justify-between ${isMobile ? 'flex-col space-y-4' : ''}`}>
-        <div>
-          <h2 className={`font-bold text-gray-900 flex items-center space-x-2 ${isMobile ? 'text-lg' : 'text-xl'}`}>
-            <DollarSign size={isMobile ? 20 : 24} className="text-indigo-600" />
-            <span>Caixa por Profissional</span>
-          </h2>
-          <p className={`text-gray-600 mt-1 ${isMobile ? 'text-sm' : ''}`}>
-            Gerencie fechamentos e histórico financeiro
-          </p>
-        </div>
-        <button
-          onClick={onHistoricoModalOpen}
-          className={`flex items-center space-x-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors ${isMobile ? 'px-3 py-2 text-sm' : 'px-4 py-2'}`}
-        >
-          <Eye size={16} />
-          <span>Ver Histórico</span>
-        </button>
-      </div>
 
       {/* Filtros responsivos */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
@@ -143,7 +124,7 @@ export default function FechamentoCaixaSection({
 
       {/* Resultado do fechamento responsivo */}
       {hasSearched && selectedProfessional ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className={"bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden " + (isMobile ? "h-[calc(100vh-180px)] overflow-y-auto scrollbar-thin" : "")}>
           {/* Header do fechamento */}
           <div className={`border-b border-gray-200 ${isMobile ? 'p-4' : 'p-6'}`}>
             <div className="flex items-center justify-between">
@@ -171,7 +152,7 @@ export default function FechamentoCaixaSection({
 
             {isMobile ? (
               /* Cards Mobile */
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[60vh] min-h-[120px] overflow-y-auto scrollbar-thin">
                 {servicosParaFechamento.map((servico, index) => (
                   <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-start justify-between mb-3">

@@ -115,25 +115,6 @@ export default function ClientSelection({
               </div>
             </div>
 
-            {/* Sem reserva */}
-            <div 
-              onClick={() => onSelectClient({ nome: 'Sem reserva', id: 'no-reservation' })}
-              className={`flex items-center space-x-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 cursor-pointer transition-colors ${
-                hideServicesSidebar ? 'p-3 mobile-client-list-item' : 'p-4'
-              }`}
-            >
-              <div className={`bg-purple-100 rounded-full flex items-center justify-center ${
-                hideServicesSidebar ? 'w-10 h-10' : 'w-12 h-12'
-              }`}>
-                <UserPlus size={hideServicesSidebar ? 18 : 20} className="text-purple-600" />
-              </div>
-              <div>
-                <h3 className={`font-medium text-gray-900 ${hideServicesSidebar ? 'text-sm' : ''}`}>
-                  Sem reserva
-                </h3>
-              </div>
-            </div>
-
             {/* Lista de clientes */}
             {filteredClients.map((cliente) => (
               <div

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Percent } from 'lucide-react';
+import { X, CreditCard, Percent, Trash2 } from 'lucide-react';
 
 interface Taxa {
   id: string;
@@ -13,6 +13,7 @@ interface TaxaModalProps {
   onClose: () => void;
   onSave: (taxa: Omit<Taxa, 'id'> | Taxa) => Promise<void>;
   editingTaxa?: Taxa | null;
+  onDelete?: () => Promise<void>;
 }
 
 interface TaxaFormData {
@@ -24,13 +25,26 @@ export default function TaxaModal({
   isOpen,
   onClose,
   onSave,
-  editingTaxa
+  editingTaxa,
+  onDelete
 }: TaxaModalProps) {
   const [taxaForm, setTaxaForm] = useState<TaxaFormData>({
     nome: '',
     taxa: ''
   });
   const [saving, setSaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Preencher formulário quando editando
   useEffect(() => {
@@ -67,16 +81,26 @@ export default function TaxaModal({
     try {
       const taxa = {
         id: editingTaxa?.id || '',
-      nome: taxaForm.nome.trim(),
+        nome: taxaForm.nome.trim(),
         taxa: parseFloat(taxaForm.taxa) || 0,
-      ativo: true
-    };
+        ativo: true
+      };
     
       await onSave(taxa);
     } catch (err) {
       console.error('Erro ao salvar taxa:', err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (onDelete && editingTaxa) {
+      try {
+        await onDelete();
+      } catch (err) {
+        console.error('Erro ao deletar taxa:', err);
+      }
     }
   };
 
@@ -88,40 +112,46 @@ export default function TaxaModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Overlay com blur */}
+      {/* Overlay */}
       <div className="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm" onClick={onClose} />
       
-      {/* Modal - design moderno e elegante */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-100">
-        {/* Header com gradiente sutil */}
-        <div className="relative bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-2xl p-6 border-b border-gray-100">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-white hover:bg-opacity-80 rounded-full transition-all duration-200"
-          >
-            <X size={18} className="text-gray-500" />
-          </button>
-          
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <CreditCard size={24} className="text-white" />
+      {/* Modal - Ultra Compacto */}
+      <div className={`absolute ${
+        isMobile 
+          ? 'inset-x-3 top-1/2 transform -translate-y-1/2 rounded-2xl max-h-[70vh]' 
+          : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[340px] rounded-2xl'
+      } bg-white shadow-2xl border border-gray-100`}>
+        
+        {/* Header ultra compacto */}
+        <div className={`bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-2xl ${isMobile ? 'p-3' : 'p-4'} border-b border-gray-100`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-indigo-600 rounded-lg flex items-center justify-center`}>
+                <CreditCard size={isMobile ? 16 : 20} className="text-white" />
+              </div>
+              <div>
+                <h2 className={`${isMobile ? 'text-base' : 'text-lg'} font-bold text-gray-900`}>
+                  {editingTaxa ? 'Editar Método' : 'Novo Método'}
+                </h2>
+                <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-600`}>
+                  {editingTaxa ? 'Atualizar dados' : 'Configurar pagamento'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                {editingTaxa ? 'Editar Método de Pagamento' : 'Adicionar Método de Pagamento'}
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                {editingTaxa ? 'Atualize os dados do método' : 'Configure um novo método de pagamento'}
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-white hover:bg-opacity-80 rounded-full transition-all duration-200"
+            >
+              <X size={isMobile ? 14 : 16} className="text-gray-500" />
+            </button>
           </div>
         </div>
 
-        {/* Conteúdo do formulário */}
-        <div className="p-6 space-y-5">
+        {/* Conteúdo ultra compacto */}
+        <div className={`${isMobile ? 'p-3 space-y-3' : 'p-4 space-y-3'}`}>
           {/* Nome do Método */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className={`block ${isMobile ? 'text-sm' : 'text-sm'} font-semibold text-gray-700 mb-1.5`}>
               Nome do Método
             </label>
             <input
@@ -129,18 +159,19 @@ export default function TaxaModal({
               placeholder="Ex: Cartão de crédito"
               value={taxaForm.nome}
               onChange={(e) => handleUpdateForm('nome', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-sm bg-gray-50 hover:bg-white"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+              className={`w-full ${isMobile ? 'px-3 py-2' : 'px-3 py-2'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 hover:bg-white`}
             />
           </div>
 
           {/* Taxa */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              <Percent size={16} className="inline mr-2" />
+            <label className={`block ${isMobile ? 'text-sm' : 'text-sm'} font-semibold text-gray-700 mb-1.5`}>
+              <Percent size={12} className="inline mr-1" />
               Taxa (%)
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+              <span className={`absolute ${isMobile ? 'left-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-500 font-medium text-sm`}>
                 %
               </span>
               <input
@@ -151,51 +182,45 @@ export default function TaxaModal({
                 max="100"
                 value={taxaForm.taxa}
                 onChange={(e) => handleUpdateForm('taxa', e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 text-sm bg-gray-50 hover:bg-white"
+                style={{ fontSize: isMobile ? '16px' : '14px' }}
+                className={`w-full ${isMobile ? 'pl-8 pr-3 py-2' : 'pl-8 pr-3 py-2'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 hover:bg-white`}
               />
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Digite a taxa cobrada para este método de pagamento. Por exemplo, para 3,5%, digite 3,5
-            </p>
-          </div>
-
-          {/* Informação adicional */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <div className="flex items-start space-x-3">
-              <div className="w-5 h-5 bg-blue-400 rounded-full flex items-center justify-center mt-0.5">
-                <span className="text-blue-800 text-xs font-bold">i</span>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-blue-800 mb-1">Informação</h4>
-                <p className="text-sm text-blue-700">
-                  Esta taxa será aplicada automaticamente nos cálculos de fechamento de caixa para este método de pagamento.
-                </p>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Footer com botões */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-100">
-          <button
-            onClick={handleCancel}
-            disabled={saving}
-            className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-200 disabled:opacity-50"
-          >
-            Cancelar
-          </button>
+        {/* Footer compacto */}
+        <div className={`flex items-center justify-between ${isMobile ? 'px-3 py-2.5' : 'px-4 py-3'} bg-gray-50 rounded-b-2xl border-t border-gray-100`}>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              className={`${isMobile ? 'px-3 py-1.5' : 'px-4 py-2'} text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-200 disabled:opacity-50`}
+            >
+              Cancelar
+            </button>
+            {editingTaxa && onDelete && (
+              <button
+                onClick={handleDelete}
+                className={`${isMobile ? 'px-3 py-1.5' : 'px-3 py-2'} text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1`}
+              >
+                <Trash2 size={14} />
+                Deletar
+              </button>
+            )}
+          </div>
           <button
             onClick={handleSave}
             disabled={!isFormValid() || saving}
             className={`
-              px-8 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 shadow-lg
+              ${isMobile ? 'px-4 py-1.5' : 'px-6 py-2'} text-sm font-semibold rounded-lg transition-all duration-200 shadow-lg
               ${isFormValid() && !saving
                 ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-xl transform hover:-translate-y-0.5'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }
             `}
           >
-            {saving ? 'Salvando...' : editingTaxa ? 'Atualizar' : 'Adicionar Método'}
+            {saving ? 'Salvando...' : editingTaxa ? 'Atualizar' : 'Adicionar'}
           </button>
         </div>
       </div>

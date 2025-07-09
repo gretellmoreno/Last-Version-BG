@@ -7,6 +7,8 @@ import Clientes from './pages/Clientes';
 import Profissionais from './pages/Profissionais';
 import Servicos from './pages/Servicos';
 import Financeiro from './pages/Financeiro';
+import Performance from './pages/Performance';
+import Configuracoes from './pages/Configuracoes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
 import { BookingProvider } from './contexts/BookingContext';
@@ -81,6 +83,10 @@ function AppContent() {
         return <Servicos />;
       case 'financeiro':
         return <Financeiro />;
+      case 'performance':
+        return <Performance />;
+      case 'configuracoes':
+        return <Configuracoes />;
       default:
         return <Agenda />;
     }

@@ -91,7 +91,7 @@ export default function HistoricoSection({ currentDate }: HistoricoSectionProps)
             
             {isMobile ? (
               /* Cards Mobile */
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[50vh] overflow-y-auto scrollbar-thin">
                 {atendimentos.map((atendimento) => (
                   <div key={atendimento.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-3">

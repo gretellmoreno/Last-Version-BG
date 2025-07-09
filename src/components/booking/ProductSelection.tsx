@@ -44,47 +44,47 @@ export default function ProductSelection({
     <div className={`flex h-full ${hideClientSection ? 'w-full' : ''}`}>
       {/* Sidebar esquerda - condicional */}
       {!hideClientSection && (
-        <div className="w-48 bg-gray-50 border-r border-gray-200 flex flex-col">
-          <div className="p-6 flex flex-col items-center text-center">
-            {selectedClient ? (
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <span className="text-green-600 font-semibold text-lg">
-                  {selectedClient.nome?.charAt(0).toUpperCase() || 'C'}
-                </span>
-              </div>
-            ) : (
-              <button
-                onClick={onShowClientSelection}
-                className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4 cursor-pointer hover:bg-purple-200 transition-colors relative group"
-              >
-                <User size={28} className="text-purple-600" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                  <Plus size={14} className="text-white" />
-                </div>
-              </button>
-            )}
-            
-            <div>
-              {selectedClient ? (
-                <>
-                  <h3 className="font-semibold text-gray-900 text-base mb-1">{selectedClient.nome || 'Cliente'}</h3>
-                  <p className="text-sm text-gray-500">Cliente selecionado</p>
-                  <button
-                    onClick={onShowClientSelection}
-                    className="text-xs text-indigo-600 hover:text-indigo-700 mt-2"
-                  >
-                    Alterar cliente
-                  </button>
-                </>
-              ) : (
-                <>
-                  <h3 className="font-semibold text-gray-900 text-base mb-1">Adicionar cliente</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
-                </>
-              )}
+      <div className="w-48 bg-gray-50 border-r border-gray-200 flex flex-col">
+        <div className="p-6 flex flex-col items-center text-center">
+          {selectedClient ? (
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <span className="text-green-600 font-semibold text-lg">
+                {selectedClient.nome?.charAt(0).toUpperCase() || 'C'}
+              </span>
             </div>
+          ) : (
+            <button
+              onClick={onShowClientSelection}
+              className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4 cursor-pointer hover:bg-purple-200 transition-colors relative group"
+            >
+              <User size={28} className="text-purple-600" />
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                <Plus size={14} className="text-white" />
+              </div>
+            </button>
+          )}
+          
+          <div>
+            {selectedClient ? (
+              <>
+                <h3 className="font-semibold text-gray-900 text-base mb-1">{selectedClient.nome || 'Cliente'}</h3>
+                <p className="text-sm text-gray-500">Cliente selecionado</p>
+                <button
+                  onClick={onShowClientSelection}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 mt-2"
+                >
+                  Alterar cliente
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 className="font-semibold text-gray-900 text-base mb-1">Adicionar cliente</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
+              </>
+            )}
           </div>
         </div>
+      </div>
       )}
 
       {/* Conteúdo principal */}
@@ -106,16 +106,16 @@ export default function ProductSelection({
           
           {/* Barra de busca - não mostra quando compacto */}
           {!isCompact && (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Buscar produto por nome"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Buscar produto por nome"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
           )}
         </div>
 

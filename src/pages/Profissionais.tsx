@@ -6,7 +6,10 @@ import ProfessionalModal from '../components/ProfessionalModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import ValesSection from '../components/financeiro/ValesSection';
 import FechamentoCaixaSection from '../components/financeiro/FechamentoCaixaSection';
+import ValeModal from '../components/ValeModal';
 import Header from '../components/Header';
+import HistoricoFechamentoModal from '../components/HistoricoFechamentoModal';
+import PeriodFilterModal from '../components/PeriodFilterModal';
 
 const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: boolean }> = ({ onToggleMobileSidebar, isMobile: isMobileProp }) => {
   const { professionals, loading, error, addProfessional, updateProfessional, removeProfessional } = useProfessional();
@@ -15,6 +18,17 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
   const [professionalToDelete, setProfessionalToDelete] = useState<Professional | null>(null);
   const [isMobile, setIsMobile] = useState(isMobileProp || false);
   const [activeTab, setActiveTab] = useState<'profissionais' | 'vales' | 'fechamento'>('profissionais');
+  
+  // Estados para ValeModal
+  const [isValeModalOpen, setIsValeModalOpen] = useState(false);
+  const [editingVale, setEditingVale] = useState<any>(null);
+  
+  // Estado para controlar modal de histórico
+  const [isHistoricoModalOpen, setIsHistoricoModalOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  
+  // Estado para modal de período
+  const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
 
   useEffect(() => {
     if (isMobileProp !== undefined) {
@@ -163,9 +177,8 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
             vales={mockVales}
             loading={false}
             error={null}
-            onNewVale={() => console.log('Novo vale')}
-            onEditVale={(vale) => console.log('Editar vale', vale)}
-            onDeleteVale={(vale) => console.log('Deletar vale', vale)}
+            onNewVale={handleNewVale}
+            onEditVale={handleEditVale}
             formatDate={formatDate}
           />
         );
@@ -181,9 +194,9 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
             totalLiquidoFechamento={38.00}
             profissionais={professionals}
             onProfessionalChange={setSelectedProfessional}
-            onPeriodModalOpen={() => console.log('Abrir modal período')}
+            onPeriodModalOpen={() => setIsPeriodModalOpen(true)}
             onBuscar={() => setHasSearched(true)}
-            onHistoricoModalOpen={() => console.log('Abrir histórico')}
+            onHistoricoModalOpen={() => setIsHistoricoModalOpen(true)}
             onFechamentoCaixaModalOpen={() => console.log('Fechar caixa')}
             formatPeriodDisplay={formatPeriodDisplay}
             getProfessionalName={getProfessionalName}
@@ -221,116 +234,111 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
             ) : (
               <>
                 {isMobile ? (
-                  // Cards para mobile - igual aos serviços
-                  <div className="space-y-1.5 h-[calc(100vh-150px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
+                  /* Cards compactos para mobile */
+                  <div className="grid grid-cols-3 gap-2 h-[calc(100vh-150px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
                     {professionals.map((professional) => (
                       <div
                         key={professional.id}
                         onClick={() => openEditModal(professional)}
-                        className="relative bg-white rounded-xl shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-pink-200 transition-all duration-200 cursor-pointer active:scale-95"
+                        className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-pink-200 transition-all duration-200 cursor-pointer active:scale-95 flex flex-col items-center justify-center text-center p-2 aspect-square"
                       >
-                        {/* Ponto colorido no canto superior direito */}
+                        {/* Avatar/Foto compacto */}
                         <div 
-                          className="absolute top-2 right-2 w-2 h-2 rounded-full"
-                          style={{ backgroundColor: professional.color }}
-                        ></div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 flex-1">
-                            <h3 className="font-bold text-gray-900 text-sm truncate">
-                              {professional.name}
-                            </h3>
-                            <span className="text-gray-400">•</span>
-                            <p className="font-medium text-gray-600 text-xs truncate">
-                              {professional.role}
-                            </p>
-                          </div>
+                          className="w-10 h-10 text-sm rounded-full flex items-center justify-center text-white font-bold overflow-hidden mb-1.5"
+                          style={{ backgroundColor: professional.photo ? 'transparent' : professional.color }}
+                        >
+                          {professional.photo ? (
+                            <img
+                              src={professional.photo}
+                              alt={professional.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span>{professional.name.charAt(0).toUpperCase()}</span>
+                          )}
                         </div>
+                        
+                        {/* Nome do profissional */}
+                        <h3 className="font-medium text-gray-900 text-center leading-tight text-xs">
+                          {professional.name}
+                        </h3>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  // Tabela para desktop - como serviços
-                  <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+                  /* Tabela para desktop - como serviços */
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-[calc(100vh-180px)] overflow-y-auto scrollbar-thin">
                     <table className="w-full">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gray-50 sticky top-0">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Profissional
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Cargo
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Telefone
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Status
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {professionals.length === 0 ? (
-                          <tr>
-                            <td colSpan={4} className="px-6 py-12 text-center">
-                              <p className="text-gray-500">Nenhum profissional encontrado</p>
+                        {professionals.map((professional) => (
+                          <tr 
+                            key={professional.id} 
+                            onClick={() => openEditModal(professional)}
+                            className="hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div 
+                                  className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden mr-4"
+                                  style={{ backgroundColor: professional.photo ? 'transparent' : professional.color }}
+                                >
+                                  {professional.photo ? (
+                                    <img
+                                      src={professional.photo}
+                                      alt={professional.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <span>{professional.name.charAt(0).toUpperCase()}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {professional.name}
+                                  </div>
+                                  {professional.email && (
+                                    <div className="text-xs text-gray-500">{professional.email}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900 font-medium">
+                                {professional.role}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {professional.phone}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                professional.active
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {professional.active ? 'Ativo' : 'Inativo'}
+                              </span>
                             </td>
                           </tr>
-                        ) : (
-                          professionals.map((professional) => (
-                            <tr 
-                              key={professional.id} 
-                              onClick={() => openEditModal(professional)}
-                              className="hover:bg-gray-50 transition-colors cursor-pointer"
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <div 
-                                    className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-white font-semibold text-xs overflow-hidden"
-                                    style={{ backgroundColor: professional.photo ? 'transparent' : professional.color }}
-                                  >
-                                    {professional.photo ? (
-                                      <img
-                                        src={professional.photo}
-                                        alt={professional.name}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <span>{professional.name.charAt(0).toUpperCase()}</span>
-                                    )}
-                                  </div>
-                                  <div className="ml-4">
-                                    <span className="text-sm font-medium text-gray-900">
-                                      {professional.name}
-                                    </span>
-                                    {professional.email && (
-                                      <p className="text-xs text-gray-500">{professional.email}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-gray-600">
-                                  {professional.role}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-gray-600">
-                                  {professional.phone}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                  professional.active
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {professional.active ? 'Ativo' : 'Inativo'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        )}
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -360,7 +368,7 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
       case 'profissionais':
         return handleNewProfessional;
       case 'vales':
-        return () => console.log('Novo vale');
+        return handleNewVale;
       case 'fechamento':
         return undefined; // Fechamento não tem botão adicionar
       default:
@@ -368,97 +376,160 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
     }
   };
 
+  // Handlers para ValeModal
+  const handleNewVale = () => {
+    setEditingVale(null);
+    setIsValeModalOpen(true);
+  };
+
+  const handleEditVale = (vale: any) => {
+    setEditingVale(vale);
+    setIsValeModalOpen(true);
+  };
+
+  const handleSaveVale = async (vale: any) => {
+    console.log('Salvando vale:', vale);
+    // Aqui você pode implementar a lógica de salvar
+    setIsValeModalOpen(false);
+  };
+
+  const handleDeleteVale = (vale: any) => {
+    console.log('Deletando vale:', vale);
+    // Aqui você pode implementar a lógica de deletar
+  };
+
+  const handleCloseValeModal = () => {
+    setIsValeModalOpen(false);
+    setEditingVale(null);
+  };
+
+  // Função para aplicar período selecionado
+  const handleApplyPeriod = (startDate: string, endDate: string) => {
+    setPeriodFilter({ start: startDate, end: endDate });
+    setHasSearched(false); // Reset busca quando mudar período
+  };
+
+  // Dados mockados para histórico de fechamentos
+  const mockHistoricoFechamentos = [
+    {
+      id: '1',
+      data: '15/01/2024',
+      hora: '18:30',
+      profissionalNome: 'Carmen Silva',
+      servicos: [
+        {
+          data: '15/01/2024',
+          cliente: 'Maria Silva',
+          servico: 'Corte e Escova',
+          valorBruto: 80.00,
+          taxa: -4.00,
+          comissao: 40.00,
+          valorLiquido: 36.00
+        },
+        {
+          data: '15/01/2024',
+          cliente: 'Ana Santos',
+          servico: 'Manicure',
+          valorBruto: 25.00,
+          taxa: -1.25,
+          comissao: 12.50,
+          valorLiquido: 11.25
+        }
+      ],
+      totalLiquido: 47.25
+    },
+    {
+      id: '2',
+      data: '10/01/2024',
+      hora: '19:15',
+      profissionalNome: 'Carmen Silva',
+      servicos: [
+        {
+          data: '10/01/2024',
+          cliente: 'João Oliveira',
+          servico: 'Corte Masculino',
+          valorBruto: 35.00,
+          taxa: -1.75,
+          comissao: 17.50,
+          valorLiquido: 15.75
+        }
+      ],
+      totalLiquido: 15.75
+    }
+  ];
+
+  // Função para mudar de aba e resetar histórico
+  const handleTabChange = (tab: 'profissionais' | 'vales' | 'fechamento') => {
+    setActiveTab(tab);
+    // Reset histórico quando sair da aba fechamento
+    if (tab !== 'fechamento') {
+      setIsHistoricoModalOpen(false);
+      setIsHistoryOpen(false);
+    }
+  };
+
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-screen">
       <Header 
         title={getPageTitle()}
         onAddClick={getAddClickHandler()}
         onMenuClick={handleMenuClick}
+        showHistoryButton={activeTab === 'fechamento'}
+        onHistoryToggle={() => {
+          setIsHistoricoModalOpen(true);
+          setIsHistoryOpen(true);
+        }}
+        isHistoryOpen={isHistoryOpen}
+        onHistoryClose={() => {
+          setIsHistoricoModalOpen(false);
+          setIsHistoryOpen(false);
+        }}
       />
       
       <div className="flex-1 bg-gray-50 overflow-hidden">
-        <div className={`flex-1 overflow-hidden ${isMobile ? 'p-3' : 'p-4 md:p-6'}`}>
-                    {/* Tabs de navegação */}
-          <div className={`${isMobile ? 'border-b border-gray-200 bg-white p-2 mb-3' : 'bg-white rounded-xl shadow-sm border border-gray-200 mb-4'}`}>
-            {isMobile ? (
+        <div className="h-[calc(100vh-100px)] overflow-y-auto scrollbar-thin md:h-auto md:overflow-visible">
+          <div className="p-4 md:p-6">
+            {/* Tabs de navegação */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
               <nav className="flex bg-gray-100 rounded-xl p-1">
                 <button
-                  onClick={() => setActiveTab('profissionais')}
-                  className={`flex-1 py-2.5 px-2 font-medium text-sm flex items-center justify-center space-x-1 transition-all duration-200 rounded-lg ${
+                  onClick={() => handleTabChange('profissionais')}
+                  className={`flex-1 ${isMobile ? 'py-2.5 px-2' : 'py-2.5 px-4'} font-medium ${isMobile ? 'text-xs' : 'text-sm'} flex items-center justify-center ${isMobile ? 'space-x-1' : 'space-x-2'} transition-all duration-200 rounded-lg ${
                     activeTab === 'profissionais'
                       ? 'text-pink-600 bg-white shadow-sm'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
                   }`}
                 >
-                  <Users size={14} />
+                  <Users size={isMobile ? 14 : 16} />
                   <span>Profissionais</span>
                 </button>
                 <button
-                  onClick={() => setActiveTab('vales')}
-                  className={`flex-1 py-2.5 px-2 font-medium text-sm flex items-center justify-center space-x-1 transition-all duration-200 rounded-lg ${
+                  onClick={() => handleTabChange('vales')}
+                  className={`flex-1 ${isMobile ? 'py-2.5 px-2' : 'py-2.5 px-4'} font-medium ${isMobile ? 'text-xs' : 'text-sm'} flex items-center justify-center ${isMobile ? 'space-x-1' : 'space-x-2'} transition-all duration-200 rounded-lg ${
                     activeTab === 'vales'
-                      ? 'text-pink-600 bg-white shadow-sm'
+                      ? 'text-purple-600 bg-white shadow-sm'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
                   }`}
                 >
-                  <Receipt size={14} />
+                  <Receipt size={isMobile ? 14 : 16} />
                   <span>Vales</span>
                 </button>
                 <button
-                  onClick={() => setActiveTab('fechamento')}
-                  className={`flex-1 py-2.5 px-1 font-medium text-xs flex items-center justify-center space-x-1 transition-all duration-200 rounded-lg ${
+                  onClick={() => handleTabChange('fechamento')}
+                  className={`flex-1 ${isMobile ? 'py-2.5 px-1' : 'py-2.5 px-4'} font-medium ${isMobile ? 'text-xs' : 'text-sm'} flex items-center justify-center ${isMobile ? 'space-x-1' : 'space-x-2'} transition-all duration-200 rounded-lg ${
                     activeTab === 'fechamento'
-                      ? 'text-pink-600 bg-white shadow-sm'
+                      ? 'text-indigo-600 bg-white shadow-sm'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
                   }`}
                 >
-                  <DollarSign size={14} />
+                  <DollarSign size={isMobile ? 14 : 16} />
                   <span>Fechamento</span>
                 </button>
               </nav>
-            ) : (
-              <div className="border-b border-gray-200">
-                <nav className="flex justify-start px-6">
-                  <button
-                    onClick={() => setActiveTab('profissionais')}
-                    className={`flex items-center space-x-2 py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === 'profissionais'
-                        ? 'border-pink-500 text-pink-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Users size={16} />
-                    <span>Profissionais</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('vales')}
-                    className={`flex items-center space-x-2 py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === 'vales'
-                        ? 'border-pink-500 text-pink-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Receipt size={16} />
-                    <span>Vales</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('fechamento')}
-                    className={`flex items-center space-x-2 py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === 'fechamento'
-                        ? 'border-pink-500 text-pink-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <DollarSign size={16} />
-                    <span>Fechamento de Caixa</span>
-                  </button>
-                </nav>
-              </div>
-            )}
-          </div>
+            </div>
 
-          {/* Conteúdo das tabs */}
-          {renderTabContent()}
+            {renderTabContent()}
+          </div>
         </div>
       </div>
 
@@ -478,6 +549,34 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
         onConfirm={handleDeleteProfessional}
         title="Excluir profissional?"
         message="Tem certeza que deseja excluir este profissional? Esta ação não pode ser desfeita."
+      />
+
+      <ValeModal
+        isOpen={isValeModalOpen}
+        onClose={handleCloseValeModal}
+        onSave={handleSaveVale}
+        editingVale={editingVale}
+        onDelete={editingVale ? () => {
+          handleDeleteVale(editingVale);
+          handleCloseValeModal();
+        } : undefined}
+      />
+      
+      <HistoricoFechamentoModal
+        isOpen={isHistoricoModalOpen}
+        onClose={() => {
+          setIsHistoricoModalOpen(false);
+          setIsHistoryOpen(false);
+        }}
+        fechamentos={mockHistoricoFechamentos}
+        profissionalNome={selectedProfessional ? getProfessionalName(selectedProfessional) : 'Todos os profissionais'}
+      />
+
+      <PeriodFilterModal
+        isOpen={isPeriodModalOpen}
+        onClose={() => setIsPeriodModalOpen(false)}
+        onApply={handleApplyPeriod}
+        currentPeriod={periodFilter}
       />
     </div>
   );

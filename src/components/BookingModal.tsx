@@ -20,6 +20,7 @@ interface BookingModalProps {
   selectedTime?: string;
   selectedProfessional?: string;
   isMobile?: boolean;
+  appointmentId?: string;
 }
 
 interface ClientFormData {
@@ -42,7 +43,8 @@ export default function BookingModal({
   selectedDate, 
   selectedTime, 
   selectedProfessional,
-  isMobile = false
+  isMobile = false,
+  appointmentId
 }: BookingModalProps) {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -357,10 +359,19 @@ export default function BookingModal({
     setServiceProfessionals(professionals);
   }, []);
 
-  const handleSelectClient = useCallback((client: any) => {
+  const handleSelectClient = useCallback(async (client: any) => {
     setSelectedClient(client);
     setShowClientSelection(false);
-  }, []);
+
+    // Atualizar imediatamente o agendamento se já existir (edição de comanda)
+    if (currentSalon && appointmentId) {
+      await supabaseService.appointments.updateAppointment({
+        appointmentId: appointmentId,
+        salonId: currentSalon.id,
+        newClientId: client.id
+      });
+    }
+  }, [currentSalon, appointmentId]);
 
   const handleUpdateClientForm = useCallback((field: string, value: string) => {
     setClientForm(prev => ({
@@ -507,17 +518,17 @@ export default function BookingModal({
                           </div>
                         </>
                       )}
-                    </div>
+                </div>
                     
                     {/* Texto do cliente */}
-                    <div className="text-center">
+                <div className="text-center">
                       <p className="font-medium text-gray-900 leading-none text-xs">
                         {selectedClient 
                           ? selectedClient.nome?.split(' ')[0] || 'Cliente'
                           : 'Cliente'
                         }
                       </p>
-                    </div>
+                </div>
                   </button>
 
                   <div className="w-px bg-gray-300 h-5"></div>

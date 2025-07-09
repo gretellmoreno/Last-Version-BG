@@ -131,6 +131,10 @@ export default function EditAppointmentModal({
           const serviceIds = details.services.map(s => s.id);
           setSelectedServices(serviceIds);
           
+          // Popular produtos selecionados
+          const productIds = (details as any).products ? (details as any).products.map((p: any) => p.product_id) : [];
+          setSelectedProducts(productIds);
+          
           const newServiceProfessionals = serviceIds.map(serviceId => ({
             serviceId,
             professionalId: details.professional.id
@@ -190,15 +194,44 @@ export default function EditAppointmentModal({
     }
   }, [isOpen, appointment, appointmentId, clients, services]);
 
-  const toggleProduct = useCallback((productId: string) => {
+  const toggleProduct = useCallback(async (productId: string) => {
+    const isCurrentlySelected = selectedProducts.includes(productId);
+    
+    // Atualizar estado local
     setSelectedProducts(prev => 
       prev.includes(productId) 
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     );
+
+    // Atualizar imediatamente o agendamento se já existir (edição de comanda)
+    const currentAppointmentId = appointmentId || appointment?.id;
+    if (currentSalon && currentAppointmentId) {
+      if (isCurrentlySelected) {
+        // Remover produto - encontrar o product_sale_id correto
+        const productToRemove = (appointmentDetails?.appointment as any)?.products?.find((p: any) => p.product_id === productId);
+        if (productToRemove?.product_sale_id) {
+          await supabaseService.appointments.updateAppointment({
+            appointmentId: currentAppointmentId,
+            salonId: currentSalon.id,
+            productsToAdd: [],
+            productsToRemove: [{ product_sale_id: productToRemove.product_sale_id }]
+          });
+        }
+      } else {
+        // Adicionar produto
+        await supabaseService.appointments.updateAppointment({
+          appointmentId: currentAppointmentId,
+          salonId: currentSalon.id,
+          productsToAdd: [{ product_id: productId, quantity: 1 }],
+          productsToRemove: []
+        });
+      }
+    }
+
     // Transição imediata para confirmação
     setCurrentStep('confirmation');
-  }, []);
+  }, [selectedProducts, currentSalon, appointmentId, appointment?.id, appointmentDetails]);
 
   const resetModal = useCallback(() => {
     setSelectedServices([]);
@@ -238,6 +271,9 @@ export default function EditAppointmentModal({
       if (data?.success) {
         setAppointmentDetails(data);
         setSelectedServices(data.appointment.services.map(s => s.id));
+        // Atualizar produtos também
+        const productIds = (data.appointment as any).products ? (data.appointment as any).products.map((p: any) => p.product_id) : [];
+        setSelectedProducts(productIds);
         await refreshAppointments();
       }
     } catch (error) {
@@ -268,6 +304,9 @@ export default function EditAppointmentModal({
       if (data?.success) {
         setAppointmentDetails(data);
         setSelectedServices(data.appointment.services.map(s => s.id));
+        // Atualizar produtos também
+        const productIds = (data.appointment as any).products ? (data.appointment as any).products.map((p: any) => p.product_id) : [];
+        setSelectedProducts(productIds);
         await refreshAppointments();
       }
     } catch (error) {
@@ -308,10 +347,20 @@ export default function EditAppointmentModal({
     setServiceProfessionals(professionals);
   }, []);
 
-  const handleSelectClient = useCallback((client: any) => {
+  const handleSelectClient = useCallback(async (client: any) => {
     setSelectedClient(client);
     setShowClientSelection(false);
-  }, []);
+
+    // Atualizar imediatamente o agendamento se já existir (edição de comanda)
+    const currentAppointmentId = appointmentId || appointment?.id;
+    if (currentSalon && currentAppointmentId) {
+      await supabaseService.appointments.updateAppointment({
+        appointmentId: currentAppointmentId,
+        salonId: currentSalon.id,
+        newClientId: client.id
+      });
+    }
+  }, [currentSalon, appointmentId, appointment?.id]);
 
   const handleUpdateClientForm = useCallback((field: string, value: string) => {
     setClientForm(prev => ({ ...prev, [field]: value }));

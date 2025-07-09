@@ -120,47 +120,47 @@ export default function ProductSelection({
     <div className={`flex h-full ${hideClientSection ? 'w-full' : ''}`}>
       {/* Sidebar esquerda - condicional */}
       {!hideClientSection && (
+      <div 
+        className={`w-48 bg-gray-50 border-r border-gray-200 flex flex-col ${
+          !selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''
+        }`}
+        onClick={!selectedClient ? onShowClientSelection : undefined}
+      >
         <div 
-          className={`w-48 bg-gray-50 border-r border-gray-200 flex flex-col ${
-            !selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''
-          }`}
-          onClick={!selectedClient ? onShowClientSelection : undefined}
+          className={`p-6 flex flex-col items-center text-center ${selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
+          onClick={selectedClient ? onShowClientSelection : undefined}
         >
-          <div 
-            className={`p-6 flex flex-col items-center text-center ${selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
-            onClick={selectedClient ? onShowClientSelection : undefined}
-          >
-            {selectedClient ? (
-              <>
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-green-600 font-semibold text-lg">
+          {selectedClient ? (
+            <>
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <span className="text-green-600 font-semibold text-lg">
                     {(selectedClient.nome || selectedClient.name)?.charAt(0).toUpperCase() || 'C'}
-                  </span>
-                </div>
-                <div>
+                </span>
+              </div>
+              <div>
                   <h3 className="font-semibold text-gray-900 text-base mb-1">{selectedClient.nome || selectedClient.name || 'Cliente'}</h3>
-                  <p className="text-sm text-gray-500">Cliente selecionado</p>
-                  <p className="text-xs text-indigo-600 mt-2">
-                    Alterar cliente
-                  </p>
+                <p className="text-sm text-gray-500">Cliente selecionado</p>
+                <p className="text-xs text-indigo-600 mt-2">
+                  Alterar cliente
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4 hover:bg-purple-200 transition-colors relative group">
+                <User size={28} className="text-purple-600" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                  <Plus size={14} className="text-white" />
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4 hover:bg-purple-200 transition-colors relative group">
-                  <User size={28} className="text-purple-600" />
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                    <Plus size={14} className="text-white" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-base mb-1">Adicionar cliente</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
-                </div>
-              </>
-            )}
-          </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base mb-1">Adicionar cliente</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
+              </div>
+            </>
+          )}
         </div>
+      </div>
       )}
 
       {/* Área principal de produtos */}
@@ -224,15 +224,15 @@ export default function ProductSelection({
                     `}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex-1">
+                        <div className="flex-1">
                         <h3 className="font-medium text-gray-900 text-sm">{product.name}</h3>
                         <div className="flex items-center space-x-3 text-xs text-gray-500">
-                          <span>Estoque: {product.stock}</span>
-                          {editingProductId !== product.id && (
-                            <span className="font-semibold text-gray-900">
-                              R$ {formatDisplayValue(getProductPrice(product))}
-                            </span>
-                          )}
+                            <span>Estoque: {product.stock}</span>
+                            {editingProductId !== product.id && (
+                              <span className="font-semibold text-gray-900">
+                                R$ {formatDisplayValue(getProductPrice(product))}
+                              </span>
+                            )}
                         </div>
                       </div>
 
