@@ -12,13 +12,15 @@ import PaymentMethodSelection from './PaymentMethodSelection';
 import ClientSelection from './booking/ClientSelection';
 import ClientForm from './booking/ClientForm';
 import { CalendarEvent, AppointmentDetails } from '../types';
-import { useBooking } from '../contexts/BookingContext';
+import { useBooking } from '../hooks/useBooking';
 import { useService } from '../contexts/ServiceContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
 import { useApp } from '../contexts/AppContext';
-import { useClient } from '../contexts/ClientContext';
+import { useClients } from '../hooks/useClients';
 import { useProduct } from '../contexts/ProductContext';
 import { supabaseService } from '../lib/supabaseService';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryClient';
 
 interface EditAppointmentModalProps {
   isOpen: boolean;
@@ -60,6 +62,9 @@ export default function EditAppointmentModal({
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+  const [editingQuantity, setEditingQuantity] = useState<string>('1');
 
   // Detectar se está em mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -78,9 +83,10 @@ export default function EditAppointmentModal({
   const { refreshAppointments } = useBooking();
   const { services } = useService();
   const { professionals } = useProfessional();
-  const { clients } = useClient();
+  const { clients } = useClients();
   const { products } = useProduct();
   const { currentSalon } = useApp();
+  const queryClient = useQueryClient();
   
   const [bookingDate, setBookingDate] = useState(appointment?.start || new Date());
   const [bookingTime, setBookingTime] = useState<string>('');
@@ -105,10 +111,9 @@ export default function EditAppointmentModal({
     return 'Profissional';
   }, [appointmentDetails, serviceProfessionals, professionals]);
 
-  // Buscar detalhes do agendamento
-  useEffect(() => {
-    const fetchAppointmentDetails = async () => {
-      if (!isOpen || !appointmentId || !currentSalon?.id) return;
+  // Função para buscar detalhes do agendamento
+  const fetchAppointmentDetails = useCallback(async () => {
+    if (!appointmentId || !currentSalon?.id) return;
 
       setLoadingDetails(true);
       setDetailsError(null);
@@ -159,12 +164,14 @@ export default function EditAppointmentModal({
       } finally {
         setLoadingDetails(false);
       }
-    };
+  }, [appointmentId, currentSalon?.id]);
 
-    if (appointmentId) {
+  // Buscar detalhes do agendamento quando modal abrir
+  useEffect(() => {
+    if (isOpen && appointmentId) {
       fetchAppointmentDetails();
     }
-  }, [isOpen, appointmentId, currentSalon?.id]);
+  }, [isOpen, appointmentId, fetchAppointmentDetails]);
 
   // Inicializar dados do agendamento (modo legado)
   useEffect(() => {
@@ -227,11 +234,14 @@ export default function EditAppointmentModal({
           productsToRemove: []
         });
       }
+      
+      // Recarregar dados do agendamento para ter dados atualizados
+      await fetchAppointmentDetails();
     }
 
     // Transição imediata para confirmação
     setCurrentStep('confirmation');
-  }, [selectedProducts, currentSalon, appointmentId, appointment?.id, appointmentDetails]);
+  }, [selectedProducts, currentSalon, appointmentId, appointment?.id, appointmentDetails, fetchAppointmentDetails]);
 
   const resetModal = useCallback(() => {
     setSelectedServices([]);
@@ -247,6 +257,9 @@ export default function EditAppointmentModal({
     });
     setAppointmentDetails(null);
     setDetailsError(null);
+    setEditingItemId(null);
+    setEditingValue('');
+    setEditingQuantity('1');
   }, []);
 
   // Adicionar serviço à comanda
@@ -329,11 +342,14 @@ export default function EditAppointmentModal({
       await addServiceToComanda(serviceId);
     }
     
-    // Transição rápida para confirmação (50ms para dar tempo da API processar)
+    // Recarregar dados do agendamento para ter dados atualizados no resumo
+    await fetchAppointmentDetails();
+    
+    // Transição rápida para confirmação
     setTimeout(() => {
       setCurrentStep('confirmation');
     }, 50);
-  }, [selectedServices, appointmentDetails, addServiceToComanda, removeServiceFromComanda]);
+  }, [selectedServices, appointmentDetails, addServiceToComanda, removeServiceFromComanda, fetchAppointmentDetails]);
 
   const handleContinueFromConfirmation = useCallback(async () => {
     setCurrentStep('datetime');
@@ -405,9 +421,11 @@ export default function EditAppointmentModal({
     onClose();
   }, [resetModal, onClose]);
 
-  const handleCompleteAppointment = useCallback(() => {
+  const handleCompleteAppointment = useCallback(async () => {
+    // Recarregar dados do agendamento antes de mostrar resumo da comanda
+    await fetchAppointmentDetails();
     setCurrentStep('payment');
-  }, []);
+  }, [fetchAppointmentDetails]);
 
   const handleSelectPaymentMethod = useCallback((paymentMethodId: string) => {
     setSelectedPaymentMethodId(paymentMethodId);
@@ -434,16 +452,20 @@ export default function EditAppointmentModal({
       if (data?.success) {
         setAppointmentDetails(data);
         await refreshAppointments();
+        // Forçar atualização dos dados antes de fechar
+        await queryClient.invalidateQueries({ 
+          queryKey: queryKeys.appointmentDetails(currentAppointmentId, currentSalon.id)
+        });
         resetModal();
-      onClose();
-    }
+        onClose();
+      }
     } catch (error) {
       console.error('Erro inesperado ao finalizar comanda:', error);
       alert('Erro inesperado ao finalizar comanda');
     } finally {
       setIsUpdatingAppointment(false);
     }
-  }, [appointmentId, appointment?.id, currentSalon?.id, selectedPaymentMethodId, refreshAppointments, resetModal, onClose]);
+  }, [appointmentId, appointment?.id, currentSalon?.id, selectedPaymentMethodId, refreshAppointments, onClose]);
 
   const handleBackFromPayment = useCallback(() => setCurrentStep('confirmation'), []);
   const handleOpenCancelModal = useCallback(() => setShowCancelModal(true), []);
@@ -466,8 +488,13 @@ export default function EditAppointmentModal({
         return;
       }
 
-      if (data?.success) {
+      if (data?.success && data.appointment) {
+        // Atualizar o estado local com o agendamento cancelado
+        setAppointmentDetails(data);
+        
+        // Atualizar a lista principal de agendamentos
         await refreshAppointments();
+        
         resetModal();
         onClose();
       }
@@ -478,6 +505,96 @@ export default function EditAppointmentModal({
       setIsUpdatingAppointment(false);
     }
   }, [appointmentId, appointment?.id, currentSalon?.id, refreshAppointments, resetModal, onClose]);
+
+  // Função para atualizar valor de item da comanda
+  const updateComandaItemValue = useCallback(async (
+    itemType: 'service' | 'product', 
+    itemRecordId: string, 
+    newPrice: number,
+    newQuantity?: number
+  ) => {
+    if (!currentSalon?.id || !appointmentId) return;
+
+    setIsUpdatingAppointment(true);
+
+    try {
+      const { data, error } = await supabaseService.appointments.updateComandaItem({
+        salonId: currentSalon.id,
+        appointmentId: appointmentId,
+        itemType: itemType,
+        itemRecordId: itemRecordId,
+        customPrice: newPrice,
+        quantity: newQuantity
+      });
+
+      if (error) {
+        alert('Erro ao atualizar valor: ' + error);
+        return;
+      }
+
+      if (data?.success) {
+        // Recarregar detalhes do agendamento
+        const { data: updatedData, error: fetchError } = await supabaseService.appointments.getDetails(
+          appointmentId,
+          currentSalon.id
+        );
+
+        if (!fetchError && updatedData?.success) {
+          setAppointmentDetails(updatedData);
+        }
+        
+        await refreshAppointments();
+      }
+    } catch (error) {
+      console.error('Erro inesperado ao atualizar valor:', error);
+      alert('Erro inesperado ao atualizar valor');
+    } finally {
+      setIsUpdatingAppointment(false);
+      setEditingItemId(null);
+      setEditingValue('');
+    }
+  }, [currentSalon?.id, appointmentId, refreshAppointments]);
+
+  // Função para iniciar edição de valor (serviços)
+  const startEditingService = useCallback((serviceId: string, currentValue: number) => {
+    setEditingItemId(`service-${serviceId}`);
+    setEditingValue(currentValue.toFixed(2).replace('.', ','));
+  }, []);
+
+  // Função para iniciar edição de produto (valor + quantidade)
+  const startEditingProduct = useCallback((productSaleId: string, currentValue: number, currentQuantity: number) => {
+    setEditingItemId(`product-${productSaleId}`);
+    setEditingValue(currentValue.toFixed(2).replace('.', ','));
+    setEditingQuantity(currentQuantity.toString());
+  }, []);
+
+  // Função para cancelar edição
+  const cancelEditing = useCallback(() => {
+    setEditingItemId(null);
+    setEditingValue('');
+    setEditingQuantity('1');
+  }, []);
+
+  // Função para salvar valor editado
+  const saveEditedValue = useCallback(async (itemType: 'service' | 'product', itemRecordId: string) => {
+    const numericValue = parseFloat(editingValue.replace(',', '.'));
+    if (isNaN(numericValue) || numericValue < 0) {
+      alert('Por favor, insira um valor válido');
+      return;
+    }
+
+    let quantity = undefined;
+    if (itemType === 'product') {
+      const numericQuantity = parseInt(editingQuantity);
+      if (isNaN(numericQuantity) || numericQuantity < 1) {
+        alert('Por favor, insira uma quantidade válida');
+        return;
+      }
+      quantity = numericQuantity;
+    }
+
+    await updateComandaItemValue(itemType, itemRecordId, numericValue, quantity);
+  }, [editingValue, editingQuantity, updateComandaItemValue]);
 
   if (!isOpen) return null;
 
@@ -674,30 +791,148 @@ export default function EditAppointmentModal({
                   <div className="space-y-2">
                     {appointmentDetails?.appointment?.services?.map((service) => {
                       const serviceData = services?.find(s => s.id === service.id);
+                      const currentPrice = (service as any).price || 0;
+                      const serviceId = service.appointment_service_id || service.id;
+                      const isEditing = editingItemId === `service-${serviceId}`;
+                      
                       return (
                         <div key={service.id} className="flex justify-between items-center py-1">
                           <span className="text-sm text-gray-800">{serviceData?.name || service.name}</span>
-                          <span className="text-sm font-medium text-gray-900">
-                            R$ {serviceData?.price?.toFixed(2).replace('.', ',') || '0,00'}
-                          </span>
+                          
+                          {isEditing ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="flex items-center bg-white border border-gray-300 rounded-md px-2 py-1">
+                                <span className="text-sm text-gray-500 mr-1">R$</span>
+                                <input
+                                  type="text"
+                                  value={editingValue}
+                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  className="w-16 text-sm text-right border-0 outline-none"
+                                  autoFocus
+                                  placeholder="0,00"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      saveEditedValue('service', serviceId);
+                                    } else if (e.key === 'Escape') {
+                                      cancelEditing();
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <button
+                                onClick={() => saveEditedValue('service', serviceId)}
+                                disabled={isUpdatingAppointment}
+                                className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 font-medium"
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                disabled={isUpdatingAppointment}
+                                className="text-xs px-2 py-1 bg-gray-400 text-white rounded hover:bg-gray-500 disabled:opacity-50"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => startEditingService(serviceId, currentPrice)}
+                              disabled={isUpdatingAppointment}
+                              className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors"
+                              title="Clique para editar o valor"
+                            >
+                              R$ {currentPrice.toFixed(2).replace('.', ',')}
+                            </button>
+                          )}
                   </div>
                       );
                     })}
                 </div>
               </div>
 
-                {selectedProducts.length > 0 && (
+                {(appointmentDetails?.appointment as any)?.products?.length > 0 && (
                   <div className="mb-4">
                     <p className="text-sm font-medium text-gray-600 mb-2">Produtos:</p>
                     <div className="space-y-2">
-                      {selectedProducts.map((productId) => {
-                        const productData = products?.find(p => p.id === productId);
+                      {(appointmentDetails?.appointment as any)?.products?.map((productSale: any) => {
+                        const productData = products?.find(p => p.id === productSale.product_id);
+                        const currentPrice = productSale.unit_price || productData?.price || 0;
+                        const productSaleId = productSale.product_sale_id;
+                        const isEditing = editingItemId === `product-${productSaleId}`;
+                        
                         return (
-                          <div key={productId} className="flex justify-between items-center py-1">
-                            <span className="text-sm text-gray-800">{productData?.name || `Produto ${productId}`}</span>
-                            <span className="text-sm font-medium text-gray-900">
-                              R$ {productData?.price?.toFixed(2).replace('.', ',') || '0,00'}
-                            </span>
+                          <div key={productSaleId} className="flex justify-between items-center py-1">
+                            <span className="text-sm text-gray-800">{productData?.name || `Produto ${productSale.product_id}`}</span>
+                            
+                            {isEditing ? (
+                              <div className="flex items-center space-x-2">
+                                {/* Quantidade */}
+                                <div className="flex items-center bg-white border border-gray-300 rounded-md px-2 py-1">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={editingQuantity}
+                                    onChange={(e) => setEditingQuantity(e.target.value)}
+                                    className="w-10 text-sm text-center border-0 outline-none"
+                                    placeholder="1"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        saveEditedValue('product', productSaleId);
+                                      } else if (e.key === 'Escape') {
+                                        cancelEditing();
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm text-gray-500 ml-1">x</span>
+                                </div>
+                                
+                                {/* Valor */}
+                                <div className="flex items-center bg-white border border-gray-300 rounded-md px-2 py-1">
+                                  <span className="text-sm text-gray-500 mr-1">R$</span>
+                                  <input
+                                    type="text"
+                                    value={editingValue}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    className="w-16 text-sm text-right border-0 outline-none"
+                                    autoFocus
+                                    placeholder="0,00"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        saveEditedValue('product', productSaleId);
+                                      } else if (e.key === 'Escape') {
+                                        cancelEditing();
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                
+                                <button
+                                  onClick={() => saveEditedValue('product', productSaleId)}
+                                  disabled={isUpdatingAppointment}
+                                  className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 font-medium"
+                                >
+                                  Salvar
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  disabled={isUpdatingAppointment}
+                                  className="text-xs px-2 py-1 bg-gray-400 text-white rounded hover:bg-gray-500 disabled:opacity-50"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => startEditingProduct(productSaleId, currentPrice, productSale.quantity || 1)}
+                                  disabled={isUpdatingAppointment}
+                                  className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors"
+                                  title="Clique para editar valor e quantidade"
+                                >
+                                  {productSale.quantity || 1}x R$ {currentPrice.toFixed(2).replace('.', ',')}
+                                </button>
+                              </div>
+                            )}
                 </div>
                         );
                       })}
@@ -711,14 +946,15 @@ export default function EditAppointmentModal({
                     <span className="text-lg font-bold text-gray-900">
                       R$ {(() => {
                         const servicesTotal = appointmentDetails?.appointment?.services?.reduce((total, service) => {
-                          const serviceData = services?.find(s => s.id === service.id);
-                          return total + (serviceData?.price || 0);
+                          const currentPrice = (service as any).price || 0;
+                          return total + currentPrice;
                         }, 0) || 0;
                         
-                        const productsTotal = selectedProducts.reduce((total, productId) => {
-                          const productData = products?.find(p => p.id === productId);
-                          return total + (productData?.price || 0);
-                        }, 0);
+                        const productsTotal = (appointmentDetails?.appointment as any)?.products?.reduce((total: number, productSale: any) => {
+                          const currentPrice = productSale.unit_price || products?.find(p => p.id === productSale.product_id)?.price || 0;
+                          const quantity = productSale.quantity || 1;
+                          return total + (currentPrice * quantity);
+                        }, 0) || 0;
                         
                         return (servicesTotal + productsTotal).toFixed(2).replace('.', ',');
                       })()}
@@ -775,6 +1011,10 @@ export default function EditAppointmentModal({
               isLoading={isUpdatingAppointment}
               isNewAppointment={false}
               hideClientSection={isMobile}
+              appointmentId={appointmentId || appointment?.id}
+              salonId={currentSalon?.id}
+              appointmentDetails={appointmentDetails}
+              onRefreshAppointment={fetchAppointmentDetails}
             />
           ) : (
             <ServiceSelection
@@ -791,46 +1031,72 @@ export default function EditAppointmentModal({
         {/* Footer */}
         {currentStep === 'confirmation' && (
           <div className={`border-t border-gray-200 bg-white ${isMobile ? 'p-3' : 'p-4'}`}>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleOpenCancelModal}
-                disabled={isUpdatingAppointment}
-                className={`flex items-center space-x-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${
-                  isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
-                }`}
-              >
-                {isUpdatingAppointment ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                    <span>...</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle size={14} />
-                    <span>Cancelar</span>
-                  </>
+            <div className={`flex ${isMobile ? 'justify-end' : 'justify-between'} items-center space-x-3`}>
+              {/* Botão Lembrete WhatsApp - desktop à esquerda, mobile junto */}
+              {!isMobile && (
+                <button
+                  className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg font-semibold shadow-sm hover:bg-green-200 transition-colors text-sm"
+                  style={{ minWidth: 0 }}
+                  onClick={() => alert('Função de lembrete WhatsApp!')}
+                >
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: '#25D366' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.967-.273-.099-.472-.148-.67.15-.198.297-.767.966-.94 1.164-.173.198-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.372-.01-.571-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.1 3.2 5.077 4.363.71.306 1.263.489 1.694.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.288.173-1.413-.074-.124-.272-.198-.57-.347z"/><path fillRule="evenodd" d="M12.004 2.003c-5.514 0-9.997 4.483-9.997 9.997 0 1.762.462 3.484 1.34 4.995L2.01 21.99l5.09-1.332a9.96 9.96 0 0 0 4.904 1.245h.004c5.514 0 9.997-4.483 9.997-9.997 0-2.67-1.04-5.178-2.927-7.065-1.887-1.887-4.395-2.927-7.065-2.927zm0 17.995a7.96 7.96 0 0 1-4.07-1.13l-.292-.173-3.02.789.805-2.945-.19-.302A7.96 7.96 0 0 1 4.04 12c0-4.398 3.566-7.964 7.964-7.964 2.126 0 4.124.83 5.63 2.337a7.93 7.93 0 0 1 2.334 5.627c0 4.398-3.566 7.964-7.964 7.964z" clipRule="evenodd"/></svg>
+                  </span>
+                  <span className="ml-2 hidden md:inline">Lembrete</span>
+                </button>
+              )}
+              <div className="flex space-x-3">
+                {/* Botão Lembrete WhatsApp em mobile */}
+                {isMobile && (
+                  <button
+                    className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg font-semibold shadow-sm hover:bg-green-200 transition-colors text-sm"
+                    style={{ minWidth: 0 }}
+                    onClick={() => alert('Função de lembrete WhatsApp!')}
+                  >
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: '#25D366' }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.967-.273-.099-.472-.148-.67.15-.198.297-.767.966-.94 1.164-.173.198-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.372-.01-.571-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.1 3.2 5.077 4.363.71.306 1.263.489 1.694.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.288.173-1.413-.074-.124-.272-.198-.57-.347z"/><path fillRule="evenodd" d="M12.004 2.003c-5.514 0-9.997 4.483-9.997 9.997 0 1.762.462 3.484 1.34 4.995L2.01 21.99l5.09-1.332a9.96 9.96 0 0 0 4.904 1.245h.004c5.514 0 9.997-4.483 9.997-9.997 0-2.67-1.04-5.178-2.927-7.065-1.887-1.887-4.395-2.927-7.065-2.927zm0 17.995a7.96 7.96 0 0 1-4.07-1.13l-.292-.173-3.02.789.805-2.945-.19-.302A7.96 7.96 0 0 1 4.04 12c0-4.398 3.566-7.964 7.964-7.964 2.126 0 4.124.83 5.63 2.337a7.93 7.93 0 0 1 2.334 5.627c0 4.398-3.566 7.964-7.964 7.964z" clipRule="evenodd"/></svg>
+                    </span>
+                  </button>
                 )}
-              </button>
-
-          <button
-                onClick={handleCompleteAppointment}
-                disabled={isUpdatingAppointment}
-                className={`flex items-center space-x-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${
-                  isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
-                }`}
-          >
-                {isUpdatingAppointment ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                    <span>...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={14} />
-                    <span>Fechar Comanda</span>
-                  </>
-                )}
-          </button>
+                <button
+                  onClick={handleOpenCancelModal}
+                  disabled={isUpdatingAppointment}
+                  className={`flex items-center space-x-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${
+                    isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
+                  }`}
+                >
+                  {isUpdatingAppointment ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                      <span>...</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle size={14} />
+                      <span>Cancelar</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleCompleteAppointment}
+                  disabled={isUpdatingAppointment}
+                  className={`flex items-center space-x-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${
+                    isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
+                  }`}
+                >
+                  {isUpdatingAppointment ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                      <span>...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={14} />
+                      <span>Fechar Comanda</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -136,8 +136,9 @@ export const ClientProvider: React.FC<ClientProviderProps> = ({ children }) => {
         return false;
       }
       
-      if (data?.success) {
-        await loadClients(); // Recarregar lista
+      if (data?.success && data.client) {
+        // Adicionar o cliente recém-criado diretamente à lista
+        setClients(prev => [data.client, ...prev]);
         return true;
       }
       

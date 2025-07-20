@@ -14,6 +14,8 @@ interface ProductSelectionProps {
   selectedClient?: any;
   onShowClientSelection?: () => void;
   hideClientSection?: boolean;
+  customPrices: Record<string, number>; // novo
+  onEditPrice: (productId: string, price: number) => void; // novo
 }
 
 export default function ProductSelection({
@@ -22,14 +24,15 @@ export default function ProductSelection({
   onContinue,
   selectedClient,
   onShowClientSelection,
-  hideClientSection = false
+  hideClientSection = false,
+  customPrices,
+  onEditPrice
 }: ProductSelectionProps) {
 
 
 
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [tempProductValue, setTempProductValue] = useState('');
-  const [editedProductPrices, setEditedProductPrices] = useState<Record<string, number>>({});
   const { products } = useProduct();
   
   const getQuantityForProduct = (productId: string) => {
@@ -44,7 +47,7 @@ export default function ProductSelection({
 
   // Função para obter preço do produto (editado ou original)
   const getProductPrice = (product: any) => {
-    return editedProductPrices[product.id] ?? product.price;
+    return customPrices[product.id] ?? product.price;
   };
 
   // Função para formatar valor para exibição
@@ -84,10 +87,7 @@ export default function ProductSelection({
     if (editingProductId && tempProductValue) {
       const value = parseFormattedValue(tempProductValue);
       if (!isNaN(value) && value >= 0) {
-        setEditedProductPrices(prev => ({
-          ...prev,
-          [editingProductId]: value
-        }));
+        onEditPrice(editingProductId, value);
       }
     }
     setEditingProductId(null);

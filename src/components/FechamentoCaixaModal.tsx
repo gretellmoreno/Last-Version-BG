@@ -36,28 +36,28 @@ export default function FechamentoCaixaModal({
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
       
       {/* Modal */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] bg-white rounded-xl shadow-2xl">
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-[500px] bg-white rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle size={16} className="sm:w-5 sm:h-5 text-green-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Confirmar Fechamento</h2>
-              <p className="text-sm text-gray-600">Fechamento de caixa para {profissionalNome}</p>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Confirmar Fechamento</h2>
+              <p className="text-xs sm:text-sm text-gray-600">Fechamento de caixa para {profissionalNome}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            className="p-2 hover:bg-gray-100 rounded transition-colors"
           >
             <X size={20} className="text-gray-500" />
           </button>
         </div>
 
         {/* Conteúdo */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           {/* Resumo */}
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
@@ -90,10 +90,21 @@ export default function FechamentoCaixaModal({
               </div>
             </div>
           </div>
+
+          {/* Botões para mobile */}
+          <div className="block sm:hidden space-y-3 pt-4">
+            <button
+              onClick={onConfirm}
+              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <CheckCircle size={16} />
+              <span>Fechar Caixa</span>
+            </button>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+        {/* Footer - apenas para desktop */}
+        <div className="hidden sm:flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

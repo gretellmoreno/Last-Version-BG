@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, User, CreditCard, Clock, Building, Mail, Lock, Eye, EyeOff, Save, Edit3, Trash2, Plus, UserCheck } from 'lucide-react';
+import { Settings, User, CreditCard, Clock, Building, Mail, Lock, Eye, EyeOff, Save, Edit3, Trash2, Plus, UserCheck, Bell } from 'lucide-react';
 import Header from '../components/Header';
 import TaxaModal from '../components/TaxaModal';
-import { useTaxas } from '../contexts/TaxasContext';
+import { TaxasProvider, useTaxas } from '../contexts/TaxasContext';
 
 interface ConfiguracoesProps {
   onToggleMobileSidebar?: () => void;
@@ -23,7 +23,7 @@ interface Profissional {
   nome: string;
 }
 
-export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesProps) {
+function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('usuario');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -38,14 +38,14 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
 
   // Estados para horários de atendimento
   const [selectedProfissional, setSelectedProfissional] = useState('');
-  const [horariosAtendimento, setHorariosAtendimento] = useState<HorarioAtendimento[]>([
-    { diaSemana: 'Segunda-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-    { diaSemana: 'Terça-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-    { diaSemana: 'Quarta-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-    { diaSemana: 'Quinta-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-    { diaSemana: 'Sexta-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-    { diaSemana: 'Sábado', ativo: true, horarioInicio: '08:00', horarioFim: '16:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-    { diaSemana: 'Domingo', ativo: false, horarioInicio: '08:00', horarioFim: '16:00', temAlmoco: false, almocoInicio: '', almocoFim: '' }
+  const [horariosAtendimento, setHorariosAtendimento] = useState([
+    { diaSemana: 'Segunda-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+    { diaSemana: 'Terça-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+    { diaSemana: 'Quarta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+    { diaSemana: 'Quinta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+    { diaSemana: 'Sexta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+    { diaSemana: 'Sábado', ativo: true, turnos: [{ inicio: '08:00', fim: '16:00' }] },
+    { diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '08:00', fim: '16:00' }] },
   ]);
 
   // Lista mock de profissionais
@@ -60,6 +60,25 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
   const { taxas } = useTaxas();
   const [showTaxaModal, setShowTaxaModal] = useState(false);
   const [editingTaxa, setEditingTaxa] = useState<any>(null);
+
+  // Estados para animação de sucesso
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Função para exibir o modal de sucesso:
+  const showSuccessModal = (message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessAnimation(true);
+    setTimeout(() => setShowSuccessAnimation(false), 800);
+  };
+
+  // Estados para o novo conteúdo da aba 'lembrete'
+  const [lembreteSaudacao, setLembreteSaudacao] = useState('Oi #{cliente}, tudo bem?');
+  const [lembreteDespedida, setLembreteDespedida] = useState('Obrigado.');
+  const [mostrarValorServico, setMostrarValorServico] = useState(false);
+  const [modoAvancadoLembrete, setModoAvancadoLembrete] = useState(false);
+  const [lembreteMensagem, setLembreteMensagem] = useState('Oi #{cliente}, tudo bem?\nEste é um lembrete para o seu atendimento, #{data_horario}.\nServiço: #{servico}\nObrigado.');
+  const [showVariaveisModal, setShowVariaveisModal] = useState(false);
 
   // Detectar mobile
   useEffect(() => {
@@ -81,13 +100,14 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
   const tabs = [
     { id: 'usuario', name: 'Dados do Usuário', icon: User },
     { id: 'taxas', name: 'Taxas de Pagamento', icon: CreditCard },
-    { id: 'horarios', name: 'Horários de Atendimento', icon: Clock }
+    { id: 'horarios', name: 'Horários de Atendimento', icon: Clock },
+    { id: 'lembrete', name: 'Configurar Lembrete', icon: Bell },
   ];
 
   const handleSaveUserData = () => {
     // Aqui implementaria a lógica para salvar os dados do usuário
     console.log('Salvando dados do usuário:', userData);
-    alert('Dados salvos com sucesso!');
+    showSuccessModal('Dados salvos com sucesso!');
   };
 
   const handleSaveHorarios = () => {
@@ -96,9 +116,24 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
     alert(`Horários salvos com sucesso para ${getProfissionalName(selectedProfissional)}!`);
   };
 
-  const handleHorarioChange = (index: number, field: string, value: any) => {
+  const handleTurnoChange = (diaIndex: number, turnoIndex: number, field: 'inicio' | 'fim', value: string) => {
     const newHorarios = [...horariosAtendimento];
-    newHorarios[index] = { ...newHorarios[index], [field]: value };
+    newHorarios[diaIndex].turnos[turnoIndex][field] = value;
+    setHorariosAtendimento(newHorarios);
+  };
+  const handleAddTurno = (diaIndex: number) => {
+    const newHorarios = [...horariosAtendimento];
+    newHorarios[diaIndex].turnos.push({ inicio: '', fim: '' });
+    setHorariosAtendimento(newHorarios);
+  };
+  const handleRemoveTurno = (diaIndex: number, turnoIndex: number) => {
+    const newHorarios = [...horariosAtendimento];
+    newHorarios[diaIndex].turnos.splice(turnoIndex, 1);
+    setHorariosAtendimento(newHorarios);
+  };
+  const handleDiaAtivoChange = (diaIndex: number, value: boolean) => {
+    const newHorarios = [...horariosAtendimento];
+    newHorarios[diaIndex].ativo = value;
     setHorariosAtendimento(newHorarios);
   };
 
@@ -108,13 +143,13 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
     // Aqui carregaria os horários específicos do profissional
     // Por enquanto, usar horários padrão
     setHorariosAtendimento([
-      { diaSemana: 'Segunda-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-      { diaSemana: 'Terça-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-      { diaSemana: 'Quarta-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-      { diaSemana: 'Quinta-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-      { diaSemana: 'Sexta-feira', ativo: true, horarioInicio: '08:00', horarioFim: '18:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-      { diaSemana: 'Sábado', ativo: true, horarioInicio: '08:00', horarioFim: '16:00', temAlmoco: false, almocoInicio: '', almocoFim: '' },
-      { diaSemana: 'Domingo', ativo: false, horarioInicio: '08:00', horarioFim: '16:00', temAlmoco: false, almocoInicio: '', almocoFim: '' }
+      { diaSemana: 'Segunda-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { diaSemana: 'Terça-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { diaSemana: 'Quarta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { diaSemana: 'Quinta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { diaSemana: 'Sexta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { diaSemana: 'Sábado', ativo: true, turnos: [{ inicio: '08:00', fim: '16:00' }] },
+      { diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '08:00', fim: '16:00' }] },
     ]);
   };
 
@@ -155,8 +190,26 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
     }
   };
 
+  // Função para inserir variável no cursor do textarea
+  function inserirVariavelNoCursor(variavel: string) {
+    const textarea = document.getElementById('lembrete-textarea') as HTMLTextAreaElement;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const before = lembreteMensagem.substring(0, start);
+      const after = lembreteMensagem.substring(end);
+      setLembreteMensagem(before + variavel + after);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + variavel.length;
+      }, 0);
+    } else {
+      setLembreteMensagem(lembreteMensagem + variavel);
+    }
+  }
+
   return (
-    <div className="flex-1 flex flex-col h-screen">
+    <div className="flex-1 flex flex-col h-screen page-content">
       <Header 
         title="Configurações" 
         onMenuClick={handleMenuClick}
@@ -168,27 +221,22 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
             {/* Tabs de Navegação */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
               <div className={`${isMobile ? 'p-4' : 'p-6'} border-b border-gray-200`}>
-                <div className="flex items-center mb-4">
-                  <Settings className="mr-3 text-gray-600" size={24} />
-                  <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-lg' : 'text-xl'}`}>
-                    Configurações do Sistema
-                  </h2>
-                </div>
-                
+                {/* Removido o título "Configurações do Sistema" */}
                 {/* Tabs */}
-                <div className="bg-gray-100 p-1 rounded-lg mb-6">
-                  <div className="grid grid-cols-3 gap-1">
+                {/* Tabs de Navegação (compacto em mobile) */}
+                <div className={`bg-gray-100 ${isMobile ? 'p-0.5 mb-2' : 'p-1 mb-6'} rounded-lg`}> 
+                  <div className={`grid grid-cols-4 ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
                     {tabs.map((tab) => (
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 ${
+                        className={`flex items-center justify-center space-x-1 ${isMobile ? 'px-2 py-2 text-xs' : 'px-3 py-2 text-sm'} rounded-md font-medium transition-all duration-200 whitespace-nowrap min-w-0 overflow-hidden text-ellipsis ${
                           activeTab === tab.id
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                         }`}
                       >
-                        <tab.icon size={16} />
+                        <tab.icon size={14} />
                         <span className={isMobile ? 'hidden sm:inline' : ''}>{tab.name}</span>
                       </button>
                     ))}
@@ -200,29 +248,26 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
               <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
                 {/* Tab Dados do Usuário */}
                 {activeTab === 'usuario' && (
-                  <div className="space-y-6">
-                    <div className="flex items-center mb-6">
-                      <User className="mr-3 text-blue-600" size={20} />
-                      <h3 className="text-lg font-semibold text-gray-900">Informações Pessoais</h3>
+                  <div className={`${isMobile ? 'space-y-4' : 'space-y-8'}`}> {/* menos espaço em mobile */}
+                    <div className="flex items-center mb-4 sm:mb-6">
+                      <User className="mr-3 text-purple-600" size={22} />
+                      <h3 className="text-xl font-bold text-gray-900">Informações Pessoais</h3>
                     </div>
-
-                    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-6`}>
+                    <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 gap-6'}`}> {/* menos gap em mobile */}
                       {/* Nome */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Nome Completo
-                        </label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Nome Completo</label>
                         <input
                           type="text"
                           value={userData.nome}
                           onChange={(e) => setUserData({...userData, nome: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
+                          placeholder="Digite seu nome completo"
                         />
                       </div>
-
                       {/* Email */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
                           <Mail size={16} className="inline mr-1" />
                           Email
                         </label>
@@ -230,13 +275,13 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
                           type="email"
                           value={userData.email}
                           onChange={(e) => setUserData({...userData, email: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
+                          placeholder="Digite seu email"
                         />
                       </div>
-
                       {/* Empresa */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
                           <Building size={16} className="inline mr-1" />
                           Nome da Empresa
                         </label>
@@ -244,30 +289,27 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
                           type="text"
                           value={userData.empresa}
                           onChange={(e) => setUserData({...userData, empresa: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
+                          placeholder="Digite o nome da empresa"
                         />
                       </div>
                     </div>
-
                     {/* Seção de Alteração de Senha */}
-                    <div className="border-t border-gray-200 pt-6">
+                    <div className={`border-t border-gray-200 ${isMobile ? 'pt-4' : 'pt-6'}`}>
                       <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <Lock size={20} className="mr-2" />
+                        <Lock size={20} className="mr-2 text-purple-600" />
                         Alterar Senha
                       </h4>
-                      
                       <div className="max-w-md">
                         {/* Nova Senha */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Nova Senha
-                          </label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Nova Senha</label>
                           <div className="relative">
                             <input
                               type={showNewPassword ? 'text' : 'password'}
                               value={userData.novaSenha}
                               onChange={(e) => setUserData({...userData, novaSenha: e.target.value})}
-                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
                               placeholder="Digite sua nova senha"
                             />
                             <button
@@ -281,14 +323,13 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
                         </div>
                       </div>
                     </div>
-
                     {/* Botão Salvar */}
-                    <div className="flex justify-end pt-6 border-t border-gray-200">
+                    <div className={`flex justify-end border-t border-gray-200 ${isMobile ? 'pt-4' : 'pt-6'}`}>
                       <button
                         onClick={handleSaveUserData}
-                        className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                        className="flex items-center px-8 py-3 bg-purple-600 text-white rounded-xl font-bold text-base shadow-md hover:bg-purple-700 transition-all duration-200"
                       >
-                        <Save size={16} className="mr-2" />
+                        <Save size={18} className="mr-2" />
                         Salvar Dados
                       </button>
                     </div>
@@ -298,50 +339,45 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
                 {/* Tab Taxas de Pagamento */}
                 {activeTab === 'taxas' && (
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between mb-6">
+                    <div className={`flex ${isMobile ? 'justify-center mb-2' : 'items-center justify-between mb-6'}`}> 
+                      {!isMobile && (
                       <div className="flex items-center">
                         <CreditCard className="mr-3 text-green-600" size={20} />
                         <h3 className="text-lg font-semibold text-gray-900">Taxas de Pagamento</h3>
                       </div>
+                      )}
                       <button
                         onClick={handleAddTaxa}
-                        className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                        className={`flex items-center px-4 py-2 bg-green-600 text-white rounded-xl font-bold text-base shadow-sm hover:bg-green-700 transition-all duration-200 ${isMobile ? 'mx-auto w-full max-w-xs justify-center' : ''}`}
                       >
                         <Plus size={16} className="mr-2" />
-                        Nova Taxa
+                        {isMobile ? 'Agregar Taxa de Pagamento' : 'Nova Taxa'}
                       </button>
                     </div>
-
                     {/* Lista de Taxas */}
                     {isMobile ? (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {taxas.map((taxa) => (
-                          <div key={taxa.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                            <div className="flex justify-between items-start mb-2">
-                              <h4 className="font-semibold text-gray-900">{taxa.nome}</h4>
-                              <div className="flex space-x-2">
+                          <div key={taxa.id} className="bg-white rounded-xl p-2 border border-gray-100 flex items-center justify-between">
+                            <div>
+                              <h4 className="font-semibold text-gray-900 text-sm mb-0.5">{taxa.nome}</h4>
+                              <p className="text-xs text-gray-500">Taxa: {taxa.taxa}%</p>
+                              {/* Não renderizar o status em mobile */}
+                            </div>
+                            <div className="flex flex-col space-y-1 items-end ml-2">
                                 <button
                                   onClick={() => handleEditTaxa(taxa)}
                                   className="p-1 text-blue-600 hover:bg-blue-100 rounded"
                                 >
-                                  <Edit3 size={14} />
+                                <Edit3 size={16} />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteTaxa(taxa.id)}
                                   className="p-1 text-red-600 hover:bg-red-100 rounded"
                                 >
-                                  <Trash2 size={14} />
+                                <Trash2 size={16} />
                                 </button>
-                              </div>
                             </div>
-                            <p className="text-sm text-gray-600 mb-1">
-                              Taxa: {taxa.taxa}%
-                            </p>
-                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                              taxa.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {taxa.ativo ? 'Ativo' : 'Inativo'}
-                            </span>
                           </div>
                         ))}
                       </div>
@@ -350,38 +386,24 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
                         <table className="w-full">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Método de Pagamento
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Taxa (%)
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Ações
-                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MÉTODO DE PAGAMENTO</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TAXA (%)</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AÇÕES</th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="bg-white divide-y divide-gray-100">
                             {taxas.map((taxa) => (
                               <tr key={taxa.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {taxa.nome}
-                                  </span>
+                                  <span className="text-sm font-medium text-gray-900">{taxa.nome}</span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="text-sm text-gray-900">
-                                    {taxa.taxa}%
-                                  </span>
+                                  <span className="text-sm text-gray-900">{taxa.taxa}%</span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    taxa.ativo
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-red-100 text-red-800'
+                                    taxa.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                   }`}>
                                     {taxa.ativo ? 'Ativo' : 'Inativo'}
                                   </span>
@@ -419,17 +441,17 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
                       <h3 className="text-lg font-semibold text-gray-900">Horários de Atendimento</h3>
                     </div>
 
-                    {/* Filtro de Profissional */}
+                    {/* Filtro de Profissional - sem título */}
                     <div className="mb-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <UserCheck size={16} className="inline mr-2" />
-                        Selecione o Profissional
-                      </label>
+                      {/* <label className="block text-sm font-medium text-gray-700 mb-2"> */}
+                      {/*   <UserCheck size={16} className="inline mr-2" /> */}
+                      {/*   Selecione o Profissional */}
+                      {/* </label> */}
                       <select
                         value={selectedProfissional}
                         onChange={(e) => handleProfissionalChange(e.target.value)}
-                        className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white"
-                        style={{ fontSize: isMobile ? '16px' : '14px' }}
+                        className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white appearance-none"
+                        style={{ fontSize: isMobile ? '16px' : '14px', backgroundImage: 'none' }}
                       >
                         <option value="">Selecione um profissional</option>
                         {profissionais.map((profissional) => (
@@ -441,113 +463,64 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
                     </div>
 
                     {/* Conteúdo dos horários */}
-                    {selectedProfissional ? (
-                      <div className="space-y-6">
-                        {/* Informação do profissional selecionado */}
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                          <p className="text-purple-700 text-sm">
-                            Configurando horários para: <strong>{getProfissionalName(selectedProfissional)}</strong>
-                          </p>
-                        </div>
-
+                    {selectedProfissional && (
                         <div className="space-y-4">
-                          {horariosAtendimento.map((horario, index) => (
-                            <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                              {/* Cabeçalho do dia */}
-                              <div className="flex items-center space-x-3 mb-4">
+                        {horariosAtendimento.map((dia, diaIdx) => (
+                          <div key={dia.diaSemana} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <div className="flex items-center space-x-3 mb-2">
                                 <input
                                   type="checkbox"
-                                  checked={horario.ativo}
-                                  onChange={(e) => handleHorarioChange(index, 'ativo', e.target.checked)}
+                                checked={dia.ativo}
+                                onChange={e => handleDiaAtivoChange(diaIdx, e.target.checked)}
                                   className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                                 />
-                                <span className={`font-medium text-lg ${horario.ativo ? 'text-gray-900' : 'text-gray-400'}`}>
-                                  {horario.diaSemana}
-                                </span>
-                                {!horario.ativo && (
-                                  <span className="text-sm text-gray-400 italic ml-2">- Fechado</span>
-                                )}
+                              <span className={`font-medium text-lg ${dia.ativo ? 'text-gray-900' : 'text-gray-400'}`}>{dia.diaSemana}</span>
                               </div>
-                              
-                              {/* Configurações do horário quando ativo */}
-                              {horario.ativo && (
-                                <div className="space-y-3 ml-7">
-                                  {/* Layout Ultra Compacto - Tudo em uma linha */}
-                                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                                    <div className="space-y-3">
-                                      {/* Linha Principal: Início + Fim + Pausa */}
-                                      <div className={`grid gap-4 items-end ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-                                        <div>
-                                          <label className="block text-sm font-medium text-gray-600 mb-1">
-                                            Início
-                                          </label>
+                            {dia.ativo && (
+                              <div className={`${isMobile ? 'ml-0' : 'ml-7'} flex ${isMobile ? 'flex-col gap-y-2' : 'flex-row gap-x-4 gap-y-0'}`}>
+                                {dia.turnos.map((turno, turnoIdx) => (
+                                  <div key={turnoIdx} className={`flex items-center space-x-2 mb-1 ${isMobile ? '' : 'mb-0'}`}>
+                                    <label className="text-xs font-medium text-gray-600">Início {turnoIdx + 1}</label>
                                           <input
                                             type="time"
-                                            value={horario.horarioInicio}
-                                            onChange={(e) => handleHorarioChange(index, 'horarioInicio', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                      value={turno.inicio}
+                                      onChange={e => handleTurnoChange(diaIdx, turnoIdx, 'inicio', e.target.value)}
+                                      className="px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm w-20 sm:w-24"
                                           />
-                                        </div>
-                                        <div>
-                                          <label className="block text-sm font-medium text-gray-600 mb-1">
-                                            Fim
-                                          </label>
+                                    <label className="text-xs font-medium text-gray-600">Fim {turnoIdx + 1}</label>
                                           <input
                                             type="time"
-                                            value={horario.horarioFim}
-                                            onChange={(e) => handleHorarioChange(index, 'horarioFim', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                      value={turno.fim}
+                                      onChange={e => handleTurnoChange(diaIdx, turnoIdx, 'fim', e.target.value)}
+                                      className="px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm w-20 sm:w-24"
                                           />
-                                        </div>
-                                        <div className="flex items-center space-x-2 pb-2">
-                                          <input
-                                            type="checkbox"
-                                            checked={horario.temAlmoco}
-                                            onChange={(e) => handleHorarioChange(index, 'temAlmoco', e.target.checked)}
-                                            className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                                          />
-                                          <label className="text-sm font-medium text-gray-700">
-                                            🍽️ Tem pausa para almoço?
-                                          </label>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Linha de Almoço (condicional) */}
-                                      {horario.temAlmoco && (
-                                        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} bg-orange-50 p-3 rounded-lg border border-orange-200`}>
-                                          <div>
-                                            <label className="block text-sm font-medium text-orange-700 mb-1">
-                                              Início do Almoço
-                                            </label>
-                                            <input
-                                              type="time"
-                                              value={horario.almocoInicio}
-                                              onChange={(e) => handleHorarioChange(index, 'almocoInicio', e.target.value)}
-                                              className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm bg-white"
-                                              placeholder="Ex: 12:00"
-                                            />
-                                          </div>
-                                          <div>
-                                            <label className="block text-sm font-medium text-orange-700 mb-1">
-                                              Fim do Almoço
-                                            </label>
-                                            <input
-                                              type="time"
-                                              value={horario.almocoFim}
-                                              onChange={(e) => handleHorarioChange(index, 'almocoFim', e.target.value)}
-                                              className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm bg-white"
-                                              placeholder="Ex: 13:00"
-                                            />
-                                          </div>
-                                        </div>
+                                    {turnoIdx > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveTurno(diaIdx, turnoIdx)}
+                                        className={`ml-1 ${isMobile ? 'p-1' : ''} text-purple-600 hover:text-purple-800 font-bold flex items-center justify-center`}
+                                        title="Remover Turno"
+                                      >
+                                        {isMobile ? <Trash2 size={18} /> : <>Remover Turno {turnoIdx + 1}</>}
+                                      </button>
+                                    )}
+                                    {turnoIdx === dia.turnos.length - 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddTurno(diaIdx)}
+                                        className="ml-2 text-purple-600 hover:text-purple-800 text-xl font-bold"
+                                      >
+                                        +
+                                      </button>
                                       )}
-                                    </div>
                                   </div>
+                                ))}
                                 </div>
                               )}
                             </div>
                           ))}
                         </div>
+                    )}
 
                         {/* Botão Salvar Horários */}
                         <div className="flex justify-end pt-6 border-t border-gray-200">
@@ -560,16 +533,130 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
                           </button>
                         </div>
                       </div>
-                    ) : (
-                      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-                        <UserCheck size={48} className="mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          Selecione um profissional
-                        </h3>
-                        <p className="text-gray-500">
-                          Escolha um profissional para configurar seus horários de atendimento
-                        </p>
+                )}
+
+                {/* Tab Configurar Lembrete */}
+                {activeTab === 'lembrete' && (
+                  <div className="space-y-6 max-w-lg mx-auto">
+                    {/* Aviso em rosa */}
+                    <div className="text-center text-xs text-pink-600 font-semibold mb-2">
+                      OBS: Data, horário, e serviço são preenchidos automaticamente com base no agendamento.
+                    </div>
+                    {/* Modal de variáveis */}
+                    {showVariaveisModal && (
+                      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-50">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs mx-4 p-4 relative animate-fade-in">
+                          <h3 className="text-center text-base font-bold text-gray-900 mb-4">Selecione uma variável</h3>
+                          <div className="space-y-2 mb-4">
+                            <button onClick={() => { inserirVariavelNoCursor('#{cliente}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
+                              <span className="font-semibold text-purple-700">#&#123;cliente&#125;</span>
+                              <span className="text-xs text-gray-500">Primeiro nome do cliente</span>
+                            </button>
+                            <button onClick={() => { inserirVariavelNoCursor('#{data_horario}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
+                              <span className="font-semibold text-purple-700">#&#123;data_horario&#125;</span>
+                              <span className="text-xs text-gray-500">Data e horário do atendimento</span>
+                            </button>
+                            <button onClick={() => { inserirVariavelNoCursor('#{servico}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
+                              <span className="font-semibold text-purple-700">#&#123;servico&#125;</span>
+                              <span className="text-xs text-gray-500">Nome do serviço do atendimento</span>
+                            </button>
+                            <button onClick={() => { inserirVariavelNoCursor('#{valorTotal}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
+                              <span className="font-semibold text-purple-700">#&#123;valorTotal&#125;</span>
+                              <span className="text-xs text-gray-500">Valor total do atendimento</span>
+                            </button>
+                            <button onClick={() => { inserirVariavelNoCursor('#{profissional}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
+                              <span className="font-semibold text-purple-700">#&#123;profissional&#125;</span>
+                              <span className="text-xs text-gray-500">Nome do profissional do atendimento</span>
+                            </button>
+                          </div>
+                          <button onClick={() => setShowVariaveisModal(false)} className="w-full py-3 rounded-xl bg-purple-100 text-purple-700 font-bold text-base shadow hover:bg-purple-200 transition-all duration-200 mt-2">Fechar</button>
+                        </div>
                       </div>
+                    )}
+                    {/* Modo avançado */}
+                    {modoAvancadoLembrete ? (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-sm font-medium text-gray-700">Texto da Mensagem</label>
+                          <button className="text-purple-700 font-semibold text-sm hover:underline" onClick={() => setShowVariaveisModal(true)}>Adicionar variáveis</button>
+                        </div>
+                        <textarea
+                          id="lembrete-textarea"
+                          value={lembreteMensagem}
+                          onChange={e => setLembreteMensagem(e.target.value)}
+                          rows={6}
+                          className="w-full p-4 border-2 border-purple-500 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg font-medium text-gray-900 placeholder-gray-400 mb-2"
+                        />
+                        <button
+                          onClick={() => setModoAvancadoLembrete(false)}
+                          className="text-purple-700 font-semibold text-xs hover:underline mb-2"
+                        >
+                          Voltar para modo simples
+                        </button>
+                        <button
+                          onClick={() => alert('Lembrete salvo!')}
+                          className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-lg shadow-md hover:bg-purple-700 transition-all duration-200 mt-2"
+                        >
+                          Salvar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {/* Card cinza com exemplo */}
+                        <div className="bg-gray-100 rounded-lg p-3 text-gray-700 text-sm border border-gray-200">
+                          Oi Michele, tudo bem?<br/>
+                          Este é um lembrete para o seu atendimento, dia (Hoje) 20 de Julho às 08:00.<br/>
+                          Serviço: Corte Cabelo<br/>
+                          Obrigado.
+                        </div>
+                        {/* Saudação */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Saudação</label>
+                          <input
+                            type="text"
+                            value={lembreteSaudacao}
+                            onChange={e => setLembreteSaudacao(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
+                            placeholder="Oi #{cliente}, tudo bem?"
+                          />
+                        </div>
+                        {/* Despedida + Avançado */}
+                        <div className="flex items-center mb-2">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Despedida</label>
+                            <input
+                              type="text"
+                              value={lembreteDespedida}
+                              onChange={e => setLembreteDespedida(e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
+                              placeholder="Obrigado."
+                            />
+                          </div>
+                          <button className="ml-2 text-purple-700 font-semibold text-xs hover:underline" onClick={() => setModoAvancadoLembrete(true)}>Avançado</button>
+                        </div>
+                        {/* Switch Mostrar Valor */}
+                        <div className="flex items-center space-x-3 mb-2">
+                          <button
+                            type="button"
+                            onClick={() => setMostrarValorServico(v => !v)}
+                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus:outline-none ${mostrarValorServico ? 'bg-purple-600' : 'bg-gray-300'}`}
+                          >
+                            <span
+                              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200 ${mostrarValorServico ? 'translate-x-5' : 'translate-x-1'}`}
+                            />
+                          </button>
+                          <span className="text-sm font-medium text-gray-700 select-none">
+                            Mostrar Valor do Serviço: <span className="font-bold">{mostrarValorServico ? 'Sim' : 'Não'}</span>
+                          </span>
+                        </div>
+                        {/* Botão Salvar */}
+                        <button
+                          onClick={() => alert('Lembrete salvo!')}
+                          className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-lg shadow-md hover:bg-purple-700 transition-all duration-200 mt-2"
+                        >
+                          Salvar
+                        </button>
+                      </>
                     )}
                   </div>
                 )}
@@ -591,6 +678,32 @@ export default function Configuracoes({ onToggleMobileSidebar }: ConfiguracoesPr
           editingTaxa={editingTaxa}
         />
       )}
+
+      {showSuccessAnimation && (
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center pointer-events-none">
+          <div className={`bg-white rounded-2xl shadow-2xl ${isMobile ? 'p-3' : 'p-6'} mx-4 max-w-sm transform transition-all duration-300 scale-100`}>
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-base font-semibold text-gray-900">Salvo com sucesso!</p>
+                <p className="text-sm text-gray-600">{successMessage}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}
+
+export default function Configuracoes(props: ConfiguracoesProps) {
+  return (
+    <TaxasProvider>
+      <ConfiguracoesContent {...props} />
+    </TaxasProvider>
+  );
+}

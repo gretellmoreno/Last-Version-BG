@@ -157,7 +157,7 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0 page-content">
       <Header 
         title="Serviços e Produtos" 
         onAddClick={handleNew}
@@ -212,8 +212,6 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
                         onClick={() => handleEditService(service)}
                         className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-purple-200 transition-all duration-200 cursor-pointer active:scale-95"
                       >
-                        {/* Ponto colorido no canto superior direito */}
-                        <div className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full"></div>
                         
                         <div className="flex items-start justify-between mb-1.5">
                           <div className="flex-1 pr-4">
@@ -329,8 +327,6 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
                         onClick={() => handleEditProduct(product)}
                         className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-green-200 transition-all duration-200 cursor-pointer active:scale-95"
                       >
-                        {/* Ponto colorido no canto superior direito */}
-                        <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full"></div>
                         
                         <div className="flex items-start justify-between mb-1.5">
                           <div className="flex-1 pr-4">

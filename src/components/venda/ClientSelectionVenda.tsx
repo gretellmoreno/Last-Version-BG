@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Plus, UserPlus, ArrowLeft } from 'lucide-react';
-import { useClient } from '../../contexts/ClientContext';
+import { useClients } from '../../hooks/useClients';
 import { useProduct } from '../../contexts/ProductContext';
 
 interface ClientSelectionVendaProps {
@@ -21,7 +21,7 @@ export default function ClientSelectionVenda({
   hideProductsSidebar = false
 }: ClientSelectionVendaProps) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const { clients } = useClient();
+  const { clients } = useClients();
   const { products } = useProduct();
 
   // Filtrar clientes baseado na busca - com verificação de segurança
@@ -149,7 +149,6 @@ export default function ClientSelectionVenda({
                         <span>{cliente.phone}</span>
                         {cliente.email && (
                           <>
-                            <span>•</span>
                             <span>{cliente.email}</span>
                           </>
                         )}

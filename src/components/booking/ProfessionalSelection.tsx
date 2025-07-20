@@ -47,19 +47,7 @@ export default function ProfessionalSelection({
           </button>
           <h2 className="text-xl font-semibold text-gray-900">Selecionar Profissional</h2>
         </div>
-        
-        {/* Barra de busca */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Buscar profissional por nome"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            style={{ fontSize: '16px' }}
-          />
-        </div>
+        {/* Barra de busca removida */}
       </div>
 
       {/* Lista de profissionais */}

@@ -89,8 +89,9 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
         return false;
       }
       
-      if (data?.success) {
-        await loadProfessionals(); // Recarregar lista
+      if (data?.success && data.professional) {
+        // Adicionar o profissional recém-criado diretamente à lista
+        setProfessionals(prev => [data.professional, ...prev]);
         return true;
       }
       

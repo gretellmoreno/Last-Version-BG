@@ -73,8 +73,13 @@ export const ServiceProvider: React.FC<ServiceProviderProps> = ({ children }) =>
       return false;
     }
 
-    await refreshServices();
-    return true;
+    if (result.data?.success && result.data.service) {
+      // Adicionar o serviço recém-criado diretamente à lista
+      setServices(prev => [result.data.service, ...prev]);
+      return true;
+    }
+
+    return false;
   };
 
   const updateService = async (serviceId: string, updates: Partial<Service>) => {

@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from './lib/queryClient';
 import Sidebar from './components/Sidebar';
 import LoginForm from './components/LoginForm';
 import LoadingScreen from './components/LoadingScreen';
@@ -6,19 +10,18 @@ import Agenda from './pages/Agenda';
 import Clientes from './pages/Clientes';
 import Profissionais from './pages/Profissionais';
 import Servicos from './pages/Servicos';
-import Financeiro from './pages/Financeiro';
-import Performance from './pages/Performance';
+import Relatorio from './pages/Financeiro';
 import Configuracoes from './pages/Configuracoes';
+import LinkAgendamento from './pages/LinkAgendamento';
+import AgendamentoPublico from './pages/AgendamentoPublico';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
-import { BookingProvider } from './contexts/BookingContext';
-import { ClientProvider } from './contexts/ClientContext';
 import { ProfessionalProvider } from './contexts/ProfessionalContext';
 import { ServiceProvider } from './contexts/ServiceContext';
 import { ProductProvider } from './contexts/ProductContext';
-import { FinanceiroProvider } from './contexts/FinanceiroContext';
+import { ClientProvider } from './contexts/ClientContext';
 import { TaxasProvider } from './contexts/TaxasContext';
-
+import { FinanceiroProvider } from './contexts/FinanceiroContext';
 function AppContent() {
   const [activeMenu, setActiveMenu] = useState('agenda');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -72,76 +75,79 @@ function AppContent() {
   }
 
   const renderContent = () => {
+    const commonProps = {
+      onToggleMobileSidebar: () => setIsMobileSidebarOpen(!isMobileSidebarOpen),
+      isMobile
+    };
+
     switch (activeMenu) {
       case 'agenda':
-        return <Agenda />;
+        return <Agenda {...commonProps} />;
       case 'clientes':
-        return <Clientes />;
+        return <Clientes {...commonProps} />;
       case 'profissionais':
-        return <Profissionais />;
+        return <Profissionais {...commonProps} />;
       case 'servicos':
-        return <Servicos />;
+        return <Servicos {...commonProps} />;
       case 'financeiro':
-        return <Financeiro />;
-      case 'performance':
-        return <Performance />;
+        return <Relatorio {...commonProps} />;
       case 'configuracoes':
-        return <Configuracoes />;
+        return <Configuracoes {...commonProps} />;
+      case 'link-agendamento':
+        return <LinkAgendamento {...commonProps} />;
       default:
-        return <Agenda />;
+        return <Agenda {...commonProps} />;
     }
   };
 
+  // Mantemos apenas os providers que são realmente globais
   return (
     <AppProvider>
       <ProfessionalProvider>
-      <TaxasProvider>
-        <FinanceiroProvider>
+        <ServiceProvider>
           <ProductProvider>
-            <ServiceProvider>
-                <ClientProvider>
-                  <BookingProvider>
-                    <div className={`flex h-screen bg-gray-50 overflow-hidden ${isMobile ? 'mobile-app-layout' : ''}`}>
-                      {/* Desktop Sidebar */}
-                      <div className={isMobile ? 'hidden' : 'block'}>
-                        <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
-                      </div>
-                      
-                      {/* Mobile Sidebar Overlay */}
-                      {isMobile && isMobileSidebarOpen && (
-                        <div className="fixed inset-0 z-50 lg:hidden">
-                          <div 
-                            className="fixed inset-0 bg-black bg-opacity-50"
-                            onClick={() => setIsMobileSidebarOpen(false)}
+            <ClientProvider>
+              <TaxasProvider>
+                <FinanceiroProvider>
+                  <div className={`flex h-screen bg-gray-50 overflow-hidden ${isMobile ? 'mobile-app-layout' : ''}`}>
+                    {/* Desktop Sidebar */}
+                    <div className={isMobile ? 'hidden' : 'block'}>
+                      <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+                    </div>
+                    
+                    {/* Mobile Sidebar Overlay */}
+                    {isMobile && isMobileSidebarOpen && (
+                      <div className="fixed inset-0 z-50 lg:hidden">
+                        <div 
+                          className="fixed inset-0 bg-black bg-opacity-50"
+                          onClick={() => setIsMobileSidebarOpen(false)}
+                        />
+                        <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
+                          <Sidebar 
+                            activeMenu={activeMenu} 
+                            onMenuChange={(menu) => {
+                              setActiveMenu(menu);
+                              setIsMobileSidebarOpen(false);
+                            }}
+                            isMobile={true}
+                            onClose={() => setIsMobileSidebarOpen(false)}
                           />
-                          <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
-                            <Sidebar 
-                              activeMenu={activeMenu} 
-                              onMenuChange={(menu) => {
-                                setActiveMenu(menu);
-                                setIsMobileSidebarOpen(false);
-                              }}
-                              isMobile={true}
-                              onClose={() => setIsMobileSidebarOpen(false)}
-                            />
-                          </div>
                         </div>
-                      )}
-                      
-                      {/* Main Content */}
-                      <div className={`flex-1 transition-all duration-300 ${isMobile ? 'ml-0' : 'ml-16'}`}>
-                        {React.cloneElement(renderContent() as React.ReactElement, {
-                          onToggleMobileSidebar: () => setIsMobileSidebarOpen(!isMobileSidebarOpen),
-                          isMobile
-                        })}
+                      </div>
+                    )}
+                    
+                    {/* Main Content */}
+                    <div className={`flex-1 transition-all duration-300 main-content-area ${isMobile ? 'ml-0' : 'ml-16 group-hover:ml-64'}`}>
+                      <div className="h-full w-full page-container">
+                        {renderContent()}
                       </div>
                     </div>
-                  </BookingProvider>
-                </ClientProvider>
-            </ServiceProvider>
+                  </div>
+                </FinanceiroProvider>
+              </TaxasProvider>
+            </ClientProvider>
           </ProductProvider>
-        </FinanceiroProvider>
-      </TaxasProvider>
+        </ServiceProvider>
       </ProfessionalProvider>
     </AppProvider>
   );
@@ -149,9 +155,17 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/agendamento" element={<AgendamentoPublico />} />
+            <Route path="/*" element={<AppContent />} />
+          </Routes>
+        </AuthProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </Router>
   );
 }
 

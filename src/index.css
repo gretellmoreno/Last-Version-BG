@@ -2,6 +2,209 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Estilos para responsividade */
+@layer utilities {
+  /* Scroll horizontal para tabs */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Melhora a experiência de scroll no iOS */
+  .-webkit-overflow-scrolling-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Grid responsivo para cards */
+  .kpi-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  @media (max-width: 768px) {
+    .kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .kpi-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* Layout responsivo para itens do resumo */
+  .summary-item {
+  display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  
+  .summary-item-label {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  
+  .summary-item-value {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  @media (max-width: 480px) {
+    .summary-item {
+  flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    
+    .summary-item-label {
+      font-size: 12px;
+    }
+    
+    .summary-item-value {
+      font-size: 12px;
+    }
+  }
+}
+
+/* Estilos para o layout mobile */
+.mobile-app-layout {
+  @apply overflow-hidden;
+}
+
+.main-content-area {
+  @apply flex-1 overflow-hidden;
+}
+
+.page-container {
+  @apply h-full overflow-y-auto;
+}
+
+.page-content {
+  @apply flex flex-col h-full;
+}
+
+/* Melhorias para scroll suave */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f7fafc;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #a0aec0;
+}
+
+/* Container específico para fechamento de caixa com rolagem adequada */
+.fechamento-caixa-container {
+  height: calc(100vh - 120px); /* Altura total menos header e tabs */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 2rem;
+  
+  /* Scrollbar invisível por padrão */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scrollbar customizada que aparece apenas quando necessário */
+.fechamento-caixa-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.fechamento-caixa-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.fechamento-caixa-container::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background-color 0.3s ease, opacity 0.3s ease;
+}
+
+/* Aparece apenas no hover ou quando há conteúdo para rolar */
+.fechamento-caixa-container:hover::-webkit-scrollbar-thumb,
+.fechamento-caixa-container:active::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+}
+
+.fechamento-caixa-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.6);
+}
+
+/* Versão ultra discreta - só aparece quando necessário */
+.fechamento-caixa-container.scrollable::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+}
+
+/* Scrollbar que aparece apenas durante o scroll */
+.fechamento-caixa-container.scrolling::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.6);
+  transition: background-color 0.2s ease;
+}
+
+/* Scrollbar ultra fina para mobile */
+@media (max-width: 768px) {
+  .fechamento-caixa-container::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
+  .fechamento-caixa-container::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.2);
+  }
+  
+  .fechamento-caixa-container:hover::-webkit-scrollbar-thumb,
+  .fechamento-caixa-container:active::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.3);
+  }
+}
+
+.fechamento-caixa-container::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Garantir que o conteúdo do fechamento tenha espaço adequado */
+.fechamento-caixa-content {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Layout responsivo para desktop */
+@media (min-width: 1024px) {
+  .main-content-area {
+    margin-left: 4rem; /* 64px - largura do sidebar recolhido */
+    transition: margin-left 0.3s ease;
+  }
+  
+  .main-content-area.sidebar-expanded {
+    margin-left: 16rem; /* 256px - largura do sidebar expandido */
+  }
+}
+
 /* Animações customizadas */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }

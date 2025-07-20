@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Receipt } from 'lucide-react';
+import { useFinanceiro } from '../../contexts/FinanceiroContext';
 
 interface Vale {
   id: string;
@@ -12,22 +13,17 @@ interface Vale {
 }
 
 interface ValesSectionProps {
-  vales: Vale[];
-  loading?: boolean;
-  error?: string | null;
   onNewVale: () => void;
   onEditVale: (vale: Vale) => void;
   formatDate: (dateStr: string) => string;
 }
 
 export default function ValesSection({
-  vales,
-  loading = false,
-  error = null,
   onNewVale,
   onEditVale,
   formatDate
 }: ValesSectionProps) {
+  const { vales, loading, error } = useFinanceiro();
   const [isMobile, setIsMobile] = useState(false);
   
   // Detectar mobile
@@ -41,6 +37,8 @@ export default function ValesSection({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -51,8 +49,25 @@ export default function ValesSection({
 
   if (error) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-        <p className="text-red-500">Erro: {error}</p>
+      <div className="bg-white rounded-xl shadow-sm border border-red-200 p-12 text-center">
+        <div className="mb-4">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <span className="text-red-600 text-xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Erro ao carregar vales</h3>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-left">
+          <p className="text-red-700 text-sm font-medium mb-2">Detalhes do erro:</p>
+          <p className="text-red-600 text-sm break-words">{error}</p>
+        </div>
+        <div className="mt-4">
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
       </div>
     );
   }
@@ -75,72 +90,59 @@ export default function ValesSection({
       ) : (
         <>
           {isMobile ? (
-            /* Cards para mobile */
-            <div className="space-y-2 h-[calc(100vh-150px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
+            /* Cards compactos para mobile - padronizado */
+            <div className="space-y-1.5 h-[calc(100vh-180px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
               {vales.map((vale) => (
                 <div
                   key={vale.id}
                   onClick={() => onEditVale(vale)}
-                  className="group relative bg-white rounded-xl border border-gray-200 p-3 hover:border-purple-300 hover:shadow-md transition-all duration-200 cursor-pointer active:scale-95"
+                  className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-purple-200 transition-all duration-200 cursor-pointer active:scale-95"
                 >
-                  {/* Ponto roxo decorativo */}
-                  <div className="absolute top-3 right-3 w-2 h-2 bg-purple-500 rounded-full"></div>
                   
-                  <div className="space-y-2">
-                    {/* Header com profissional e data */}
-                    <div className="flex items-center space-x-2">
-                      <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
-                        <span className="text-purple-600 font-semibold text-xs">
-                          {vale.profissionalNome.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-sm text-gray-900">{vale.profissionalNome}</p>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">{formatDate(vale.data)}</p>
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div className="flex-1 pr-4">
+                      <h3 className="font-medium text-gray-900 text-xs">{vale.profissionalNome}</h3>
                       </div>
                     </div>
 
-                    {/* Valor e Status */}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Valor</p>
-                        <p className="font-bold text-lg text-gray-900">
-                          R$ {vale.valor.toFixed(2).replace('.', ',')}
-                        </p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div>
+                      <p className="font-semibold text-xs text-gray-900">
+                        R$ {vale.valor.toFixed(2).replace('.', ',')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-xs text-gray-600">
+                        {formatDate(vale.data)}
+                      </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Status</p>
-                        <span className={`
-                          inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold
-                          ${vale.status === 'descontado' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                          }
-                        `}>
-                          {vale.status === 'descontado' ? 'Descontado' : 'Pendente'}
-                        </span>
-                      </div>
+                    <div>
+                      <p className={`font-semibold text-xs ${
+                        vale.status === 'pendente' ? 'text-yellow-600' : 'text-green-600'
+                      }`}>
+                        {vale.status === 'pendente' ? 'Pendente' : 'Descontado'}
+                      </p>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            /* Tabela para desktop - como profissionais */
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-[calc(100vh-180px)] overflow-y-auto scrollbar-thin">
-              <table className="w-full">
-                <thead className="bg-gray-50 sticky top-0">
+            /* Tabela para desktop */
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Profissional
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Data
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Valor
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                   </tr>
@@ -176,11 +178,11 @@ export default function ValesSection({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          vale.status === 'descontado' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
+                          vale.status === 'pendente'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
                         }`}>
-                          {vale.status === 'descontado' ? 'Descontado' : 'Pendente'}
+                          {vale.status === 'pendente' ? 'Pendente' : 'Descontado'}
                         </span>
                       </td>
                     </tr>
@@ -191,6 +193,8 @@ export default function ValesSection({
           )}
         </>
       )}
+
+
     </div>
   );
 }

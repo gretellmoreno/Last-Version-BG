@@ -149,11 +149,9 @@ export interface Appointment {
 
 export interface PaymentMethod {
   id: string;
-  salon_id: string;
   name: string;
   fee: number;
-  created_at: string;
-  updated_at: string;
+  value: number;
 }
 
 export interface ProductSale {
@@ -174,8 +172,44 @@ export interface CashClosure {
   id: string;
   salon_id: string;
   professional_id: string;
+  professional_name: string;
   date: string;
-  created_at: string;
+  payment_method_id: string;
+  payment_method_name: string;
+  services: Array<{
+    date: string;
+    client_name: string | null;
+    service_name: string;
+    gross_value: number;
+    fee: number;
+    commission: number;
+    net_value: number;
+  }>;
+}
+
+export interface CashClosurePreview {
+  preview: {
+    services: Array<{
+      appointment_id: string;
+      date: string;
+      client: string;
+      service: string;
+      grossValue: number;
+      feeValue: number;
+      commissionValue: number;
+      netValue: number;
+    }>;
+    advancesList: Array<{
+      id: string;
+      value: number;
+      created_at: string;
+    }>;
+    resumo: {
+      fees: number;      // Total das taxas
+      commissions: number; // Total das comissões
+      net_total: number;   // Total líquido
+    };
+  };
 }
 
 export interface Advance {
@@ -184,6 +218,7 @@ export interface Advance {
   professional_id: string;
   value: number;
   created_at: string;
+  updated_at: string;
 }
 
 // Interface para eventos do calendário
@@ -226,11 +261,129 @@ export interface AppointmentDetails {
       duration: number;
       appointment_service_id?: string;
     }>;
+    products?: Array<{
+      id: string;
+      product_name: string;
+      name?: string;
+      quantity: number;
+      unit_price: number;
+    }>;
     start_time: string;
     professional: {
       id: string;
       name: string;
       color: string;
+    };
+  };
+}
+
+// Tipo para resposta de cancelamento de agendamento
+export interface CancelAppointmentResponse {
+  success: boolean;
+  appointment: {
+    id: string;
+    date: string;
+    notes: string | null;
+    client: {
+      id: string;
+      name: string;
+    };
+    status: string;
+    end_time: string | null;
+    services: Array<{
+      id: string;
+      name: string;
+      price: number;
+      duration: number;
+      appointment_service_id?: string;
+    }>;
+    products?: Array<{
+      id: string;
+      product_name: string;
+      name?: string;
+      quantity: number;
+      unit_price: number;
+    }>;
+    start_time: string;
+    professional: {
+      id: string;
+      name: string;
+      color: string;
+    };
+  };
+}
+
+// Tipos para respostas de criação otimizadas
+export interface CreateClientResponse {
+  success: boolean;
+  client: Client;
+}
+
+export interface CreateProfessionalResponse {
+  success: boolean;
+  professional: Professional;
+}
+
+export interface CreateServiceResponse {
+  success: boolean;
+  service: Service;
+}
+
+export interface CreateProductResponse {
+  success: boolean;
+  product: Product;
+}
+
+export interface LinkAgendamentoConfig {
+  corPrimaria: string;
+  corSecundaria: string;
+  logotipo: string;
+  mensagemBoasVindas: string;
+  mostrarPrecos: boolean;
+  mostrarDuracaoServicos: boolean;
+}
+
+export interface Database {
+  public: {
+    Tables: {
+      link_agendamento_config: {
+        Row: {
+          id: string;
+          salon_id: string;
+          cor_primaria: string;
+          cor_secundaria: string;
+          logotipo: string | null;
+          mensagem_boas_vindas: string;
+          mostrar_precos: boolean;
+          mostrar_duracao_servicos: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          salon_id: string;
+          cor_primaria?: string;
+          cor_secundaria?: string;
+          logotipo?: string | null;
+          mensagem_boas_vindas?: string;
+          mostrar_precos?: boolean;
+          mostrar_duracao_servicos?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          salon_id?: string;
+          cor_primaria?: string;
+          cor_secundaria?: string;
+          logotipo?: string | null;
+          mensagem_boas_vindas?: string;
+          mostrar_precos?: boolean;
+          mostrar_duracao_servicos?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }

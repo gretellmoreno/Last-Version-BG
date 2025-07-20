@@ -73,8 +73,13 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
       return false;
     }
 
-    await refreshProducts();
-    return true;
+    if (result.data?.success && result.data.product) {
+      // Adicionar o produto recém-criado diretamente à lista
+      setProducts(prev => [result.data.product, ...prev]);
+      return true;
+    }
+
+    return false;
   };
 
   const updateProduct = async (productId: string, updates: Partial<Product>) => {

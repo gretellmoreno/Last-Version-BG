@@ -4,6 +4,7 @@ import ProductSelection from './venda/ProductSelection';
 import PaymentMethodSelection from './venda/PaymentMethodSelection';
 import ClientSelectionVenda from './venda/ClientSelectionVenda';
 import ClientForm from './booking/ClientForm';
+import { useApp } from '../contexts/AppContext';
 
 interface VendaModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export default function VendaModal({
     dataNascimento: '',
     ano: ''
   });
+  const [customPrices, setCustomPrices] = useState<{ [productId: string]: number }>({});
 
   // Detectar se está em mobile (se não foi passado via props)
   const [internalIsMobile, setInternalIsMobile] = useState(false);
@@ -173,6 +175,10 @@ export default function VendaModal({
     onClose();
   }, [selectedProducts, selectedPaymentMethod, selectedClient, onClose]);
 
+  const handleEditProductPrice = useCallback((productId: string, price: number) => {
+    setCustomPrices(prev => ({ ...prev, [productId]: price }));
+  }, []);
+
   // Reset quando fechar o modal
   const handleClose = useCallback(() => {
     setSelectedProducts([]);
@@ -191,6 +197,8 @@ export default function VendaModal({
     setCurrentStep('products');
     onClose();
   }, [onClose]);
+
+  const { currentSalon } = useApp();
 
   if (!isOpen) return null;
 
@@ -255,6 +263,9 @@ export default function VendaModal({
               onSelectPaymentMethod={handleSelectPaymentMethod}
               onBack={handleBackToProducts}
               onFinish={handleFinishSale}
+              selectedClient={selectedClient}
+              salonId={currentSalon?.id || ''}
+              customPrices={customPrices}
             />
           ) : (
             <ProductSelection
@@ -264,6 +275,8 @@ export default function VendaModal({
               selectedClient={selectedClient}
               onShowClientSelection={handleShowClientSelection}
                   hideClientSection={isMobileDevice}
+                customPrices={customPrices}
+                onEditPrice={handleEditProductPrice}
                 />
               )}
             </>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { User, Plus, Trash2, Package, Edit2, Check, X as XIcon, UserCheck } from 'lucide-react';
+import { User, Plus, Trash2, Package, Edit2, X as XIcon, UserCheck } from 'lucide-react';
 import { useService } from '../../contexts/ServiceContext';
 import { useProfessional } from '../../contexts/ProfessionalContext';
 import { useProduct } from '../../contexts/ProductContext';
+import { appointmentService } from '../../lib/supabaseService';
 
 interface ServiceConfirmationProps {
   selectedClient: any;
@@ -21,6 +22,10 @@ interface ServiceConfirmationProps {
   isLoading?: boolean;
   isNewAppointment?: boolean; // Nova prop para distinguir novo agendamento vs edição
   hideClientSection?: boolean; // Prop para esconder seção de cliente em mobile
+  appointmentId?: string; // ID do agendamento para atualizar comanda
+  salonId?: string; // ID do salão
+  appointmentDetails?: any; // Dados completos do agendamento para obter IDs corretos
+  onRefreshAppointment?: () => Promise<void>; // Função para recarregar dados do agendamento
 }
 
 export default function ServiceConfirmation({
@@ -39,7 +44,11 @@ export default function ServiceConfirmation({
   hasPreselectedDateTime = false,
   isLoading = false,
   isNewAppointment = false,
-  hideClientSection = false
+  hideClientSection = false,
+  appointmentId,
+  salonId,
+  appointmentDetails,
+  onRefreshAppointment
 }: ServiceConfirmationProps) {
   const { services } = useService();
   const { products } = useProduct();
@@ -50,8 +59,10 @@ export default function ServiceConfirmation({
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editedServicePrices, setEditedServicePrices] = useState<Record<string, number>>({});
   const [editedProductPrices, setEditedProductPrices] = useState<Record<string, number>>({});
+  const [editedProductQuantities, setEditedProductQuantities] = useState<Record<string, number>>({});
   const [tempServiceValue, setTempServiceValue] = useState('');
   const [tempProductValue, setTempProductValue] = useState('');
+  const [tempProductQuantity, setTempProductQuantity] = useState('1');
 
   // Filtrar serviços selecionados
   const selectedServiceObjects = services?.filter(service => 
@@ -62,14 +73,58 @@ export default function ServiceConfirmation({
   const selectedProfessionalId = serviceProfessionals.length > 0 ? serviceProfessionals[0].professionalId : '';
   const selectedProfessional = professionals?.find(p => p.id === selectedProfessionalId);
 
-  // Função para obter preço atual do serviço (editado ou original)
+  // Função para obter preço atual do serviço (editado, do agendamento ou original)
   const getServicePrice = (service: any) => {
-    return editedServicePrices[service.id] !== undefined ? editedServicePrices[service.id] : service.price;
+    // Prioridade: 1. Editado localmente, 2. Do agendamento, 3. Original
+    if (editedServicePrices[service.id] !== undefined) {
+      return editedServicePrices[service.id];
+    }
+    
+    // Se estamos editando um agendamento, usar preço do agendamento
+    if (appointmentDetails?.appointment?.services) {
+      const serviceInAppointment = appointmentDetails.appointment.services.find((s: any) => s.id === service.id);
+      if (serviceInAppointment?.price !== undefined) {
+        return serviceInAppointment.price;
+      }
+    }
+    
+    return service.price;
   };
 
-  // Função para obter preço atual do produto (editado ou original)
+  // Função para obter preço atual do produto (editado, do agendamento ou original)
   const getProductPrice = (product: any) => {
-    return editedProductPrices[product.id] !== undefined ? editedProductPrices[product.id] : product.price;
+    // Prioridade: 1. Editado localmente, 2. Do agendamento, 3. Original
+    if (editedProductPrices[product.id] !== undefined) {
+      return editedProductPrices[product.id];
+    }
+    
+    // Se estamos editando um agendamento, usar preço do agendamento
+    if (appointmentDetails?.appointment?.products) {
+      const productInAppointment = appointmentDetails.appointment.products.find((p: any) => p.product_id === product.id);
+      if (productInAppointment?.unit_price !== undefined) {
+        return productInAppointment.unit_price;
+      }
+    }
+    
+    return product.price;
+  };
+
+  // Função para obter quantidade atual do produto (editada, do agendamento ou padrão)
+  const getProductQuantity = (product: any) => {
+    // Prioridade: 1. Editado localmente, 2. Do agendamento, 3. Padrão (1)
+    if (editedProductQuantities[product.id] !== undefined) {
+      return editedProductQuantities[product.id];
+    }
+    
+    // Se estamos editando um agendamento, usar quantidade do agendamento
+    if (appointmentDetails?.appointment?.products) {
+      const productInAppointment = appointmentDetails.appointment.products.find((p: any) => p.product_id === product.id);
+      if (productInAppointment?.quantity !== undefined) {
+        return productInAppointment.quantity;
+      }
+    }
+    
+    return 1;
   };
 
   // Função para formatar valor para exibição (com separador de milhares)
@@ -116,7 +171,9 @@ export default function ServiceConfirmation({
     return parseInt(digits, 10) / 100;
   };
 
-  const saveServiceEdit = () => {
+  const saveServiceEdit = async () => {
+    console.log('🔧 saveServiceEdit chamada', { editingServiceId, tempServiceValue, appointmentId, salonId });
+    
     if (editingServiceId && tempServiceValue) {
       const value = parseFormattedValue(tempServiceValue);
       if (!isNaN(value) && value >= 0) {
@@ -124,6 +181,48 @@ export default function ServiceConfirmation({
           ...prev,
           [editingServiceId]: value
         }));
+        
+        // Chamar função para atualizar comanda se estivermos editando um agendamento
+        if (appointmentId && salonId && appointmentDetails) {
+          // Buscar o appointment_service.id correto para este serviço
+          const serviceInAppointment = appointmentDetails.appointment?.services?.find((s: any) => s.id === editingServiceId);
+          const appointmentServiceId = serviceInAppointment?.appointment_service_id;
+          
+          if (appointmentServiceId) {
+            console.log('🔧 Chamando updateComandaItem para serviço', {
+              salonId,
+              appointmentId,
+              itemType: 'service',
+              itemRecordId: appointmentServiceId, // Agora usando appointment_service_id
+              customPrice: value
+            });
+            
+            const result = await appointmentService.updateComandaItem({
+              salonId,
+              appointmentId,
+              itemType: 'service',
+              itemRecordId: appointmentServiceId,
+              customPrice: value
+            });
+            
+            console.log('🔧 Resultado updateComandaItem:', result);
+            
+            // Se a atualização foi bem-sucedida, recarregar dados do agendamento
+            if (result.data?.success && onRefreshAppointment) {
+              await onRefreshAppointment();
+              // Limpar estado de edição local para usar os novos valores do agendamento
+              setEditedServicePrices(prev => {
+                const newPrices = { ...prev };
+                delete newPrices[editingServiceId];
+                return newPrices;
+              });
+            }
+          } else {
+            console.log('🔧 appointment_service_id não encontrado para o serviço:', editingServiceId);
+          }
+        } else {
+          console.log('🔧 Não chamando updateComandaItem - dados ausentes');
+        }
       }
     }
     setEditingServiceId(null);
@@ -139,25 +238,86 @@ export default function ServiceConfirmation({
   const startEditingProduct = (product: any) => {
     setEditingProductId(product.id);
     setTempProductValue(getProductPrice(product).toFixed(2).replace('.', ','));
+    setTempProductQuantity(getProductQuantity(product).toString());
   };
 
-  const saveProductEdit = () => {
-    if (editingProductId && tempProductValue) {
+  const saveProductEdit = async () => {
+    console.log('🔧 saveProductEdit chamada', { editingProductId, tempProductValue, tempProductQuantity, appointmentId, salonId });
+    
+    if (editingProductId && tempProductValue && tempProductQuantity) {
       const value = parseFormattedValue(tempProductValue);
-      if (!isNaN(value) && value >= 0) {
+      const quantity = parseInt(tempProductQuantity, 10);
+      
+      if (!isNaN(value) && value >= 0 && !isNaN(quantity) && quantity > 0) {
         setEditedProductPrices(prev => ({
           ...prev,
           [editingProductId]: value
         }));
+        
+        setEditedProductQuantities(prev => ({
+          ...prev,
+          [editingProductId]: quantity
+        }));
+        
+        // Chamar função para atualizar comanda se estivermos editando um agendamento  
+        if (appointmentId && salonId && appointmentDetails) {
+          // Buscar o product_sale.id correto para este produto
+          const productInAppointment = appointmentDetails.appointment?.products?.find((p: any) => p.product_id === editingProductId);
+          const productSaleId = productInAppointment?.product_sale_id;
+          
+          if (productSaleId) {
+            console.log('🔧 Chamando updateComandaItem para produto', {
+              salonId,
+              appointmentId,
+              itemType: 'product',
+              itemRecordId: productSaleId, // Agora usando product_sale_id
+              customPrice: value,
+              quantity: quantity
+            });
+            
+            const result = await appointmentService.updateComandaItem({
+              salonId,
+              appointmentId,
+              itemType: 'product',
+              itemRecordId: productSaleId,
+              customPrice: value,
+              quantity: quantity
+            });
+            
+            console.log('🔧 Resultado updateComandaItem:', result);
+            
+            // Se a atualização foi bem-sucedida, recarregar dados do agendamento
+            if (result.data?.success && onRefreshAppointment) {
+              await onRefreshAppointment();
+              // Limpar estado de edição local para usar os novos valores do agendamento
+              setEditedProductPrices(prev => {
+                const newPrices = { ...prev };
+                delete newPrices[editingProductId];
+                return newPrices;
+              });
+              setEditedProductQuantities(prev => {
+                const newQuantities = { ...prev };
+                delete newQuantities[editingProductId];
+                return newQuantities;
+              });
+            }
+          } else {
+            console.log('🔧 product_sale_id não encontrado para o produto:', editingProductId);
+          }
+        } else {
+          console.log('🔧 Não chamando updateComandaItem - dados ausentes');
+        }
       }
     }
     setEditingProductId(null);
     setTempProductValue('');
+    setTempProductQuantity('1');
   };
 
   const cancelProductEdit = () => {
     setEditingProductId(null);
     setTempProductValue('');
+    setTempProductQuantity('1');
   };
 
   // Handlers para mudança de valor com máscara
@@ -169,6 +329,13 @@ export default function ServiceConfirmation({
   const handleProductValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCurrencyInput(e.target.value);
     setTempProductValue(formatted);
+  };
+
+  const handleProductQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Apenas números
+    if (value === '' || (parseInt(value, 10) > 0 && parseInt(value, 10) <= 999)) {
+      setTempProductQuantity(value);
+    }
   };
 
   const formatDuration = (minutes: number) => {
@@ -183,13 +350,16 @@ export default function ServiceConfirmation({
     return `${minutes}min`;
   };
 
+  // Detectar se está em mobile (hideClientSection true) ou desktop
+  const isDesktop = !hideClientSection;
+
   return (
-    <div className={`flex h-full ${hideClientSection ? 'w-full' : ''}`}>
+    <div className={`flex h-full relative overflow-hidden ${hideClientSection ? 'w-full' : ''}`}>
       {/* Sidebar esquerda com cliente - condicional */}
       {!hideClientSection && (
       <div 
-        className={`w-48 bg-gray-50 border-r border-gray-200 flex flex-col ${selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
-        onClick={selectedClient ? onShowClientSelection : undefined}
+        className="w-48 bg-gray-50 border-r border-gray-200 flex flex-col cursor-pointer hover:bg-gray-100 transition-colors"
+        onClick={onShowClientSelection}
       >
         <div className="p-6 flex flex-col items-center text-center">
           {selectedClient ? (
@@ -209,15 +379,12 @@ export default function ServiceConfirmation({
             </>
           ) : (
             <>
-              <button
-                onClick={onShowClientSelection}
-                className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4 cursor-pointer hover:bg-purple-200 transition-colors relative group"
-              >
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4 relative">
                 <User size={28} className="text-purple-600" />
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
                   <Plus size={14} className="text-white" />
                 </div>
-              </button>
+              </div>
               <div>
                 <h3 className="font-semibold text-gray-900 text-base mb-1">Adicionar cliente</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
@@ -231,12 +398,30 @@ export default function ServiceConfirmation({
       {/* Conteúdo principal */}
       <div className={`flex flex-col ${hideClientSection ? 'w-full' : 'flex-1'}`}>
 
+        {/* Header mobile com botão de voltar e título Serviços */}
+        {isNewAppointment && (
+          <div className="sm:hidden flex items-center p-2">
+            <button
+              onClick={onBackToServices}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              title="Voltar"
+            >
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left text-gray-600"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <span className="ml-2 font-semibold text-gray-900 text-lg">Serviços</span>
+          </div>
+        )}
+
+        {/* Remover título duplicado de Serviços em mobile */}
+
+        {/* Info Card */}
+        {/* Removido card de serviços/quantidade/valor para mobile */}
+
         {/* Lista de serviços */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 pb-28 md:pb-6"> {/* padding-bottom maior no mobile */}
           <div className="space-y-4">
             {/* Serviços selecionados */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">Serviços</h3>
+            <div className="space-y-4 mt-0 md:mt-6">
               {selectedServiceObjects.map((service) => (
                 <div key={service.id} className="bg-white border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center justify-between">
@@ -268,9 +453,9 @@ export default function ServiceConfirmation({
                           </div>
                           <button
                             onClick={saveServiceEdit}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            className="px-2 py-1 text-xs bg-green-600 text-white hover:bg-green-700 rounded transition-colors font-medium"
                           >
-                            <Check size={16} />
+                            Salvar
                           </button>
                           <button
                             onClick={cancelServiceEdit}
@@ -309,57 +494,20 @@ export default function ServiceConfirmation({
             {/* Seletores de Cliente e Profissional - só aparece em novo agendamento quando não há profissional pré-selecionado */}
             {isNewAppointment && !hasPreselectedDateTime && (
               <div className="space-y-3 mt-6">
-                <h3 className="text-base font-medium text-gray-900 mb-2">Cliente e Profissional</h3>
-                
-                {/* Grid com os dois botões */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Botão de Selecionar Cliente */}
-                  <button
-                    onClick={onShowClientSelection}
-                    className="bg-white border-2 border-purple-200 rounded-lg p-3 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200 text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                        {selectedClient ? (
-                          <UserCheck size={16} className="text-purple-600" />
-                        ) : (
-                          <User size={16} className="text-purple-600" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 text-sm">
-                          {selectedClient ? selectedClient.nome : 'Selecionar Cliente'}
-                        </h4>
-                        {selectedClient && (
-                          <p className="text-xs text-gray-500">Cliente selecionado</p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Botão de Selecionar Profissional */}
-                  <button
-                    onClick={onShowProfessionalSelection}
-                    className="bg-white border-2 border-blue-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                        {selectedProfessional ? (
-                          <UserCheck size={16} className="text-blue-600" />
-                        ) : (
-                          <User size={16} className="text-blue-600" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 text-sm">
-                          {selectedProfessional ? selectedProfessional.name.replace('[Exemplo] ', '') : 'Selecionar Profissional'}
-                        </h4>
-                        {selectedProfessional && (
-                          <p className="text-xs text-gray-500">Profissional selecionado</p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                {/* Cliente e Profissional */}
+                <div className="mt-6">
+                  <h4 className="font-semibold text-gray-900 mb-2">Profissional</h4>
+                  <div className="flex space-x-3">
+                    {/* Botão de profissional sempre */}
+                    <button
+                      className={`flex-1 border-2 rounded-lg px-4 py-3 flex flex-col items-center justify-center ${selectedProfessional ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 bg-white'} transition-colors`}
+                      onClick={onShowProfessionalSelection}
+                    >
+                      <UserCheck size={22} className="mb-1 text-yellow-600" />
+                      <span className="text-xs font-medium text-gray-900">{selectedProfessional ? selectedProfessional.name : 'Selecionar Profissional'}</span>
+                      {selectedProfessional && <span className="text-xs text-gray-500">Profissional selecionado</span>}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -376,46 +524,64 @@ export default function ServiceConfirmation({
                         <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
                           <span>Produto</span>
                           {editingProductId !== product.id && (
-                            <span className="font-semibold text-gray-900">
-                              R$ {formatDisplayValue(getProductPrice(product))}
-                            </span>
+                            <>
+                              <span className="font-semibold text-gray-900">
+                                {getProductQuantity(product)}x R$ {formatDisplayValue(getProductPrice(product))}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                Total: R$ {formatDisplayValue(getProductPrice(product) * getProductQuantity(product))}
+                              </span>
+                            </>
                           )}
                         </div>
                       </div>
                       
                       <div className="flex items-center space-x-1">
                         {editingProductId === product.id ? (
-                                                  <div className="flex items-center space-x-2">
-                          <div className="flex items-center">
-                            <span className="text-sm text-gray-500 mr-1">R$</span>
-                            <input
-                              type="text"
-                              value={tempProductValue}
-                              onChange={handleProductValueChange}
-                              className="w-20 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="0,00"
-                              autoFocus
-                            />
-                          </div>
-                            <button
-                              onClick={saveProductEdit}
-                              className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              onClick={cancelProductEdit}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            >
-                              <XIcon size={16} />
-                            </button>
+                          <div className="flex flex-col space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <div className="flex items-center">
+                                <span className="text-xs text-gray-500 mr-1">Qtd:</span>
+                                <input
+                                  type="text"
+                                  value={tempProductQuantity}
+                                  onChange={handleProductQuantityChange}
+                                  className="w-12 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                                  placeholder="1"
+                                />
+                              </div>
+                              <div className="flex items-center">
+                                <span className="text-xs text-gray-500 mr-1">R$</span>
+                                <input
+                                  type="text"
+                                  value={tempProductValue}
+                                  onChange={handleProductValueChange}
+                                  className="w-20 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="0,00"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={saveProductEdit}
+                                className="px-2 py-1 text-xs bg-green-600 text-white hover:bg-green-700 rounded transition-colors font-medium"
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                onClick={cancelProductEdit}
+                                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              >
+                                <XIcon size={16} />
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <>
                             <button
                               onClick={() => startEditingProduct(product)}
                               className="w-8 h-8 flex items-center justify-center transition-colors group"
-                              title="Editar valor"
+                              title="Editar valor e quantidade"
                             >
                               <Edit2 size={16} className="text-blue-600 hover:text-blue-700" />
                             </button>
@@ -446,17 +612,41 @@ export default function ServiceConfirmation({
                 <span>Adicionar serviço</span>
               </button>
 
-              {/* Botão Adicionar Produto */}
-              <button
-                onClick={onShowProductSelection}
-                className="flex items-center justify-center space-x-2 px-4 py-2 text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-colors text-sm"
-              >
-                <Package size={16} />
-                <span>Adicionar produto</span>
-              </button>
+              {/* Botão Adicionar Produto - só aparece em comandas, não em novos agendamentos */}
+              {!isNewAppointment && (
+                <button
+                  onClick={onShowProductSelection}
+                  className="flex items-center justify-center space-x-2 px-4 py-2 text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-colors text-sm"
+                >
+                  <Package size={16} />
+                  <span>Adicionar produto</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Footer fixo para salvar agendamento - aparece quando é novo agendamento e tem serviços selecionados */}
+        {isNewAppointment && selectedServices.length > 0 && (
+          <div className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-end items-center px-4 py-3 z-20">
+            <button
+              onClick={() => {
+                console.log('🔥 ServiceConfirmation - Botão Salvar clicado!');
+                console.log('Estado:', { 
+                  isLoading, 
+                  selectedServicesLength: selectedServices.length,
+                  isNewAppointment,
+                  disabled: isLoading || selectedServices.length === 0
+                });
+                onContinue();
+              }}
+              disabled={isLoading || selectedServices.length === 0}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-semibold"
+            >
+              {isLoading ? 'Salvando agendamento...' : 'Salvar agendamento'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

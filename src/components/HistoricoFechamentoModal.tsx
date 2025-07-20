@@ -1,38 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, History, DollarSign } from 'lucide-react';
-
-interface FechamentoHistorico {
-  id: string;
-  data: string;
-  hora: string;
-  profissionalNome: string;
-  servicos: Array<{
-    data: string;
-    cliente: string;
-    servico: string;
-    valorBruto: number;
-    taxa: number;
-    comissao: number;
-    valorLiquido: number;
-  }>;
-  totalLiquido: number;
-}
+import { X, ChevronLeft, ChevronRight, History, DollarSign, Calendar, Clock, User, Package, Receipt } from 'lucide-react';
+import { useCashClosureHistory } from '../hooks/useCashClosureHistory';
+import { useApp } from '../contexts/AppContext';
+import { formatCurrency } from '../utils/formatters';
 
 interface HistoricoFechamentoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  fechamentos: FechamentoHistorico[];
-  profissionalNome: string;
+  professionalId: string;
 }
 
 export default function HistoricoFechamentoModal({
   isOpen,
   onClose,
-  fechamentos,
-  profissionalNome
+  professionalId
 }: HistoricoFechamentoModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const { currentSalon } = useApp();
+  
+  // Buscar histórico de fechamentos
+  const { data: fechamentos, isLoading, error } = useCashClosureHistory(
+    currentSalon?.id || null,
+    professionalId
+  );
   
   // Detectar mobile
   useEffect(() => {
@@ -45,7 +36,51 @@ export default function HistoricoFechamentoModal({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  if (!isOpen || fechamentos.length === 0) return null;
+  if (!isOpen) return null;
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+        <div className="relative bg-white p-6 rounded-lg shadow-xl">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-8 w-8 bg-indigo-200 rounded-full mb-4" />
+            <div className="h-4 w-32 bg-indigo-100 rounded mb-2" />
+            <div className="text-sm text-gray-500">Carregando histórico...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !fechamentos || fechamentos.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative bg-white p-6 rounded-lg shadow-xl max-w-sm mx-auto">
+          <div className="flex flex-col items-center text-center">
+            <div className="bg-red-100 p-3 rounded-full mb-4">
+              <Receipt className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Nenhum fechamento encontrado
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              {error ? error.toString() : 'Não há registros de fechamento de caixa para este profissional.'}
+            </p>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const currentFechamento = fechamentos[currentIndex];
 
@@ -57,17 +92,12 @@ export default function HistoricoFechamentoModal({
     setCurrentIndex(prev => Math.min(fechamentos.length - 1, prev + 1));
   };
 
-  const handleLimparHistorico = () => {
-    // Implementar lógica para limpar histórico
-    onClose();
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       
-      {/* Modal - responsivo e compacto */}
+      {/* Modal */}
       <div className={`
         absolute bg-white shadow-2xl flex flex-col
         ${isMobile 
@@ -75,146 +105,144 @@ export default function HistoricoFechamentoModal({
           : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[480px] max-h-[85vh] rounded-xl'
         }
       `}>
-        {/* Header compacto */}
-        <div className={`flex items-center justify-between border-b border-gray-100 ${
-          isMobile ? 'p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-2xl' : 'p-4'
-        }`}>
-          <div className={`flex items-center ${isMobile ? 'space-x-2' : 'space-x-2'}`}>
-            <div className={`bg-indigo-100 rounded-lg flex items-center justify-center ${
-              isMobile ? 'w-7 h-7' : 'w-8 h-8'
-            }`}>
-              <History size={isMobile ? 14 : 16} className="text-indigo-600" />
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-t-xl">
+          <div className="flex items-center space-x-3">
+            <div className="bg-indigo-100 p-2 rounded-lg">
+              <History className="h-5 w-5 text-indigo-600" />
             </div>
             <div>
-              <h2 className={`font-semibold text-gray-900 ${isMobile ? 'text-sm' : 'text-base'}`}>
-                Histórico {isMobile ? '' : `- ${profissionalNome}`}
+              <h2 className="font-semibold text-gray-900">
+                Histórico de Fechamentos
               </h2>
-              {isMobile && (
-                <p className="text-xs text-gray-600">{profissionalNome}</p>
-              )}
-              <p className="text-xs text-gray-500">
-                {currentIndex + 1} de {fechamentos.length} fechamentos
+              <p className="text-sm text-gray-600">
+                {currentFechamento.profissionalNome}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-1">
-            {/* Navegação compacta */}
-            <div className="flex items-center space-x-0.5">
-              <button
-                onClick={handlePrevious}
-                disabled={currentIndex === 0}
-                className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={14} className="text-gray-600" />
-              </button>
-              <span className="text-xs text-gray-600 px-1 min-w-[30px] text-center">
-                {currentIndex + 1}/{fechamentos.length}
-              </span>
-              <button
-                onClick={handleNext}
-                disabled={currentIndex === fechamentos.length - 1}
-                className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight size={14} className="text-gray-600" />
-              </button>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded transition-colors"
-            >
-              <X size={14} className="text-gray-500" />
-            </button>
-          </div>
-        </div>
-
-        {/* Conteúdo compacto */}
-        <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3' : 'p-4'}`}>
-          {/* Info do fechamento */}
-          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200 p-3 mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-1.5">
-                <DollarSign size={12} className="text-indigo-600" />
-                <span className="text-xs font-medium text-indigo-800">
-                  {currentFechamento.data} {currentFechamento.hora}
-                </span>
-              </div>
-              <span className="text-xs text-indigo-600">
-                {currentFechamento.servicos.length} serviços
-              </span>
-            </div>
-            
-            {/* Lista de serviços */}
-            <div className="text-xs text-indigo-700 mb-2">
-              {currentFechamento.servicos.map((servico, index) => (
-                <span key={index}>
-                  {servico.servico}
-                  {index < currentFechamento.servicos.length - 1 ? ', ' : ''}
-                </span>
-              ))}
-            </div>
-
-            {/* Resumo financeiro compacto */}
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="bg-white/50 rounded p-1.5">
-                <div className="text-xs text-indigo-600 mb-0.5">Valor Bruto:</div>
-                <div className="text-xs font-semibold text-indigo-900">
-                  R$ {currentFechamento.servicos.reduce((sum, s) => sum + s.valorBruto, 0).toFixed(2).replace('.', ',')}
-                </div>
-              </div>
-              <div className="bg-white/50 rounded p-1.5">
-                <div className="text-xs text-red-600 mb-0.5">Taxa:</div>
-                <div className="text-xs font-semibold text-red-700">
-                  -R$ {Math.abs(currentFechamento.servicos.reduce((sum, s) => sum + s.taxa, 0)).toFixed(2).replace('.', ',')}
-                </div>
-              </div>
-              <div className="bg-white/50 rounded p-1.5">
-                <div className="text-xs text-indigo-600 mb-0.5">Comissão:</div>
-                <div className="text-xs font-semibold text-indigo-900">
-                  R$ {currentFechamento.servicos.reduce((sum, s) => sum + s.comissao, 0).toFixed(2).replace('.', ',')}
-                </div>
-              </div>
-              <div className="bg-white/50 rounded p-1.5">
-                <div className="text-xs text-green-600 mb-0.5">Valor Líquido:</div>
-                <div className="text-sm font-bold text-green-700">
-                  R$ {currentFechamento.totalLiquido.toFixed(2).replace('.', ',')}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Indicadores de navegação compactos */}
-          {fechamentos.length > 1 && (
-            <div className="flex justify-center space-x-1.5 mb-2">
-              {fechamentos.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentIndex(index)}
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                    index === currentIndex ? 'bg-indigo-600' : 'bg-gray-300'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer compacto */}
-        <div className={`flex items-center justify-between border-t border-gray-100 bg-gray-50 ${
-          isMobile ? 'p-2.5 rounded-b-2xl' : 'p-3 rounded-b-xl'
-        }`}>
-          <button
-            onClick={handleLimparHistorico}
-            className="px-3 py-1.5 text-xs text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
-          >
-            Limpar
-          </button>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="p-2 hover:bg-white/50 rounded-lg transition-colors"
           >
-            Fechar
+            <X className="h-4 w-4 text-gray-500" />
           </button>
+        </div>
+
+        {/* Conteúdo */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* Cabeçalho do fechamento */}
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 p-4 mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 text-indigo-600" />
+                <span className="text-sm text-gray-700">{currentFechamento.data}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4 text-indigo-600" />
+                <span className="text-sm text-gray-700">{currentFechamento.hora}</span>
+              </div>
+            </div>
+
+            {/* Totais */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/80 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1">Total Bruto</div>
+                <div className="text-sm font-semibold text-gray-900">
+                  {formatCurrency(currentFechamento.servicos.reduce((sum, s) => sum + s.valorBruto, 0))}
+                </div>
+              </div>
+              <div className="bg-white/80 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1">Total Taxas</div>
+                <div className="text-sm font-semibold text-red-600">
+                  {formatCurrency(currentFechamento.servicos.reduce((sum, s) => sum + s.taxa, 0))}
+                </div>
+              </div>
+              <div className="bg-white/80 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1">Total Comissões</div>
+                <div className="text-sm font-semibold text-indigo-600">
+                  {formatCurrency(currentFechamento.servicos.reduce((sum, s) => sum + s.comissao, 0))}
+                </div>
+              </div>
+              <div className="bg-white/80 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1">Total Líquido</div>
+                <div className="text-sm font-bold text-green-600">
+                  {formatCurrency(currentFechamento.totalLiquido)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de serviços */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-gray-700 flex items-center space-x-2">
+              <Package className="h-4 w-4" />
+              <span>Serviços Realizados ({currentFechamento.servicos.length})</span>
+            </h3>
+            
+            {currentFechamento.servicos.map((servico, idx) => (
+              <div 
+                key={idx}
+                className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-gray-900">
+                      {servico.servico}
+                    </h4>
+                    <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      <User className="h-3 w-3" />
+                      <span>{servico.cliente || 'Cliente não especificado'}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900">
+                      {formatCurrency(servico.valorBruto)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Líquido: {formatCurrency(servico.valorLiquido)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="text-red-600">
+                    Taxa: {formatCurrency(servico.taxa)}
+                  </div>
+                  <div className="text-indigo-600 text-right">
+                    Comissão: {formatCurrency(servico.comissao)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer com navegação */}
+        <div className="border-t border-gray-100 p-4 bg-gray-50 rounded-b-xl">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handlePrevious}
+              disabled={currentIndex === 0}
+              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Anterior</span>
+            </button>
+            
+            <span className="text-sm text-gray-600">
+              {currentIndex + 1} de {fechamentos.length}
+            </span>
+            
+            <button
+              onClick={handleNext}
+              disabled={currentIndex === fechamentos.length - 1}
+              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+            >
+              <span>Próximo</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

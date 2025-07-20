@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Edit3, Trash2, User, UserPlus, Loader2, Users, Receipt, DollarSign } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { Professional } from '../types';
 import { useProfessional } from '../contexts/ProfessionalContext';
+import { useFinanceiro } from '../contexts/FinanceiroContext';
 import ProfessionalModal from '../components/ProfessionalModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import ValesSection from '../components/financeiro/ValesSection';
@@ -10,9 +12,12 @@ import ValeModal from '../components/ValeModal';
 import Header from '../components/Header';
 import HistoricoFechamentoModal from '../components/HistoricoFechamentoModal';
 import PeriodFilterModal from '../components/PeriodFilterModal';
+import { supabaseService } from '../lib/supabaseService';
+import { getTodayLocal, formatDateForDisplay } from '../utils/dateUtils';
 
 const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: boolean }> = ({ onToggleMobileSidebar, isMobile: isMobileProp }) => {
   const { professionals, loading, error, addProfessional, updateProfessional, removeProfessional } = useProfessional();
+  const { removeVale } = useFinanceiro();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
   const [professionalToDelete, setProfessionalToDelete] = useState<Professional | null>(null);
@@ -100,51 +105,44 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
   };
 
   // Funções mockadas para Vales (você pode implementar com contexto próprio)
-  const mockVales = [
-    {
-      id: '1',
-      data: '2024-01-15',
-      profissionalId: 'prof1',
-      profissionalNome: 'Carmen Silva',
-      valor: 50.00,
-      status: 'pendente' as const,
-      observacoes: 'Vale para almoço'
-    },
-    {
-      id: '2', 
-      data: '2024-01-10',
-      profissionalId: 'prof2',
-      profissionalNome: 'Ana Santos',
-      valor: 100.00,
-      status: 'descontado' as const,
-      observacoes: 'Adiantamento salário'
-    }
-  ];
+  const mockVales = [];
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR');
+    return formatDateForDisplay(dateStr);
   };
 
-  // Funções para Fechamento de Caixa (mockadas)
+  // Funções para Fechamento de Caixa
   const [selectedProfessional, setSelectedProfessional] = useState('');
-  const [periodFilter, setPeriodFilter] = useState({
-    start: new Date().toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+  const [periodFilter, setPeriodFilter] = useState(() => {
+    const today = getTodayLocal();
+    return {
+      start: today,
+      end: today
+    };
   });
   const [hasSearched, setHasSearched] = useState(false);
+  const [previewData, setPreviewData] = useState<any | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [canConfirmClosure, setCanConfirmClosure] = useState(false);
   
-  const mockServicos = [
-    {
-      data: '15/01/2024',
-      cliente: 'Maria Silva',
-      servico: 'Corte e Escova',
-      valorBruto: 80.00,
-      taxa: -4.00,
-      comissao: 50,
-      valorLiquido: 38.00
-    }
-  ];
+  // Dados padrão vazios para quando não há pré-visualização
+  const defaultServicos: any[] = [];
+  const defaultTotal = 0;
+
+  // Função para mapear os dados da API para o formato esperado pelo componente
+  const mapApiDataToComponent = (apiData: any) => {
+    if (!apiData?.preview?.services) return defaultServicos;
+    
+    return apiData.preview.services.map((service: any) => ({
+      data: service.date.split('T')[0], // Garante que a data está no formato YYYY-MM-DD
+      cliente: service.client || null,
+      servico: service.service,
+      valorBruto: service.grossValue,
+      taxa: service.feeValue,
+      comissao: service.commissionValue,
+      valorLiquido: service.netValue
+    }));
+  };
 
   const formatPeriodDisplay = () => {
     if (periodFilter.start === periodFilter.end) {
@@ -169,14 +167,74 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
     );
   }
 
+  const onBuscar = async () => {
+    if (!selectedProfessional) return;
+    
+    setIsLoadingPreview(true);
+    setHasSearched(false);
+    setCanConfirmClosure(false);
+    setPreviewData(null);
+    
+    const salonId = professionals.find(p => p.id === selectedProfessional)?.salon_id || '';
+    const dateFrom = periodFilter.start.split('T')[0]; // Garante que a data está no formato YYYY-MM-DD
+    const dateTo = (periodFilter.end || periodFilter.start).split('T')[0]; // Garante que a data está no formato YYYY-MM-DD
+    
+    try {
+      console.log('Enviando requisição com parâmetros:', {
+        salonId,
+        professionalId: selectedProfessional,
+        dateFrom,
+        dateTo
+      });
+
+      const result = await supabaseService.finance.getCashClosurePreview({
+        salonId,
+        professionalId: selectedProfessional,
+        dateFrom,
+        dateTo
+      });
+      
+      console.log('Resposta completa da API:', JSON.stringify(result, null, 2));
+      
+      if (result.error) {
+        alert(`Erro ao buscar dados: ${result.error}`);
+      } else if (result.data) {
+        console.log('Dados recebidos:', JSON.stringify(result.data, null, 2));
+        setPreviewData(result.data);
+        setCanConfirmClosure(true);
+      } else {
+        alert('Nenhum dado retornado pela API');
+      }
+      
+      setHasSearched(true);
+    } catch (err) {
+      console.error('Erro na chamada da API:', err);
+      alert('Erro inesperado ao buscar dados');
+      setHasSearched(true);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  const handleConfirmarFechamento = () => {
+    // Resetar todos os estados relacionados ao fechamento
+    setPreviewData(null);
+    setHasSearched(false);
+    setCanConfirmClosure(false);
+    setSelectedProfessional('');
+    setPeriodFilter({
+      start: getTodayLocal(),
+      end: getTodayLocal()
+    });
+    // Abrir o modal de histórico
+    setIsHistoricoModalOpen(true);
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'vales':
         return (
           <ValesSection
-            vales={mockVales}
-            loading={false}
-            error={null}
             onNewVale={handleNewVale}
             onEditVale={handleEditVale}
             formatDate={formatDate}
@@ -190,16 +248,30 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
             periodFilter={periodFilter}
             hasSearched={hasSearched}
             canSearch={!!selectedProfessional}
-            servicosParaFechamento={mockServicos}
-            totalLiquidoFechamento={38.00}
+            servicosParaFechamento={previewData ? mapApiDataToComponent(previewData) : defaultServicos}
+            totalLiquidoFechamento={(() => {
+              if (!previewData) return defaultTotal;
+              const servicos = mapApiDataToComponent(previewData);
+              const total = servicos.reduce((total: number, servico: any) => total + servico.valorLiquido, 0);
+              console.log('✅ Profissionais: Calculando total líquido:', {
+                servicos: servicos.length,
+                valoresLiquidos: servicos.map((s: any) => s.valorLiquido),
+                totalCalculado: total
+              });
+              return total;
+            })()}
+            isLoadingPreview={isLoadingPreview}
+            canConfirmClosure={canConfirmClosure}
+            setCanConfirmClosure={setCanConfirmClosure}
             profissionais={professionals}
             onProfessionalChange={setSelectedProfessional}
             onPeriodModalOpen={() => setIsPeriodModalOpen(true)}
-            onBuscar={() => setHasSearched(true)}
+            onBuscar={onBuscar}
+            onConfirmarFechamento={handleConfirmarFechamento}
             onHistoricoModalOpen={() => setIsHistoricoModalOpen(true)}
-            onFechamentoCaixaModalOpen={() => console.log('Fechar caixa')}
             formatPeriodDisplay={formatPeriodDisplay}
             getProfessionalName={getProfessionalName}
+            previewData={previewData}
           />
         );
       
@@ -234,34 +306,40 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
             ) : (
               <>
                 {isMobile ? (
-                  /* Cards compactos para mobile */
-                  <div className="grid grid-cols-3 gap-2 h-[calc(100vh-150px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
+                  /* Cards horizontais para mobile - padronizado com serviços/produtos */
+                  <div className="space-y-1.5 h-[calc(100vh-180px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
                     {professionals.map((professional) => (
                       <div
                         key={professional.id}
                         onClick={() => openEditModal(professional)}
-                        className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-pink-200 transition-all duration-200 cursor-pointer active:scale-95 flex flex-col items-center justify-center text-center p-2 aspect-square"
+                        className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-pink-200 transition-all duration-200 cursor-pointer active:scale-95"
                       >
-                        {/* Avatar/Foto compacto */}
-                        <div 
-                          className="w-10 h-10 text-sm rounded-full flex items-center justify-center text-white font-bold overflow-hidden mb-1.5"
-                          style={{ backgroundColor: professional.photo ? 'transparent' : professional.color }}
-                        >
-                          {professional.photo ? (
-                            <img
-                              src={professional.photo}
-                              alt={professional.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span>{professional.name.charAt(0).toUpperCase()}</span>
-                          )}
+                        
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex-1 pr-4">
+                            <h3 className="font-medium text-gray-900 text-xs">{professional.name}</h3>
+                          </div>
                         </div>
                         
-                        {/* Nome do profissional */}
-                        <h3 className="font-medium text-gray-900 text-center leading-tight text-xs">
-                          {professional.name}
-                        </h3>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div>
+                            <p className="font-semibold text-xs text-gray-900">
+                              {professional.role || 'Profissional'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs text-gray-600">
+                              {professional.phone || 'Sem telefone'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className={`font-semibold text-xs ${
+                              professional.active ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {professional.active ? 'Ativo' : 'Inativo'}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -393,9 +471,18 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
     setIsValeModalOpen(false);
   };
 
-  const handleDeleteVale = (vale: any) => {
-    console.log('Deletando vale:', vale);
-    // Aqui você pode implementar a lógica de deletar
+  const handleDeleteVale = async (vale: any) => {
+    try {
+      const success = await removeVale(vale.id);
+      if (success) {
+        toast.success('Vale excluído com sucesso!');
+      } else {
+        toast.error('Erro ao excluir vale. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir vale:', error);
+      toast.error('Erro ao excluir vale. Tente novamente.');
+    }
   };
 
   const handleCloseValeModal = () => {
@@ -404,8 +491,9 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
   };
 
   // Função para aplicar período selecionado
-  const handleApplyPeriod = (startDate: string, endDate: string) => {
-    setPeriodFilter({ start: startDate, end: endDate });
+  const handleApplyPeriod = (period: { start: string; end: string }) => {
+    console.log('✅ Profissionais: Aplicando período:', period);
+    setPeriodFilter(period);
     setHasSearched(false); // Reset busca quando mudar período
   };
 
@@ -469,115 +557,114 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen">
-      <Header 
+    <div className="flex-1 overflow-hidden page-content h-screen">
+      <Header
         title={getPageTitle()}
-        onAddClick={getAddClickHandler()}
         onMenuClick={handleMenuClick}
-        showHistoryButton={activeTab === 'fechamento'}
-        onHistoryToggle={() => {
-          setIsHistoricoModalOpen(true);
-          setIsHistoryOpen(true);
-        }}
-        isHistoryOpen={isHistoryOpen}
-        onHistoryClose={() => {
-          setIsHistoricoModalOpen(false);
-          setIsHistoryOpen(false);
-        }}
+        onAddClick={getAddClickHandler()}
       />
-      
-      <div className="flex-1 bg-gray-50 overflow-hidden">
-        <div className="h-[calc(100vh-100px)] overflow-y-auto scrollbar-thin md:h-auto md:overflow-visible">
-          <div className="p-4 md:p-6">
-            {/* Tabs de navegação */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-              <nav className="flex bg-gray-100 rounded-xl p-1">
-                <button
-                  onClick={() => handleTabChange('profissionais')}
-                  className={`flex-1 ${isMobile ? 'py-2.5 px-2' : 'py-2.5 px-4'} font-medium ${isMobile ? 'text-xs' : 'text-sm'} flex items-center justify-center ${isMobile ? 'space-x-1' : 'space-x-2'} transition-all duration-200 rounded-lg ${
-                    activeTab === 'profissionais'
-                      ? 'text-pink-600 bg-white shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
-                  }`}
-                >
-                  <Users size={isMobile ? 14 : 16} />
-                  <span>Profissionais</span>
-                </button>
-                <button
-                  onClick={() => handleTabChange('vales')}
-                  className={`flex-1 ${isMobile ? 'py-2.5 px-2' : 'py-2.5 px-4'} font-medium ${isMobile ? 'text-xs' : 'text-sm'} flex items-center justify-center ${isMobile ? 'space-x-1' : 'space-x-2'} transition-all duration-200 rounded-lg ${
-                    activeTab === 'vales'
-                      ? 'text-purple-600 bg-white shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
-                  }`}
-                >
-                  <Receipt size={isMobile ? 14 : 16} />
-                  <span>Vales</span>
-                </button>
-                <button
-                  onClick={() => handleTabChange('fechamento')}
-                  className={`flex-1 ${isMobile ? 'py-2.5 px-1' : 'py-2.5 px-4'} font-medium ${isMobile ? 'text-xs' : 'text-sm'} flex items-center justify-center ${isMobile ? 'space-x-1' : 'space-x-2'} transition-all duration-200 rounded-lg ${
-                    activeTab === 'fechamento'
-                      ? 'text-indigo-600 bg-white shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
-                  }`}
-                >
-                  <DollarSign size={isMobile ? 14 : 16} />
-                  <span>Fechamento</span>
-                </button>
-              </nav>
-            </div>
 
-            {renderTabContent()}
-          </div>
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 h-full">
+        {/* Tabs */}
+        <div className="flex space-x-4 border-b border-gray-200">
+          <button
+            onClick={() => handleTabChange('profissionais')}
+            className={`pb-4 text-sm font-medium ${
+              activeTab === 'profissionais'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Users size={20} />
+              <span>Profissionais</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleTabChange('vales')}
+            className={`pb-4 text-sm font-medium ${
+              activeTab === 'vales'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Receipt size={20} />
+              <span>Vales</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleTabChange('fechamento')}
+            className={`pb-4 text-sm font-medium ${
+              activeTab === 'fechamento'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <DollarSign size={20} />
+              <span>Fechamento</span>
+            </div>
+          </button>
         </div>
+
+        {/* Conteúdo */}
+        {renderTabContent()}
       </div>
 
-      {/* Modals */}
-      <ProfessionalModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        onSave={editingProfessional ? handleEditProfessional : handleAddProfessional}
-        editingProfessional={editingProfessional}
-        onDelete={editingProfessional ? () => handleDeleteClick(editingProfessional) : undefined}
-        isMobile={isMobile}
-      />
+      {/* Modais */}
+      {isModalOpen && (
+        <ProfessionalModal
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onSave={editingProfessional ? handleEditProfessional : handleAddProfessional}
+          editingProfessional={editingProfessional}
+          onDelete={editingProfessional ? () => handleDeleteClick(editingProfessional) : undefined}
+          isMobile={isMobile}
+        />
+      )}
 
-      <DeleteConfirmationModal
-        isOpen={!!professionalToDelete}
-        onClose={() => setProfessionalToDelete(null)}
-        onConfirm={handleDeleteProfessional}
-        title="Excluir profissional?"
-        message="Tem certeza que deseja excluir este profissional? Esta ação não pode ser desfeita."
-      />
+      {professionalToDelete && (
+        <DeleteConfirmationModal
+          isOpen={!!professionalToDelete}
+          onClose={() => setProfessionalToDelete(null)}
+          onConfirm={handleDeleteProfessional}
+          title="Excluir Profissional"
+          message={`Tem certeza que deseja excluir o profissional ${professionalToDelete.name}?`}
+        />
+      )}
 
-      <ValeModal
-        isOpen={isValeModalOpen}
-        onClose={handleCloseValeModal}
-        onSave={handleSaveVale}
-        editingVale={editingVale}
-        onDelete={editingVale ? () => {
-          handleDeleteVale(editingVale);
-          handleCloseValeModal();
-        } : undefined}
-      />
-      
-      <HistoricoFechamentoModal
-        isOpen={isHistoricoModalOpen}
-        onClose={() => {
-          setIsHistoricoModalOpen(false);
-          setIsHistoryOpen(false);
-        }}
-        fechamentos={mockHistoricoFechamentos}
-        profissionalNome={selectedProfessional ? getProfessionalName(selectedProfessional) : 'Todos os profissionais'}
-      />
+      {isValeModalOpen && (
+        <ValeModal
+          isOpen={isValeModalOpen}
+          onClose={handleCloseValeModal}
+          onSave={handleSaveVale}
+          editingVale={editingVale}
+          onDelete={editingVale ? () => {
+            handleDeleteVale(editingVale);
+            handleCloseValeModal();
+          } : undefined}
+        />
+      )}
 
-      <PeriodFilterModal
-        isOpen={isPeriodModalOpen}
-        onClose={() => setIsPeriodModalOpen(false)}
-        onApply={handleApplyPeriod}
-        currentPeriod={periodFilter}
-      />
+      {isPeriodModalOpen && (
+        <PeriodFilterModal
+          isOpen={isPeriodModalOpen}
+          onClose={() => setIsPeriodModalOpen(false)}
+          onApply={handleApplyPeriod}
+          currentPeriod={periodFilter}
+        />
+      )}
+
+      {isHistoricoModalOpen && (
+        <HistoricoFechamentoModal
+          isOpen={isHistoricoModalOpen}
+          onClose={() => setIsHistoricoModalOpen(false)}
+          professionalId={selectedProfessional}
+        />
+      )}
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { Search, User, AlertCircle, Loader2, Edit3, Trash2 } from 'lucide-react'
 import Header from '../components/Header';
 import ClientModal from '../components/ClientModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
-import { useClient } from '../contexts/ClientContext';
+import { useClients } from '../hooks/useClients';
 import { Client } from '../types';
 
 export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp }: { onToggleMobileSidebar?: () => void; isMobile?: boolean } = {}) {
@@ -22,7 +22,7 @@ export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp
     addClient, 
     updateClient, 
     removeClient 
-  } = useClient();
+  } = useClients();
 
   // Detectar se é mobile (fallback se não vier via props)
   useEffect(() => {
@@ -133,7 +133,7 @@ export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full page-content">
       <Header 
         title="Clientes" 
         onAddClick={handleNewClient}
@@ -186,8 +186,6 @@ export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp
                       onClick={() => handleEditClient(client)}
                       className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer active:scale-95"
                     >
-                      {/* Ponto colorido no canto superior direito */}
-                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-500"></div>
                       
                       <div className="flex items-center space-x-2">
                         <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -214,8 +212,6 @@ export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp
                       onClick={() => handleEditClient(client)}
                       className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer"
                     >
-                      {/* Ponto colorido no canto superior direito */}
-                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-500"></div>
                       
                       <div className="flex items-center space-x-2">
                         <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">

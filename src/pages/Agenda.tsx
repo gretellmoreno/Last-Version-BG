@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
-import { Menu, ChevronDown, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, ChevronDown, Plus, ChevronLeft, ChevronRight, CheckCircle, Globe, X, UserCircle, Calendar as CalendarIcon, Clock, Scissors } from 'lucide-react';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -13,13 +13,16 @@ import AddActionModal from '../components/AddActionModal';
 import VendaModal from '../components/VendaModal';
 import AppointmentTooltip from '../components/AppointmentTooltip';
 import EditAppointmentModal from '../components/EditAppointmentModal';
-import FecharComandaModal from '../components/FecharComandaModal';
+import AppointmentDetailsModal from '../components/AppointmentDetailsModal';
+import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 
-import { useBooking } from '../contexts/BookingContext';
+
+import { useBooking } from '../hooks/useBooking';
 import { useProfessional } from '../contexts/ProfessionalContext';
 import { useApp } from '../contexts/AppContext';
 import { supabaseService } from '../lib/supabaseService';
 import { Appointment, CalendarEvent, AppointmentDetails } from '../types';
+import { formatDateToLocal } from '../utils/dateUtils';
 
 // Configuração do localizador em português
 const locales = { 'pt-BR': ptBR };
@@ -245,7 +248,8 @@ const MobileHeader = ({
   selectedProfessional, 
   onProfessionalClick,
   onAddClick,
-  onToggleSidebar
+  onToggleSidebar,
+  onShowOnlineModal
 }: {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
@@ -253,6 +257,7 @@ const MobileHeader = ({
   onProfessionalClick: () => void;
   onAddClick: () => void;
   onToggleSidebar?: () => void;
+  onShowOnlineModal: () => void;
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -358,6 +363,13 @@ const MobileHeader = ({
           </button>
           
           <button
+            onClick={onShowOnlineModal}
+            className="mx-2 p-2 rounded-full hover:bg-indigo-50 text-indigo-600 transition"
+            title="Agendamentos Online"
+          >
+            <Globe size={22} />
+          </button>
+          <button
             onClick={onAddClick}
             className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
@@ -418,11 +430,9 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
   const [resources, setResources] = useState<Resource[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
-  // Estados para o modal de fechar comanda
-  const [isFecharComandaModalOpen, setIsFecharComandaModalOpen] = useState(false);
-  const [fecharComandaAppointment, setFecharComandaAppointment] = useState<CalendarEvent | null>(null);
-  const [fecharComandaDetails, setFecharComandaDetails] = useState<AppointmentDetails | null>(null);
+
   
   // Estados para o tooltip
   const [tooltip, setTooltip] = useState<{
@@ -437,6 +447,9 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
   const [isDragging, setIsDragging] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 1. Estado para modal de agendamentos online
+  const [showOnlineModal, setShowOnlineModal] = useState(false);
 
   const { appointments, refreshAppointments } = useBooking();
   const { professionals } = useProfessional();
@@ -489,7 +502,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
       const { data, error } = await supabaseService.appointments.updateTime({
         appointmentId: event.id,
         salonId: currentSalon?.id || '',
-        newDate: start.toISOString().split('T')[0],
+        newDate: formatDateToLocal(start),
         newStartTime: start.toTimeString().split(' ')[0],
         newEndTime: end.toTimeString().split(' ')[0],
         newProfessionalId: event.resourceId
@@ -520,7 +533,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
       const { data, error } = await supabaseService.appointments.updateTime({
         appointmentId: event.id,
         salonId: currentSalon?.id || '',
-        newDate: start.toISOString().split('T')[0],
+        newDate: formatDateToLocal(start),
         newStartTime: start.toTimeString().split(' ')[0],
         newEndTime: end.toTimeString().split(' ')[0],
         newProfessionalId: resourceId
@@ -588,7 +601,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
       );
       
       // Filtrar agendamentos apenas para a data selecionada
-      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      const selectedDateStr = formatDateToLocal(selectedDate);
       activeAppointments = activeAppointments.filter((appointment: any) => 
         appointment.date === selectedDateStr
       );
@@ -740,9 +753,18 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
 
   // Manipulador de seleção de evento
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
-    console.log('handleSelectEvent chamado com evento:', event.id);
-    setSelectedAppointmentId(event.id);
-    setIsEditModalOpen(true);
+    // Verificar se o agendamento está finalizado (múltiplos status possíveis)
+    const isFinalized = ['finalizado', 'concluido', 'fechado', 'pago'].includes(event.status.toLowerCase());
+    
+    if (isFinalized) {
+      // Para agendamentos finalizados, abrir apenas o modal de detalhes (somente leitura)
+      setSelectedAppointmentId(event.id);
+      setIsDetailsModalOpen(true);
+    } else {
+      // Para agendamentos em andamento, abrir o modal editável
+      setSelectedAppointmentId(event.id);
+      setIsEditModalOpen(true);
+    }
   }, []);
 
   // Manipulador de navegação de datas
@@ -784,12 +806,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
     refreshAppointments();
   };
   
-  // Função para abrir modal de fechar comanda
-  const handleOpenFecharComanda = useCallback((appointment: CalendarEvent | null, appointmentDetails: AppointmentDetails | null) => {
-    setFecharComandaAppointment(appointment);
-    setFecharComandaDetails(appointmentDetails);
-    setIsFecharComandaModalOpen(true);
-  }, []);
+
 
   // Componente customizado para slots de tempo com atributo data-time
   const TimeSlotWrapper = ({ children, value, resource }: any) => {
@@ -816,8 +833,8 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
     const professional = professionals?.find(p => p.id === event.resourceId);
     const duration = (event.end.getTime() - event.start.getTime()) / (1000 * 60); // duração em minutos
     const isShort = duration < 45; // Se menos de 45 minutos, layout compacto
-    const isVeryShort = duration < 30; // Se menos de 30 minutos, layout muito compacto
-    
+    const isVeryShort = duration < 30;
+
     const handleEventMouseEnterLocal = (e: React.MouseEvent) => {
       if (isDragging) return; // Não mostrar tooltip se estiver arrastando
       
@@ -905,27 +922,28 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
 
     return (
       <div
-        className="w-full h-full"
+        className="w-full h-full relative"
         onMouseEnter={handleEventMouseEnterLocal}
         onMouseLeave={handleEventMouseLeaveLocal}
         onClick={handleEventClickLocal}
-        title="" // Remover qualquer tooltip nativo
-        style={{ 
-          pointerEvents: 'auto',
-          cursor: 'pointer'
-        }} // Garantir que o container principal seja clicável
+        title=""
+        style={{ pointerEvents: 'auto', cursor: 'pointer' }}
       >
-        {/* Horário - bem no começo, compacto */}
+        {/* Ícone de finalizado no canto superior direito */}
+        {event.status === 'finalizado' && (
+          <span className="absolute top-1 right-1 z-10">
+            <CheckCircle size={16} className="text-green-600 drop-shadow" />
+          </span>
+        )}
+        {/* Horário */}
         <div className="text-xs font-semibold leading-tight text-black" style={{ pointerEvents: 'none' }}>
           {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
         </div>
-        
-        {/* Nome do cliente - logo em seguida, sem margem */}
+        {/* Nome do cliente */}
         <div className={`font-semibold truncate leading-tight text-black ${isVeryShort ? 'text-xs' : 'text-sm'}`} style={{ pointerEvents: 'none' }}>
           {event.client}
         </div>
-        
-        {/* Serviços - compacto, só mostra se tem espaço e conteúdo */}
+        {/* Serviços */}
         {!isVeryShort && event.services && event.services.length > 0 && (
           <div className="text-xs leading-tight text-black space-y-0.5" style={{ pointerEvents: 'none' }}>
             {event.services.slice(0, isShort ? 1 : 2).map((service: any, index: number) => (
@@ -968,7 +986,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
   }, [events]);
 
   return (
-    <div className={`flex-1 flex flex-col h-full ${isMobile ? 'mobile-agenda-container' : ''}`}>
+    <div className={`flex-1 flex flex-col h-full page-content ${isMobile ? 'mobile-agenda-container' : ''}`}>
       <Toaster position="top-right" />
       
       {isMobile ? (
@@ -979,6 +997,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
           onProfessionalClick={() => setShowProfessionalSelector(true)}
           onAddClick={handleAddClick}
           onToggleSidebar={onToggleMobileSidebar}
+          onShowOnlineModal={() => setShowOnlineModal(true)}
         />
       ) : (
         <>
@@ -988,12 +1007,13 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             onAddClick={handleAddClick}
+            onOnlineClick={() => setShowOnlineModal(true)}
           />
-          
           {/* Cabeçalho fixo dos profissionais - apenas desktop */}
           {professionals && professionals.length > 0 && (
             <ProfessionalsHeader professionals={professionals} />
           )}
+          {/* REMOVIDO: Barra de ações com botão Plus lateral */}
         </>
       )}
       
@@ -1103,28 +1123,72 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
       )}
       
       {/* Modal de edição de agendamento */}
-      {isEditModalOpen && (
-        <EditAppointmentModal
+      {isEditModalOpen && selectedAppointmentId && (
+        <AppointmentStatusGate
+          appointmentId={selectedAppointmentId}
           isOpen={isEditModalOpen}
           onClose={() => {
             setIsEditModalOpen(false);
             setSelectedAppointmentId(null);
-            // Atualizar agendamentos quando fechar o modal
             refreshAppointments();
           }}
-          appointment={null}
-          appointmentId={selectedAppointmentId}
         />
       )}
       
-      {/* Modal de fechar comanda */}
-      {isFecharComandaModalOpen && (
-        <FecharComandaModal
-          isOpen={isFecharComandaModalOpen}
-          onClose={() => setIsFecharComandaModalOpen(false)}
-          appointment={fecharComandaAppointment}
-          appointmentDetails={fecharComandaDetails}
+      {/* Modal de detalhes do agendamento */}
+      {isDetailsModalOpen && selectedAppointmentId && (
+        <AppointmentDetailsModal
+          isOpen={isDetailsModalOpen}
+          onClose={() => {
+            setIsDetailsModalOpen(false);
+            setSelectedAppointmentId(null);
+            refreshAppointments();
+          }}
+          appointmentId={selectedAppointmentId}
         />
+      )}
+
+      {/* Modal de agendamentos online */}
+      {showOnlineModal && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-30">
+          <div className={`bg-white rounded-2xl shadow-2xl ${isMobile ? 'max-w-sm w-full max-h-[90vh] p-2' : 'w-full max-w-md p-6 mx-2'} relative`}>
+            <button onClick={() => setShowOnlineModal(false)} className={`absolute top-2 right-2 p-2 rounded-full hover:bg-gray-100 text-gray-500 ${isMobile ? 'text-base' : ''}`}>
+              <X size={isMobile ? 20 : 22} />
+            </button>
+            <h2 className={`text-center font-bold text-gray-900 mb-3 ${isMobile ? 'text-lg' : 'text-xl'}`}>Agendamentos Online</h2>
+            {/* Lista de agendamentos online (mock) */}
+            <div className="divide-y divide-gray-100">
+              {[{
+                cliente: 'Gretell',
+                data: '22/07/25 (Ter)',
+                hora: '08:00',
+                servicos: 'Escova, Corte',
+                profissional: 'Ana',
+                valor: 'R$ 130,00',
+                criado: '19/07/2025 às 21:48 (segundos atrás)'
+              }].map((ag, idx) => (
+                <div key={idx} className={`flex flex-col gap-1 ${isMobile ? 'py-2' : 'py-4'}`}> 
+                  <div className={`flex items-center gap-2 text-indigo-700 font-semibold ${isMobile ? 'text-sm' : ''}`}>
+                    <UserCircle size={isMobile ? 15 : 18} /> {ag.cliente}
+                  </div>
+                  <div className={`flex items-center gap-2 text-gray-700 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                    <CalendarIcon size={isMobile ? 13 : 16} /> {ag.data}
+                    <span className="flex items-center gap-1 ml-2"><Clock size={isMobile ? 13 : 16} /> {ag.hora}</span>
+                    <Globe size={isMobile ? 12 : 15} className="ml-2 text-indigo-500" />
+                  </div>
+                  <div className={`flex items-center gap-2 text-gray-800 ${isMobile ? 'text-sm' : ''}`}>
+                    <Scissors size={isMobile ? 12 : 15} /> {ag.servicos}
+                    <span className="ml-auto font-bold">{ag.valor}</span>
+                  </div>
+                  <div className={`flex items-center gap-2 text-gray-700 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                    <UserCircle size={isMobile ? 12 : 15} /> {ag.profissional}
+                  </div>
+                  <div className={`italic mt-1 ${isMobile ? 'text-[10px] text-gray-300' : 'text-xs text-gray-400'}`}>Criado: {ag.criado}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de seleção de profissional (mobile) */}
@@ -1134,14 +1198,13 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
           onClick={() => setShowProfessionalSelector(false)}
         >
           <div 
-            className="bg-white rounded-xl shadow-2xl max-w-xs w-full mx-4 max-h-80 overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl max-w-xs w-full mx-4 max-h-[80vh] p-2 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+            <div className="pb-2 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-2xl">
               <h3 className="text-base font-bold text-gray-900 text-center">Selecionar Profissional</h3>
             </div>
-            
-            <div className="max-h-64 overflow-y-auto">
+            <div className="max-h-48 overflow-y-auto py-1 space-y-1 scrollbar-none">
               {professionals?.map((professional) => (
                 <button
                   key={professional.id}
@@ -1149,14 +1212,14 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
                     setSelectedProfessionalId(professional.id);
                     setShowProfessionalSelector(false);
                   }}
-                  className={`w-full flex items-center space-x-3 p-3 transition-all duration-200 mobile-professional-option ${
-                    selectedProfessionalId === professional.id 
-                      ? 'bg-indigo-50 border-r-4 border-indigo-500' 
-                      : 'hover:bg-gray-50'
-                  }`}
+                  className={`w-full flex items-center space-x-2 p-1 rounded-lg shadow-sm transition-all duration-200 border text-left
+                    ${selectedProfessionalId === professional.id 
+                      ? 'bg-indigo-100 border-indigo-500' 
+                      : 'bg-white border-gray-200 hover:bg-gray-50'}
+                  `}
                 >
                   <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md"
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-base font-bold text-white shadow-md"
                     style={{ backgroundColor: professional.color || '#6366f1' }}
                   >
                     {(() => {
@@ -1168,24 +1231,18 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
                       return (names[0][0] + names[names.length - 1][0]).toUpperCase();
                     })()}
                   </div>
-                  <div className="text-left flex-1">
-                    <p className="font-semibold text-gray-900 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">
                       {professional.name.replace('[Exemplo] ', '')}
                     </p>
                   </div>
-                  {selectedProfessionalId === professional.id && (
-                    <div className="ml-auto">
-                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                    </div>
-                  )}
                 </button>
               ))}
             </div>
-            
-            <div className="p-2 border-t border-gray-200 bg-gray-50">
+            <div className="pt-2 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
               <button
                 onClick={() => setShowProfessionalSelector(false)}
-                className="w-full px-3 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-all duration-200 font-medium text-sm border border-gray-200"
+                className="w-full py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-all duration-200 font-medium text-sm"
               >
                 Cancelar
               </button>
@@ -1194,5 +1251,28 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
         </div>
       )}
     </div>
+  );
+}
+
+function AppointmentStatusGate({ appointmentId, isOpen, onClose }: { appointmentId: string, isOpen: boolean, onClose: () => void }) {
+  const { currentSalon } = useApp();
+  const { appointment, isLoading } = useAppointmentDetails(appointmentId, currentSalon?.id || null, isOpen);
+  if (isLoading) return null;
+  if (appointment?.status === 'finalizado') {
+    return (
+      <AppointmentDetailsModal
+        isOpen={isOpen}
+        onClose={onClose}
+        appointmentId={appointmentId}
+      />
+    );
+  }
+  return (
+    <EditAppointmentModal
+      isOpen={isOpen}
+      onClose={onClose}
+      appointment={null}
+      appointmentId={appointmentId}
+    />
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Plus, UserPlus, ArrowLeft } from 'lucide-react';
-import { useClient } from '../../contexts/ClientContext';
+import { useClients } from '../../hooks/useClients';
 import { useService } from '../../contexts/ServiceContext';
 
 interface ClientSelectionProps {
@@ -21,7 +21,7 @@ export default function ClientSelection({
   hideServicesSidebar = false
 }: ClientSelectionProps) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const { clients } = useClient();
+  const { clients } = useClients();
   const { services } = useService();
 
   // Filtrar clientes baseado na busca - com verificação de segurança

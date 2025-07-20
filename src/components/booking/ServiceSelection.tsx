@@ -54,31 +54,30 @@ export default function ServiceSelection({
       {/* Sidebar esquerda - condicional */}
       {!hideClientSection && (
       <div 
-          className={`w-44 bg-gray-50 border-r border-gray-200 flex flex-col ${
+          className={`w-20 md:w-44 bg-gray-50 border-r border-gray-200 flex flex-col ${
           !selectedClient ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''
         }`}
         onClick={!selectedClient ? onShowClientSelection : undefined}
       >
-          <div className="p-4 flex flex-col items-center text-center">
+          <div className="p-2 md:p-4 flex flex-col items-center text-center">
           {selectedClient ? (
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
-                <span className="text-green-600 font-semibold text-base">
+              <div className="w-8 h-8 md:w-12 md:h-12 mb-2 md:mb-3 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-green-600 font-semibold text-sm md:text-base">
                 {selectedClient.nome?.charAt(0).toUpperCase() || 'C'}
               </span>
             </div>
           ) : (
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3 hover:bg-purple-200 transition-colors relative group">
-                <User size={22} className="text-purple-600" />
-                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
-                  <Plus size={12} className="text-white" />
+              <div className="w-12 h-12 md:w-16 md:h-16 mb-2 md:mb-3 bg-purple-100 rounded-full flex items-center justify-center hover:bg-purple-200 transition-colors relative group border-2 border-dashed border-purple-300">
+                <User size={28} className="text-purple-600" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center border-2 border-white">
+                  <Plus size={16} className="text-white" />
+                </div>
               </div>
-            </div>
           )}
-          
           <div>
             {selectedClient ? (
               <>
-                  <h3 className="font-semibold text-gray-900 text-sm mb-1">{selectedClient.nome || 'Cliente'}</h3>
+                  <h3 className="font-semibold text-gray-900 text-xs md:text-sm mb-1">{selectedClient.nome || 'Cliente'}</h3>
                   <p className="text-xs text-gray-500">Cliente selecionado</p>
                 <button
                   onClick={onShowClientSelection}
@@ -89,8 +88,7 @@ export default function ServiceSelection({
               </>
             ) : (
               <>
-                  <h3 className="font-semibold text-gray-900 text-sm mb-1">Adicionar cliente</h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">Ou deixe vazio se não há cadastro</p>
+                  <h3 className="font-semibold text-gray-900 text-xs md:text-sm mb-1">Adicionar cliente</h3>
               </>
             )}
           </div>

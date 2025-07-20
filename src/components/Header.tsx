@@ -14,6 +14,8 @@ interface HeaderProps {
   onHistoryToggle?: () => void;
   isHistoryOpen?: boolean;
   onHistoryClose?: () => void;
+  isMobile?: boolean;
+  onOnlineClick?: () => void; // ADICIONADO
 }
 
 export default function Header({ 
@@ -27,7 +29,9 @@ export default function Header({
   showHistoryButton = false,
   onHistoryToggle,
   isHistoryOpen = false,
-  onHistoryClose
+  onHistoryClose,
+  isMobile = false,
+  onOnlineClick
 }: HeaderProps) {
   const handleHistoryClick = () => {
     if (isHistoryOpen && onHistoryClose) {
@@ -118,7 +122,16 @@ export default function Header({
               <span>{isHistoryOpen ? 'Fechar Histórico' : 'Ver Histórico'}</span>
             </button>
           )}
-          
+          {onOnlineClick && (
+            <button
+              onClick={onOnlineClick}
+              className="p-2 rounded-full hover:bg-indigo-50 text-indigo-600 transition mr-1"
+              title="Agendamentos Online"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="lucide lucide-globe hidden lg:block" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="lucide lucide-globe lg:hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+            </button>
+          )}
           {onAddClick && (
             <button
               onClick={onAddClick}
