@@ -4,9 +4,10 @@ import Header from '../components/Header';
 import ClientModal from '../components/ClientModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import { useClients } from '../hooks/useClients';
+import { ClientProvider } from '../contexts/ClientContext';
 import { Client } from '../types';
 
-export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp }: { onToggleMobileSidebar?: () => void; isMobile?: boolean } = {}) {
+function ClientesContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onToggleMobileSidebar?: () => void; isMobile?: boolean } = {}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -184,12 +185,12 @@ export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp
                     <div
                       key={client.id}
                       onClick={() => handleEditClient(client)}
-                      className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer active:scale-95"
+                      className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-1.5 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer active:scale-95"
                     >
                       
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <User size={14} className="text-indigo-600" />
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User size={12} className="text-indigo-600" />
                           </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-gray-900 text-xs truncate">
@@ -204,16 +205,16 @@ export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp
                   ))}
                 </div>
               ) : (
-                // Cards para desktop - compactos como outras páginas
-                <div className="grid grid-cols-2 gap-3 h-[calc(100vh-250px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
+                // Cards para desktop - grid responsivo com altura fixa
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 h-[calc(100vh-250px)] overflow-y-auto scrollbar-thin pr-1 pb-6 content-start">
                   {clients.map((client) => (
                     <div
                       key={client.id}
                       onClick={() => handleEditClient(client)}
-                      className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer"
+                      className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer h-16 max-h-16"
                     >
                       
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 h-full">
                         <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <span className="text-indigo-600 font-medium text-xs">
                             {client.name.charAt(0).toUpperCase()}
@@ -263,5 +264,13 @@ export default function Clientes({ onToggleMobileSidebar, isMobile: isMobileProp
         loading={loading}
       />
     </div>
+  );
+}
+
+export default function Clientes(props: { onToggleMobileSidebar?: () => void; isMobile?: boolean }) {
+  return (
+    <ClientProvider>
+      <ClientesContent {...props} />
+    </ClientProvider>
   );
 }

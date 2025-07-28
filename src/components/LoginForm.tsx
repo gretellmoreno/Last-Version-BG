@@ -1,13 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSalonSlug, useIsMainDomain } from '../hooks/useSubdomain';
+import { salonService } from '../lib/salonService';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [salonData, setSalonData] = useState<any>(null);
+  const [loadingSalon, setLoadingSalon] = useState(false);
+  
   const { signIn, loading } = useAuth();
+  const salonSlug = useSalonSlug();
+  const isMainDomain = useIsMainDomain();
+
+  // Carregar dados do salão se estiver em subdomínio
+  useEffect(() => {
+    const loadSalonData = async () => {
+      if (salonSlug && !isMainDomain) {
+        setLoadingSalon(true);
+        try {
+          const response = await salonService.getSalonBySlug(salonSlug);
+          if (response.success && response.salon) {
+            setSalonData(response.salon);
+          }
+        } catch (err) {
+          console.error('Erro ao carregar dados do salão para login:', err);
+        } finally {
+          setLoadingSalon(false);
+        }
+      }
+    };
+
+    loadSalonData();
+  }, [salonSlug, isMainDomain]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,17 +53,60 @@ export default function LoginForm() {
     }
   };
 
+  // Determinar título e subtítulo baseado no contexto
+  const getHeaderInfo = () => {
+    if (loadingSalon) {
+      return {
+        title: 'Carregando...',
+        subtitle: 'Verificando salão'
+      };
+    }
+
+    if (salonData) {
+      const displayName = salonData.public_display_name || salonData.name;
+      return {
+        title: displayName,
+        subtitle: 'Faça login para acessar o sistema'
+      };
+    }
+
+    // Domínio principal ou sem dados do salão
+    return {
+      title: 'BelaGestão',
+      subtitle: 'Entre na sua conta'
+    };
+  };
+
+  const headerInfo = getHeaderInfo();
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
       <div className="w-full max-w-md">
         <div className="bg-white shadow-premium-lg rounded-2xl p-8 border border-gray-100">
           {/* Logo e Título */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-white font-bold text-2xl">S</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">BelaGestão</h1>
-            <p className="text-gray-600">Entre na sua conta</p>
+            {salonData?.public_profile_photo_url ? (
+              <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4 shadow-lg">
+                <img 
+                  src={salonData.public_profile_photo_url} 
+                  alt="Logo do salão"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <span className="text-white font-bold text-2xl">
+                  {salonData ? salonData.name.charAt(0).toUpperCase() : 'S'}
+                </span>
+              </div>
+            )}
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{headerInfo.title}</h1>
+            <p className="text-gray-600">{headerInfo.subtitle}</p>
+            {salonData && (
+              <p className="text-xs text-gray-500 mt-2">
+                {salonData.subdomain}.localhost:5173
+              </p>
+            )}
           </div>
 
           {/* Formulário */}
@@ -63,7 +134,7 @@ export default function LoginForm() {
                     bg-gray-50 focus:bg-white
                   "
                   placeholder="seu@email.com"
-                  disabled={loading}
+                  disabled={loading || loadingSalon}
                 />
               </div>
             </div>
@@ -91,13 +162,13 @@ export default function LoginForm() {
                     bg-gray-50 focus:bg-white
                   "
                   placeholder="Sua senha"
-                  disabled={loading}
+                  disabled={loading || loadingSalon}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                  disabled={loading}
+                  disabled={loading || loadingSalon}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -114,7 +185,7 @@ export default function LoginForm() {
             {/* Botão de Login */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || loadingSalon}
               className="
                 w-full flex items-center justify-center py-3 px-4
                 bg-gradient-to-r from-indigo-600 to-indigo-700
@@ -127,10 +198,10 @@ export default function LoginForm() {
                 transform hover:translate-y-[-1px]
               "
             >
-              {loading ? (
+              {(loading || loadingSalon) ? (
                 <>
                   <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                  Entrando...
+                  {loadingSalon ? 'Carregando...' : 'Entrando...'}
                 </>
               ) : (
                 'Entrar'

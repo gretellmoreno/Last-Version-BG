@@ -51,7 +51,7 @@ export default function TaxaModal({
     if (editingTaxa) {
       setTaxaForm({
         nome: editingTaxa.nome || '',
-        taxa: editingTaxa.taxa.toString() || ''
+        taxa: editingTaxa.taxa != null ? editingTaxa.taxa.toString() : ''
       });
     } else {
       setTaxaForm({

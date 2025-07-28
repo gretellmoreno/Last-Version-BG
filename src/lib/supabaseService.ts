@@ -110,7 +110,7 @@ export const clientService = {
         p_phone: params.phone,
         p_email: params.email,
         p_cpf: params.cpf,
-        p_birth_date: params.birthDate
+        p_birth_date: params.birthDate === '' ? null : params.birthDate
       })
       
       if (error) {
@@ -165,29 +165,34 @@ export const professionalService = {
   async create(params: {
     salonId: string
     name: string
-    role: string
     phone: string
     email: string
-    color: string
     commissionRate: number
+    role?: string
+    color?: string
+    active?: boolean
+    availableOnline?: boolean
+    url_foto?: string
   }): Promise<RPCResponse<CreateProfessionalResponse>> {
     try {
       const { data, error } = await supabase.rpc('create_professional', {
         p_salon_id: params.salonId,
         p_name: params.name,
-        p_role: params.role,
         p_phone: params.phone,
-        p_email: params.email && params.email.trim() ? params.email : null,
-        p_color: params.color,
+        p_email: params.email,
         p_commission_rate: params.commissionRate,
-        p_active: true
+        p_role: params.role || null,
+        p_color: params.color || null,
+        p_active: params.active !== false,
+        p_available_online: params.availableOnline !== false,
+        p_url_foto: params.url_foto || null
       })
       
       if (error) {
         return { data: null, error: error.message }
       }
       
-      return { data: data || { success: false, professional: null }, error: null }
+      return { data: data?.[0] || { success: false }, error: null }
     } catch (err) {
       return { data: null, error: `Erro ao criar profissional: ${err}` }
     }
@@ -197,31 +202,37 @@ export const professionalService = {
   async update(params: {
     professionalId: string
     salonId: string
-    name: string
-    role: string
-    phone: string
-    email: string
-    color: string
-    commissionRate: number
-    active: boolean
-  }): Promise<RPCResponse<RPCSuccessResponse>> {
+    name?: string
+    phone?: string
+    email?: string
+    commissionRate?: number
+    role?: string
+    color?: string
+    active?: boolean
+    availableOnline?: boolean
+    url_foto?: string
+  }): Promise<RPCResponse<CreateProfessionalResponse>> {
     try {
-      const { data, error } = await supabase.rpc('update_professional', {
+      // Montar objeto de parâmetros sem p_available_online se for null/undefined
+      const rpcParams: any = {
         p_professional_id: params.professionalId,
         p_salon_id: params.salonId,
-        p_name: params.name,
-        p_role: params.role,
-        p_phone: params.phone,
-        p_email: params.email,
-        p_color: params.color,
-        p_commission_rate: params.commissionRate,
-        p_active: params.active
-      })
-      
+        p_name: params.name || null,
+        p_phone: params.phone || null,
+        p_email: params.email || null,
+        p_commission_rate: params.commissionRate || null,
+        p_role: params.role || null,
+        p_color: params.color || null,
+        p_active: params.active || null,
+        p_url_foto: params.url_foto || null
+      };
+      if (params.availableOnline !== undefined && params.availableOnline !== null) {
+        rpcParams.p_available_online = params.availableOnline;
+      }
+      const { data, error } = await supabase.rpc('update_professional', rpcParams);
       if (error) {
         return { data: null, error: error.message }
       }
-      
       return { data: data?.[0] || { success: false }, error: null }
     } catch (err) {
       return { data: null, error: `Erro ao atualizar profissional: ${err}` }
@@ -229,11 +240,11 @@ export const professionalService = {
   },
 
   // Deletar profissional
-  async delete(professionalId: string, salonId: string): Promise<RPCResponse<RPCSuccessResponse>> {
+  async delete(professionalId: string, salonId: string): Promise<RPCResponse<any>> {
     try {
       const { data, error } = await supabase.rpc('delete_professional', {
-        p_professional_id: professionalId,
-        p_salon_id: salonId
+        professional_id: professionalId,
+        salon_id: salonId
       })
       
       if (error) {
@@ -243,6 +254,52 @@ export const professionalService = {
       return { data: data?.[0] || { success: false }, error: null }
     } catch (err) {
       return { data: null, error: `Erro ao deletar profissional: ${err}` }
+    }
+  },
+
+  // Atualizar disponibilidade online do profissional
+  async updateOnlineAvailability(professionalId: string, salonId: string, availableOnline: boolean): Promise<RPCResponse<any>> {
+    try {
+      console.log('🔄 Atualizando disponibilidade online do profissional:', { professionalId, availableOnline });
+
+      // Tentar usar RPC específica primeiro
+      const { data, error } = await supabase.rpc('update_professional_online_availability', {
+        p_professional_id: professionalId,
+        p_salon_id: salonId,
+        p_available_online: availableOnline
+      });
+
+      if (error) {
+        // Se a RPC não existe, usar fallback com update direto
+        const isPGRST202 = typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'PGRST202';
+        if (isPGRST202) {
+          console.log('🔄 RPC não encontrada, usando fallback direto');
+          
+          const { data: updateData, error: updateError } = await supabase
+            .from('professionals')
+            .update({ available_online: availableOnline })
+            .eq('id', professionalId)
+            .eq('salon_id', salonId)
+            .select()
+            .single();
+
+          if (updateError) {
+            return { data: null, error: updateError.message };
+          }
+
+          console.log('✅ Disponibilidade atualizada via fallback');
+          return { data: { success: true, professional: updateData }, error: null };
+        }
+        
+        return { data: null, error: error.message };
+      }
+
+      console.log('✅ Disponibilidade atualizada via RPC');
+      return { data: data || { success: false }, error: null };
+
+    } catch (err) {
+      console.error('💥 Erro inesperado ao atualizar disponibilidade:', err);
+      return { data: null, error: `Erro ao atualizar disponibilidade: ${err}` };
     }
   },
 
@@ -392,6 +449,70 @@ export const serviceService = {
     } catch (err) {
       return { data: null, error: `Erro ao atualizar serviço: ${err}` }
     }
+  },
+
+  // Deletar serviço
+  async delete(serviceId: string, salonId: string): Promise<RPCResponse<any>> {
+    try {
+      const { data, error } = await supabase.rpc('delete_service', {
+        service_id: serviceId,
+        salon_id: salonId
+      })
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data: data?.[0] || { success: false }, error: null }
+    } catch (err) {
+      return { data: null, error: `Erro ao deletar serviço: ${err}` }
+    }
+  },
+
+  // Atualizar disponibilidade online do serviço
+  async updateOnlineAvailability(serviceId: string, salonId: string, availableOnline: boolean): Promise<RPCResponse<any>> {
+    try {
+      console.log('🔄 Atualizando disponibilidade online do serviço:', { serviceId, availableOnline });
+
+      // Tentar usar RPC específica primeiro
+      const { data, error } = await supabase.rpc('update_service_online_availability', {
+        p_service_id: serviceId,
+        p_salon_id: salonId,
+        p_available_online: availableOnline
+      });
+
+      if (error) {
+        // Se a RPC não existe, usar fallback com update direto
+        const isPGRST202 = typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'PGRST202';
+        if (isPGRST202) {
+          console.log('🔄 RPC não encontrada, usando fallback direto');
+          
+          const { data: updateData, error: updateError } = await supabase
+            .from('services')
+            .update({ available_online: availableOnline })
+            .eq('id', serviceId)
+            .eq('salon_id', salonId)
+            .select()
+            .single();
+
+          if (updateError) {
+            return { data: null, error: updateError.message };
+          }
+
+          console.log('✅ Disponibilidade atualizada via fallback');
+          return { data: { success: true, service: updateData }, error: null };
+        }
+        
+        return { data: null, error: error.message };
+      }
+
+      console.log('✅ Disponibilidade atualizada via RPC');
+      return { data: data || { success: false }, error: null };
+
+    } catch (err) {
+      console.error('💥 Erro inesperado ao atualizar disponibilidade:', err);
+      return { data: null, error: `Erro ao atualizar disponibilidade: ${err}` };
+    }
   }
 }
 
@@ -416,32 +537,30 @@ export const productService = {
 
   // Criar produto
   async create(params: {
-    salonId: string
-    name: string
-    price: number
-    costPrice: number
-    profitMargin: number
-    stock: number
-    description?: string
+    salonId: string;
+    name: string;
+    price: number;
+    costPrice: number;
+    profitMargin: number;
+    stock: number;
+    description?: string;
   }): Promise<RPCResponse<CreateProductResponse>> {
     try {
       const { data, error } = await supabase.rpc('create_product', {
-        salon_id: params.salonId,
-        name: params.name,
-        price: params.price,
-        cost_price: params.costPrice,
-        profit_margin: params.profitMargin,
-        stock: params.stock,
-        description: params.description || null
-      })
-      
+        p_salon_id: params.salonId,
+        p_name: params.name,
+        p_price: params.price,
+        p_cost_price: params.costPrice,
+        p_profit_margin: params.profitMargin,
+        p_stock: params.stock,
+        p_description: params.description || null
+      });
       if (error) {
-        return { data: null, error: error.message }
+        return { data: null, error: error.message };
       }
-      
-      return { data: data || { success: false, product: null }, error: null }
+      return { data: data || { success: false, product: null }, error: null };
     } catch (err) {
-      return { data: null, error: `Erro ao criar produto: ${err}` }
+      return { data: null, error: `Erro ao criar produto: ${err}` };
     }
   },
 
@@ -880,6 +999,17 @@ export const appointmentService = {
     } catch (err) {
       return { data: null, error: `Erro ao atualizar agendamento: ${err}` }
     }
+  },
+
+  async listOnlineAppointments(params: { salonId: string }) {
+    try {
+      const { data, error } = await supabase.rpc('list_online_appointments', {
+        p_salon_id: params.salonId
+      });
+      return { data, error };
+    } catch (err) {
+      return { data: null, error: `Erro ao buscar agendamentos online: ${err}` };
+    }
   }
 }
 
@@ -1144,28 +1274,39 @@ export const financeService = {
       })
       
       console.log('✅ finalizeCashClosure - Resposta:', { data, error });
+      console.log('✅ finalizeCashClosure - Tipo de data:', typeof data, 'Array?', Array.isArray(data));
       
       if (error) {
         console.error('❌ finalizeCashClosure - Erro:', error);
         return { data: null, error: error.message }
       }
       
-      // Verificar se temos dados de retorno
-      if (data && data.length > 0) {
-        const result = data[0];
+      // Verificar se temos dados de retorno - aceitar tanto array quanto objeto
+      let result = null;
+      if (data) {
+        if (Array.isArray(data) && data.length > 0) {
+          result = data[0];
+        } else if (!Array.isArray(data) && typeof data === 'object') {
+          result = data;
+        }
+      }
+      
+      if (result) {
+        console.log('✅ finalizeCashClosure - Resultado encontrado:', result);
         return { 
           data: { 
             id: result.cash_closure_id,
             resumo: {
-              fees: result.resumo.fees,
-              commissions: result.resumo.commissions,
-              net_total: result.resumo.net_total
+              fees: result.summary?.fees_total || result.resumo?.fees || 0,
+              commissions: result.summary?.commissions_total || result.resumo?.commissions || 0,
+              net_total: result.summary?.net_total || result.resumo?.net_total || 0
             },
             closed_at: result.closed_at
           }, 
           error: null 
         }
       } else {
+        console.log('❌ finalizeCashClosure - Nenhum resultado válido encontrado');
         return { data: null, error: 'Nenhum dado retornado pelo fechamento' }
       }
     } catch (err) {
@@ -1450,45 +1591,282 @@ export async function createDirectSale({
 
 // === Link de Agendamento ===
 export const linkAgendamentoService = {
-  // Obter configurações do link
+  // Obter configurações do link usando nova RPC
   getConfig: async (salonId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('link_agendamento_config')
-        .select('*')
-        .eq('salon_id', salonId)
-        .single();
+      const { data, error } = await supabase.rpc('get_agendamento_publico_config', {
+        p_salon_id: salonId
+      });
 
       if (error) {
+        console.error('❌ Erro ao obter configurações RPC:', error);
         return { data: null, error: error.message };
       }
 
-      return { data, error: null };
+      // A RPC retorna um array, pegar o primeiro elemento se existir
+      const config = data && data.length > 0 ? data[0] : null;
+      
+      if (!config) {
+        // Se não existe configuração, retornar configuração padrão
+        return { 
+          data: {
+            ativo: false,
+            nome_exibicao: null,
+            foto_perfil_url: null,
+            whatsapp: null,
+            instagram: null,
+            endereco: null,
+            cor_primaria: '#6366f1',
+            cor_secundaria: '#4f46e5',
+            logotipo_url: null,
+            mensagem_boas_vindas: 'Bem-vindo ao nosso agendamento online!',
+            mostrar_precos: true,
+            mostrar_duracao_servicos: true,
+            intervalo_tempo: 30,
+            tempo_minimo_antecedencia: 60,
+            periodo_maximo_agendamento: 7,
+            permitir_cancelamento_cliente: true,
+            horario_funcionamento: {
+              "segunda": {"ativo": true, "inicio": "08:00", "fim": "18:00"},
+              "terca": {"ativo": true, "inicio": "08:00", "fim": "18:00"},
+              "quarta": {"ativo": true, "inicio": "08:00", "fim": "18:00"},
+              "quinta": {"ativo": true, "inicio": "08:00", "fim": "18:00"},
+              "sexta": {"ativo": true, "inicio": "08:00", "fim": "18:00"},
+              "sabado": {"ativo": true, "inicio": "08:00", "fim": "16:00"},
+              "domingo": {"ativo": false, "inicio": "08:00", "fim": "16:00"}
+            },
+            notificar_via_whatsapp: true,
+            notificar_via_email: false,
+            template_confirmacao: 'Olá {cliente_nome}! Seu agendamento foi confirmado para {data} às {horario} com {profissional_nome}.',
+            template_lembrete: 'Olá {cliente_nome}! Lembramos que você tem um agendamento amanhã às {horario} com {profissional_nome}.'
+          }, 
+          error: null 
+        };
+      }
+
+      console.log('✅ Configurações carregadas via RPC:', config);
+      return { data: config, error: null };
+
     } catch (err) {
+      console.error('💥 Erro inesperado ao obter configurações:', err);
       return { data: null, error: `Erro ao obter configurações: ${err}` };
     }
   },
 
-  // Salvar configurações do link
+  // Salvar configurações do link usando nova RPC
   saveConfig: async (salonId: string, config: any) => {
     try {
-      const { data, error } = await supabase
-        .from('link_agendamento_config')
-        .upsert({
-          salon_id: salonId,
-          ...config,
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      console.log('💾 Salvando configurações via RPC:', config);
+
+      const { data, error } = await supabase.rpc('save_agendamento_publico_config', {
+        p_salon_id: salonId,
+        p_ativo: config.ativo,
+        p_nome_exibicao: config.nome_exibicao,
+        p_foto_perfil_url: config.foto_perfil_url,
+        p_whatsapp: config.whatsapp,
+        p_instagram: config.instagram,
+        p_endereco: config.endereco,
+        p_cor_primaria: config.cor_primaria,
+        p_cor_secundaria: config.cor_secundaria,
+        p_logotipo_url: config.logotipo_url,
+        p_mensagem_boas_vindas: config.mensagem_boas_vindas,
+        p_mostrar_precos: config.mostrar_precos,
+        p_mostrar_duracao_servicos: config.mostrar_duracao_servicos,
+        p_intervalo_tempo: config.intervalo_tempo,
+        p_tempo_minimo_antecedencia: config.tempo_minimo_antecedencia,
+        p_periodo_maximo_agendamento: config.periodo_maximo_agendamento,
+        p_permitir_cancelamento_cliente: config.permitir_cancelamento_cliente,
+        p_horario_funcionamento: config.horario_funcionamento,
+        p_notificar_via_whatsapp: config.notificar_via_whatsapp,
+        p_notificar_via_email: config.notificar_via_email,
+        p_template_confirmacao: config.template_confirmacao,
+        p_template_lembrete: config.template_lembrete,
+        p_configuracoes_extras: config.configuracoes_extras
+      });
+
+      if (error) {
+        console.error('❌ Erro ao salvar configurações RPC:', error);
+        return { data: null, error: error.message };
+      }
+
+      // A RPC retorna um array com o resultado
+      const result = data && data.length > 0 ? data[0] : null;
+      
+      if (!result || !result.success) {
+        const errorMsg = result?.message || 'Erro desconhecido ao salvar';
+        console.error('❌ Falha ao salvar:', errorMsg);
+        return { data: null, error: errorMsg };
+      }
+
+      console.log('✅ Configurações salvas com sucesso via RPC:', result);
+      return { data: result, error: null };
+
+    } catch (err) {
+      console.error('💥 Erro inesperado ao salvar configurações:', err);
+      return { data: null, error: `Erro ao salvar configurações: ${err}` };
+    }
+  },
+
+  // Função auxiliar para alternar apenas o status ativo/inativo
+  toggleStatus: async (salonId: string, ativo: boolean) => {
+    try {
+      const { data, error } = await supabase.rpc('save_agendamento_publico_config', {
+        p_salon_id: salonId,
+        p_ativo: ativo
+      });
 
       if (error) {
         return { data: null, error: error.message };
       }
 
-      return { data, error: null };
+      const result = data && data.length > 0 ? data[0] : null;
+      return { data: result, error: null };
+
     } catch (err) {
-      return { data: null, error: `Erro ao salvar configurações: ${err}` };
+      return { data: null, error: `Erro ao alternar status: ${err}` };
+    }
+  },
+
+  // Obter informações para agendamento público (serviços e profissionais)
+  getPublicBookingInfo: async (salonId: string) => {
+    try {
+      console.log('🔍 Carregando informações para agendamento público:', salonId);
+
+      const { data, error } = await supabase.rpc('get_public_booking_info', {
+        p_salon_id: salonId
+      });
+
+      if (error) {
+        // Se a função RPC não existe, usar fallback com queries diretas
+        const isPGRST202 = typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'PGRST202';
+        if (isPGRST202) {
+          console.log('🔄 Função get_public_booking_info não encontrada, usando fallback');
+          
+          // Buscar serviços diretamente
+          const { data: servicesData, error: servicesError } = await supabase
+            .from('services')
+            .select('id, name, price, estimated_time')
+            .eq('salon_id', salonId)
+            .eq('active', true);
+
+          // Buscar profissionais diretamente  
+          const { data: professionalsData, error: professionalsError } = await supabase
+            .from('professionals')
+            .select('id, name, color')
+            .eq('salon_id', salonId)
+            .eq('active', true);
+
+          if (servicesError || professionalsError) {
+            return { data: null, error: servicesError?.message || professionalsError?.message };
+          }
+
+          const fallbackData = {
+            services: servicesData || [],
+            professionals: professionalsData || []
+          };
+
+          console.log('✅ Dados carregados via fallback:', fallbackData);
+          return { data: fallbackData, error: null };
+        }
+        
+        console.error('❌ Erro na RPC get_public_booking_info:', error);
+        return { data: null, error: error.message };
+      }
+
+      console.log('✅ Informações de agendamento público carregadas:', data);
+      return { data: data || { services: [], professionals: [] }, error: null };
+
+    } catch (err) {
+      console.error('💥 Erro inesperado ao obter informações de agendamento:', err);
+      return { data: null, error: `Erro ao obter informações de agendamento: ${err}` };
+    }
+  },
+
+  // Criar agendamento público
+  createPublicAppointment: async (params: {
+    salonId: string
+    professionalId: string
+    serviceIds: string[]
+    date: string
+    startTime: string
+    clientName: string
+    clientPhone: string
+  }) => {
+    try {
+      console.log('🆕 Criando agendamento público:', params);
+
+      const { data, error } = await supabase.rpc('create_public_appointment', {
+        p_salon_id: params.salonId,
+        p_professional_id: params.professionalId,
+        p_service_ids: params.serviceIds,
+        p_date: params.date,
+        p_start_time: params.startTime,
+        p_client_name: params.clientName,
+        p_client_phone: params.clientPhone
+      });
+
+      if (error) {
+        // Se a função RPC não existe, usar fallback
+        const isPGRST202 = typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'PGRST202';
+        if (isPGRST202) {
+          console.log('🔄 Função create_public_appointment não encontrada, usando fallback');
+          
+          // Fallback: usar find_or_create_client + create_appointment
+          const { data: clientData, error: clientError } = await supabase.rpc('find_or_create_client', {
+            p_salon_id: params.salonId,
+            p_name: params.clientName,
+            p_phone: params.clientPhone,
+            p_email: null
+          });
+
+          if (clientError) {
+            return { data: null, error: clientError.message };
+          }
+
+          if (!clientData?.client_id) {
+            return { data: null, error: 'Erro ao criar/encontrar cliente' };
+          }
+
+          // Preparar serviços para create_appointment
+          const services = params.serviceIds.map(serviceId => ({
+            service_id: serviceId
+          }));
+
+          const { data: appointmentData, error: appointmentError } = await supabase.rpc('create_appointment', {
+            p_salon_id: params.salonId,
+            p_client_id: clientData.client_id,
+            p_professional_id: params.professionalId,
+            p_date: params.date,
+            p_start_time: params.startTime,
+            p_services_json: services,
+            p_status: 'agendado',
+            p_notes: 'Agendamento feito via agendamento público'
+          });
+
+          if (appointmentError) {
+            return { data: null, error: appointmentError.message };
+          }
+
+          console.log('✅ Agendamento público criado via fallback');
+          return { 
+            data: { 
+              success: true, 
+              message: 'Agendamento confirmado com sucesso! Nos vemos em breve!' 
+            }, 
+            error: null 
+          };
+        }
+        
+        console.error('❌ Erro na RPC create_public_appointment:', error);
+        return { data: null, error: error.message };
+      }
+
+      console.log('✅ Agendamento público criado:', data);
+      return { data: data || { success: false, message: 'Erro desconhecido' }, error: null };
+
+    } catch (err) {
+      console.error('💥 Erro inesperado ao criar agendamento público:', err);
+      return { data: null, error: `Erro ao criar agendamento público: ${err}` };
     }
   }
 };

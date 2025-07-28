@@ -16,6 +16,7 @@ import { useBooking } from '../hooks/useBooking';
 import { useService } from '../contexts/ServiceContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
 import { useApp } from '../contexts/AppContext';
+import { supabaseService } from '../lib/supabaseService';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -183,6 +184,8 @@ export default function BookingModal({
     );
   }, []);
 
+  const isValidUUID = (id: string) => /^[0-9a-fA-F-]{36}$/.test(id);
+
   // Handler para criar agendamento usando o hook customizado
   const handleCreateAppointment = useCallback(async () => {
     console.log('🔥 BookingModal - handleCreateAppointment chamado!');
@@ -200,6 +203,13 @@ export default function BookingModal({
       console.log('⏳ Já está criando agendamento, ignorando...');
       return;
     }
+
+    // Remover validação obrigatória de cliente
+    // if (!selectedClient || !isValidUUID(selectedClient.id)) {
+    //   alert('Selecione um cliente válido!');
+    //   setIsCreatingAppointment(false);
+    //   return;
+    // }
 
     setIsCreatingAppointment(true);
     
@@ -265,20 +275,31 @@ export default function BookingModal({
 
   const handleSaveClient = useCallback(async () => {
     if (!clientForm.nome.trim() || !clientForm.telefone.trim()) return;
-    
+    const phoneSanitized = clientForm.telefone.replace(/\D/g, '');
+    const { data, error } = await supabaseService.clients.create({
+      salonId: currentSalon?.id || '',
+      name: clientForm.nome.trim(),
+      phone: phoneSanitized,
+      email: clientForm.email || '',
+      cpf: '', // Não existe no form, mas é obrigatório na tipagem
+      birthDate: clientForm.dataNascimento || ''
+    });
+    if (error || !data?.client?.id) {
+      alert('Erro ao criar cliente!');
+      return;
+    }
     const newClient = {
-      id: Date.now().toString(),
-      nome: `${clientForm.nome} ${clientForm.sobrenome}`.trim(),
-      name: `${clientForm.nome} ${clientForm.sobrenome}`.trim(),
+      id: data.client.id, // UUID real
+      nome: clientForm.nome,
+      name: clientForm.nome,
       telefone: clientForm.telefone,
       phone: clientForm.telefone,
       email: clientForm.email
     };
-    
     setSelectedClient(newClient);
     setShowClientForm(false);
     setShowClientSelection(false);
-  }, [clientForm]);
+  }, [clientForm, currentSalon]);
 
   // Handler para seleção de profissional
   const handleSelectProfessional = useCallback((professional: any) => {

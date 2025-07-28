@@ -11,6 +11,7 @@ interface ServiceContextType {
   updateService: (serviceId: string, updates: Partial<Service>) => Promise<boolean>;
   removeService: (serviceId: string) => Promise<boolean>;
   refreshServices: () => Promise<void>;
+  setServices: React.Dispatch<React.SetStateAction<Service[]>>;
 }
 
 const ServiceContext = createContext<ServiceContextType | undefined>(undefined);
@@ -136,7 +137,8 @@ export const ServiceProvider: React.FC<ServiceProviderProps> = ({ children }) =>
       addService,
       updateService,
       removeService,
-      refreshServices
+      refreshServices,
+      setServices
     }}>
       {children}
     </ServiceContext.Provider>

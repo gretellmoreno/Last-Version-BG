@@ -1,16 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Professional } from '../types';
 import { supabaseService } from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 import { useApp } from './AppContext';
 
 interface ProfessionalContextType {
   professionals: Professional[];
   loading: boolean;
   error: string | null;
-  addProfessional: (professional: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => Promise<boolean>;
+  addProfessional: (professional: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> & { url_foto?: string | null }) => Promise<boolean>;
   updateProfessional: (professionalId: string, updates: Partial<Professional>) => Promise<boolean>;
   removeProfessional: (professionalId: string) => Promise<boolean>;
   refreshProfessionals: () => Promise<void>;
+  setProfessionals: React.Dispatch<React.SetStateAction<Professional[]>>;
 }
 
 const ProfessionalContext = createContext<ProfessionalContextType | undefined>(undefined);
@@ -67,38 +69,78 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
     }
   };
 
-  const addProfessional = async (professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'>): Promise<boolean> => {
+  const addProfessional = async (professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> & { url_foto?: string | null }): Promise<boolean> => {
     if (!currentSalon) return false;
     
     setLoading(true);
     setError(null);
     
     try {
-      const { data, error } = await supabaseService.professionals.create({
-        salonId: currentSalon.id,
+      console.log('🚀 Iniciando criação de funcionário via Edge Function...');
+      console.log('📋 Dados enviados:', {
+        salon_id: currentSalon.id,
+        email: professionalData.email,
         name: professionalData.name,
         role: professionalData.role,
         phone: professionalData.phone,
-        email: professionalData.email,
         color: professionalData.color,
-        commissionRate: professionalData.commission_rate
+        commission_rate: professionalData.commission_rate
       });
+
+      // Usar fetch para chamar a Edge Function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
-      if (error) {
-        setError(error);
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('❌ Variáveis de ambiente não configuradas');
+        setError('Erro de configuração do sistema');
+        return false;
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/criar-funcionario`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          salon_id: currentSalon.id,
+          email: professionalData.email,
+          name: professionalData.name,
+          role: professionalData.role,
+          phone: professionalData.phone,
+          color: professionalData.color,
+          commission_rate: professionalData.commission_rate,
+          url_foto: professionalData.url_foto || null
+        })
+      });
+
+      console.log('📦 Status da resposta:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erro HTTP:', response.status, errorText);
+        setError(`Erro na requisição: ${response.status}`);
+        return false;
+      }
+
+      const data = await response.json();
+      console.log('📦 Resposta da Edge Function:', data);
+      
+      if (data?.success) {
+        console.log('✅ Funcionário criado com sucesso! userId:', data.userId);
+        // Recarregar a lista de profissionais para incluir o novo
+        await loadProfessionals();
+        return true;
+      } else {
+        console.error('❌ Falha na criação do funcionário:', data?.message);
+        setError(data?.message || 'Falha na criação do funcionário');
         return false;
       }
       
-      if (data?.success && data.professional) {
-        // Adicionar o profissional recém-criado diretamente à lista
-        setProfessionals(prev => [data.professional, ...prev]);
-        return true;
-      }
-      
-      return false;
     } catch (err) {
-      setError('Erro inesperado ao criar profissional');
-      console.error('Erro ao criar profissional:', err);
+      console.error('💥 Erro inesperado na Edge Function:', err);
+      setError('Erro inesperado ao criar funcionário');
       return false;
     } finally {
       setLoading(false);
@@ -121,7 +163,8 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
         email: updates.email || '',
         color: updates.color || '',
         commissionRate: updates.commission_rate || 0,
-        active: updates.active !== undefined ? updates.active : true
+        active: updates.active !== undefined ? updates.active : true,
+        url_foto: updates.url_foto || undefined
       });
       
       if (error) {
@@ -185,7 +228,8 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
       addProfessional,
       updateProfessional,
       removeProfessional,
-      refreshProfessionals
+      refreshProfessionals,
+      setProfessionals
     }}>
       {children}
     </ProfessionalContext.Provider>

@@ -5,6 +5,7 @@ import PaymentMethodSelection from './venda/PaymentMethodSelection';
 import ClientSelectionVenda from './venda/ClientSelectionVenda';
 import ClientForm from './booking/ClientForm';
 import { useApp } from '../contexts/AppContext';
+import { supabaseService } from '../lib/supabaseService';
 
 interface VendaModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function VendaModal({
   onClose,
   isMobile = false
 }: VendaModalProps) {
+  const { currentSalon } = useApp();
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [currentStep, setCurrentStep] = useState<'products' | 'payment'>('products');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
@@ -116,23 +118,31 @@ export default function VendaModal({
     }));
   }, []);
 
-  const handleSaveClient = useCallback(() => {
+  const handleSaveClient = useCallback(async () => {
     if (clientForm.nome.trim() === '' || clientForm.telefone.trim() === '') return;
-    
+    const phoneSanitized = clientForm.telefone.replace(/\D/g, '');
+    const { data, error } = await supabaseService.clients.create({
+      salonId: currentSalon.id,
+      name: clientForm.nome.trim(),
+      phone: phoneSanitized,
+      email: clientForm.email || '',
+      cpf: clientForm.cpf || '',
+      birthDate: clientForm.dataNascimento || ''
+    });
+    if (error || !data?.client?.id) {
+      alert('Erro ao criar cliente!');
+      return;
+    }
     const newClient = {
-      id: Date.now().toString(),
+      id: data.client.id, // UUID real
       nome: clientForm.nome,
-      sobrenome: clientForm.sobrenome,
-      email: clientForm.email,
       telefone: clientForm.telefone,
-      dataNascimento: clientForm.dataNascimento,
-      ano: clientForm.ano
+      email: clientForm.email
     };
-    
     setSelectedClient(newClient);
     setShowClientForm(false);
     setShowClientSelection(false);
-  }, [clientForm]);
+  }, [clientForm, currentSalon]);
 
   const handleShowClientSelection = useCallback(() => {
     setShowClientSelection(true);
@@ -198,9 +208,15 @@ export default function VendaModal({
     onClose();
   }, [onClose]);
 
-  const { currentSalon } = useApp();
-
   if (!isOpen) return null;
+
+  const isValidUUID = (id: string) => /^[0-9a-fA-F-]{36}$/.test(id);
+
+  // Antes de criar venda, valide:
+  if (selectedClient && !isValidUUID(selectedClient.id)) {
+    alert('Selecione um cliente válido!');
+    return;
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">

@@ -11,6 +11,7 @@ import DateTimeSelection from './booking/DateTimeSelection';
 import PaymentMethodSelection from './PaymentMethodSelection';
 import ClientSelection from './booking/ClientSelection';
 import ClientForm from './booking/ClientForm';
+import AppointmentDetailsModal from './AppointmentDetailsModal';
 import { CalendarEvent, AppointmentDetails } from '../types';
 import { useBooking } from '../hooks/useBooking';
 import { useService } from '../contexts/ServiceContext';
@@ -21,6 +22,8 @@ import { useProduct } from '../contexts/ProductContext';
 import { supabaseService } from '../lib/supabaseService';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
+import { supabase } from '../lib/supabase';
+import { createLocalDate } from '../utils/dateUtils';
 
 interface EditAppointmentModalProps {
   isOpen: boolean;
@@ -152,7 +155,7 @@ export default function EditAppointmentModal({
             sobrenome: '', email: '', telefone: '', dataNascimento: '', ano: ''
           });
           
-          setBookingDate(new Date(details.date));
+          setBookingDate(createLocalDate(details.date));
           setBookingTime(details.start_time.slice(0, 5));
           setCurrentStep('confirmation');
         } else {
@@ -382,23 +385,31 @@ export default function EditAppointmentModal({
     setClientForm(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleSaveClient = useCallback(() => {
+  const handleSaveClient = useCallback(async () => {
     if (clientForm.nome.trim() === '' || clientForm.telefone.trim() === '') return;
-
+    const phoneSanitized = clientForm.telefone.replace(/\D/g, '');
+    const { data, error } = await supabaseService.clients.create({
+      salonId: currentSalon?.id || '',
+      name: clientForm.nome.trim(),
+      phone: phoneSanitized,
+      email: clientForm.email || '',
+      cpf: '', // Não existe no form
+      birthDate: clientForm.dataNascimento || ''
+    });
+    if (error || !data?.client?.id) {
+      alert('Erro ao criar cliente!');
+      return;
+    }
     const newClient = {
-      id: Date.now().toString(),
+      id: data.client.id, // UUID real
       nome: clientForm.nome,
-      sobrenome: clientForm.sobrenome,
-      email: clientForm.email,
       telefone: clientForm.telefone,
-      dataNascimento: clientForm.dataNascimento,
-      ano: clientForm.ano
+      email: clientForm.email
     };
-    
     setSelectedClient(newClient);
     setShowClientForm(false);
     setShowClientSelection(false);
-  }, [clientForm]);
+  }, [clientForm, currentSalon]);
 
   const handleShowClientSelection = useCallback(() => setShowClientSelection(true), []);
 
@@ -595,6 +606,76 @@ export default function EditAppointmentModal({
 
     await updateComandaItemValue(itemType, itemRecordId, numericValue, quantity);
   }, [editingValue, editingQuantity, updateComandaItemValue]);
+
+  // Função para formatar a data/hora do agendamento
+  function formatarDataHorario(dateObj: Date | undefined, horaStr: string) {
+    if (!dateObj || !horaStr) return '';
+    const hoje = new Date();
+    const data = new Date(dateObj);
+    const isHoje = data.toDateString() === hoje.toDateString();
+    const amanha = new Date(hoje);
+    amanha.setDate(hoje.getDate() + 1);
+    const isAmanha = data.toDateString() === amanha.toDateString();
+    const dia = data.getDate().toString().padStart(2, '0');
+    const mes = data.toLocaleString('pt-BR', { month: 'long' });
+    const ano = data.getFullYear();
+    const hora = horaStr;
+    if (isHoje) return `Hoje, ${dia} de ${mes} às ${hora}`;
+    if (isAmanha) return `Amanhã, ${dia} de ${mes} às ${hora}`;
+    return `${dia} de ${mes} às ${hora}`;
+  }
+
+  async function handleLembreteWhats() {
+    const appointment = appointmentDetails?.appointment;
+    const appointmentId = appointment?.id;
+    
+    if (!appointmentId) {
+      alert('Erro: ID do agendamento não encontrado.');
+      return;
+    }
+
+    if (!currentSalon?.id) {
+      alert('Erro: ID do salão não encontrado.');
+      return;
+    }
+
+    try {
+      // Chamar a RPC para gerar o link do WhatsApp
+      const { data, error } = await supabase.rpc('generate_whatsapp_reminder_link', {
+        p_appointment_id: appointmentId,
+        p_salon_id: currentSalon.id
+      });
+
+      if (error) {
+        console.error('Erro na RPC:', error);
+        alert('Erro ao gerar link do WhatsApp');
+        return;
+      }
+
+      if (data?.success && data?.link) {
+        // Abrir o link do WhatsApp
+        window.open(data.link, '_blank');
+      } else {
+        alert('Erro: Link do WhatsApp não foi gerado corretamente');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar link do WhatsApp:', error);
+      alert('Erro ao gerar link do WhatsApp');
+    }
+  }
+
+  const isValidUUID = (id: string) => /^[0-9a-fA-F-]{36}$/.test(id);
+
+  // Verificar se agendamento está finalizado e mostrar modal apropriado
+  if (appointmentDetails?.appointment?.status === 'finalizado' || appointmentDetails?.appointment?.status === 'concluido') {
+    return (
+      <AppointmentDetailsModal
+        isOpen={isOpen}
+        onClose={onClose}
+        appointmentId={appointmentId || null}
+      />
+    );
+  }
 
   if (!isOpen) return null;
 
@@ -1037,7 +1118,7 @@ export default function EditAppointmentModal({
                 <button
                   className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg font-semibold shadow-sm hover:bg-green-200 transition-colors text-sm"
                   style={{ minWidth: 0 }}
-                  onClick={() => alert('Função de lembrete WhatsApp!')}
+                  onClick={handleLembreteWhats}
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: '#25D366' }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.967-.273-.099-.472-.148-.67.15-.198.297-.767.966-.94 1.164-.173.198-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.372-.01-.571-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.1 3.2 5.077 4.363.71.306 1.263.489 1.694.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.288.173-1.413-.074-.124-.272-.198-.57-.347z"/><path fillRule="evenodd" d="M12.004 2.003c-5.514 0-9.997 4.483-9.997 9.997 0 1.762.462 3.484 1.34 4.995L2.01 21.99l5.09-1.332a9.96 9.96 0 0 0 4.904 1.245h.004c5.514 0 9.997-4.483 9.997-9.997 0-2.67-1.04-5.178-2.927-7.065-1.887-1.887-4.395-2.927-7.065-2.927zm0 17.995a7.96 7.96 0 0 1-4.07-1.13l-.292-.173-3.02.789.805-2.945-.19-.302A7.96 7.96 0 0 1 4.04 12c0-4.398 3.566-7.964 7.964-7.964 2.126 0 4.124.83 5.63 2.337a7.93 7.93 0 0 1 2.334 5.627c0 4.398-3.566 7.964-7.964 7.964z" clipRule="evenodd"/></svg>
@@ -1051,7 +1132,7 @@ export default function EditAppointmentModal({
                   <button
                     className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg font-semibold shadow-sm hover:bg-green-200 transition-colors text-sm"
                     style={{ minWidth: 0 }}
-                    onClick={() => alert('Função de lembrete WhatsApp!')}
+                    onClick={handleLembreteWhats}
                   >
                     <span className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: '#25D366' }}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.967-.273-.099-.472-.148-.67.15-.198.297-.767.966-.94 1.164-.173.198-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.372-.01-.571-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.1 3.2 5.077 4.363.71.306 1.263.489 1.694.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.288.173-1.413-.074-.124-.272-.198-.57-.347z"/><path fillRule="evenodd" d="M12.004 2.003c-5.514 0-9.997 4.483-9.997 9.997 0 1.762.462 3.484 1.34 4.995L2.01 21.99l5.09-1.332a9.96 9.96 0 0 0 4.904 1.245h.004c5.514 0 9.997-4.483 9.997-9.997 0-2.67-1.04-5.178-2.927-7.065-1.887-1.887-4.395-2.927-7.065-2.927zm0 17.995a7.96 7.96 0 0 1-4.07-1.13l-.292-.173-3.02.789.805-2.945-.19-.302A7.96 7.96 0 0 1 4.04 12c0-4.398 3.566-7.964 7.964-7.964 2.126 0 4.124.83 5.63 2.337a7.93 7.93 0 0 1 2.334 5.627c0 4.398-3.566 7.964-7.964 7.964z" clipRule="evenodd"/></svg>

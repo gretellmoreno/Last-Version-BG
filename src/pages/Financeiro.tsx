@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, TrendingUp, Users, ShoppingCart, BarChart3 } from 'lucide-react';
+import { Calendar, TrendingUp, Users, ShoppingCart, BarChart3, BarChart2, List, ShoppingBag, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Header from '../components/Header';
@@ -10,6 +10,8 @@ import { supabaseService } from '../lib/supabaseService';
 import { supabase } from '../lib/supabase';
 import { useApp } from '../contexts/AppContext';
 import { getTodayLocal, formatDateForDisplay } from '../utils/dateUtils';
+import { FinanceiroProvider } from '../contexts/FinanceiroContext';
+import { ProfessionalProvider } from '../contexts/ProfessionalContext';
 
 interface RelatorioProps {
   onToggleMobileSidebar?: () => void;
@@ -61,7 +63,7 @@ interface ClienteRanking {
 
 type TabType = 'resumo' | 'comandas' | 'produtos' | 'clientes';
 
-export default function Relatorio({ onToggleMobileSidebar }: RelatorioProps) {
+function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
   const { currentSalon } = useApp();
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('resumo');
@@ -259,6 +261,11 @@ export default function Relatorio({ onToggleMobileSidebar }: RelatorioProps) {
     return `${formatDateForDisplay(selectedPeriod.start)} - ${formatDateForDisplay(selectedPeriod.end)}`;
   };
 
+  function formatMobilePeriod(start: Date, end: Date): string {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(start.getDate())}/${pad(start.getMonth() + 1)} - ${pad(end.getDate())}/${pad(end.getMonth() + 1)}`;
+  }
+
   const renderResumoTab = () => {
     const summary = dashboardData;
     const margin = summary ? (summary.dashboard.summary.total_net_profit / summary.dashboard.summary.total_gross_revenue) * 100 : 0;
@@ -446,113 +453,77 @@ export default function Relatorio({ onToggleMobileSidebar }: RelatorioProps) {
           <div className={`${isMobile ? 'p-2' : 'p-4 md:p-6'}`}>
             {/* Header Compacto */}
             <div className={`mb-3 bg-white rounded-xl shadow-sm border border-gray-200 ${isMobile ? 'p-3' : 'p-6'}`}>
-              {/* Botão de Período */}
-              <button
-                onClick={() => setIsFilterModalOpen(true)}
-                className={`inline-flex items-center w-full border border-gray-300 shadow-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  isMobile ? 'px-3 py-2.5 text-xs' : 'px-4 py-2 text-sm'
-                }`}
-              >
-                <Calendar className={`mr-2 ${isMobile ? 'size-4' : 'size-5'}`} />
-                <span>Período: {isMobile ? formatDateForDisplay(selectedPeriod.start) : formatPeriodDisplay()}</span>
-              </button>
-
-              {/* Navegação em Tabs com Scroll Horizontal */}
-              <nav className={`${isMobile ? 'mt-3' : 'mt-6'}`}>
-                {isMobile ? (
-                  // Mobile: Container com scroll horizontal mais compacto
-                  <div className="flex overflow-x-auto -webkit-overflow-scrolling-touch scrollbar-hide gap-1 pb-1">
-                    <button
-                      onClick={() => setActiveTab('resumo')}
-                      className={`flex-shrink-0 py-2 px-3 rounded-lg font-medium text-xs transition-colors ${
-                        activeTab === 'resumo'
-                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                          : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      Resumo
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('comandas')}
-                      className={`flex-shrink-0 py-2 px-3 rounded-lg font-medium text-xs transition-colors ${
-                        activeTab === 'comandas'
-                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                          : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      Atendimentos
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('produtos')}
-                      className={`flex-shrink-0 py-2 px-3 rounded-lg font-medium text-xs transition-colors ${
-                        activeTab === 'produtos'
-                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                          : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      Produtos
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('clientes')}
-                      className={`flex-shrink-0 py-2 px-3 rounded-lg font-medium text-xs transition-colors ${
-                        activeTab === 'clientes'
-                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                          : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      Melhores Clientes
-                    </button>
-                  </div>
-                ) : (
-                  // Desktop: Tabs horizontais
-                  <div className="flex space-x-8 border-b border-gray-200">
-                    <button
-                      onClick={() => setActiveTab('resumo')}
-                      className={`
-                        py-4 px-1 border-b-2 font-medium text-sm
-                        ${activeTab === 'resumo'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                      `}
-                    >
-                      Resumo
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('comandas')}
-                      className={`
-                        py-4 px-1 border-b-2 font-medium text-sm
-                        ${activeTab === 'comandas'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                      `}
-                    >
-                      Atendimentos
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('produtos')}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm
-                        ${activeTab === 'produtos'
-                          ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                `}
-              >
-                      Produtos
-              </button>
-              <button
-                      onClick={() => setActiveTab('clientes')}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm
-                        ${activeTab === 'clientes'
-                          ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                `}
-              >
-                      Melhores Clientes
-              </button>
-                  </div>
-                )}
-            </nav>
+              {/* Tabs de Navegação */}
+              <div className="bg-gray-100 p-1 rounded-lg mb-2">
+                <div className="grid grid-cols-4 gap-1">
+                  <button
+                    onClick={() => setActiveTab('resumo')}
+                    className={`flex items-center justify-center space-x-1 px-3 py-2 text-sm rounded-md font-medium transition-all duration-200 whitespace-nowrap min-w-0 overflow-hidden text-ellipsis ${
+                      activeTab === 'resumo'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <BarChart2 size={16} />
+                    {!isMobile && <span>Resumo</span>}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('comandas')}
+                    className={`flex items-center justify-center space-x-1 px-3 py-2 text-sm rounded-md font-medium transition-all duration-200 whitespace-nowrap min-w-0 overflow-hidden text-ellipsis ${
+                      activeTab === 'comandas'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <List size={16} />
+                    {!isMobile && <span>Atendimentos</span>}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('produtos')}
+                    className={`flex items-center justify-center space-x-1 px-3 py-2 text-sm rounded-md font-medium transition-all duration-200 whitespace-nowrap min-w-0 overflow-hidden text-ellipsis ${
+                      activeTab === 'produtos'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <ShoppingBag size={16} />
+                    {!isMobile && <span>Produtos</span>}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('clientes')}
+                    className={`flex items-center justify-center space-x-1 px-3 py-2 text-sm rounded-md font-medium transition-all duration-200 whitespace-nowrap min-w-0 overflow-hidden text-ellipsis ${
+                      activeTab === 'clientes'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <Star size={16} />
+                    {!isMobile && <span>Melhores Clientes</span>}
+                  </button>
+                </div>
+              </div>
+              {/* Período - agora abaixo das tabs */}
+              <div className={`w-full ${isMobile ? 'flex justify-center mb-4' : 'flex justify-end mb-4'}`}>
+                <div className={`${isMobile ? 'w-11/12' : 'w-80'}`}>
+                  <button
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className={`inline-flex items-center w-full border border-gray-300 shadow-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      isMobile ? 'px-6 py-2.5 text-xs justify-center' : 'px-4 py-2 text-sm h-10'
+                    }`}
+                    style={!isMobile ? { minHeight: '40px' } : {}}
+                  >
+                    <Calendar className={`mr-2 ${isMobile ? 'size-4' : 'size-5'}`} />
+                    <span className={isMobile ? 'block w-full text-center' : 'block w-full text-left'}>
+                      Período: {isMobile
+                        ? formatMobilePeriod(
+                            typeof selectedPeriod.start === 'string' ? new Date(selectedPeriod.start) : selectedPeriod.start,
+                            typeof selectedPeriod.end === 'string' ? new Date(selectedPeriod.end) : selectedPeriod.end
+                          )
+                        : formatPeriodDisplay()}
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Conteúdo das tabs */}
@@ -683,5 +654,15 @@ export default function Relatorio({ onToggleMobileSidebar }: RelatorioProps) {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Relatorio(props: RelatorioProps) {
+  return (
+    <ProfessionalProvider>
+      <FinanceiroProvider>
+        <RelatorioContent {...props} />
+      </FinanceiroProvider>
+    </ProfessionalProvider>
   );
 }

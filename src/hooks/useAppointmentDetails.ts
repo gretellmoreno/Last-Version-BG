@@ -55,11 +55,12 @@ export const useAppointmentDetails = (
     // Configurações de cache otimizadas para detalhes de agendamento
     ...cacheConfig.moderate,
     
-    // Configurações específicas
-    refetchOnMount: 'always', // Sempre buscar dados frescos quando componente monta
-    refetchOnWindowFocus: true, // Recarregar quando a janela receber foco
-    staleTime: 0, // Considerar dados sempre desatualizados
-    gcTime: 1000 * 60, // Manter no garbage collector por 1 minuto apenas
+    // Configurações específicas para evitar requisições desnecessárias
+    refetchOnMount: false, // Não buscar automaticamente - usar cache quando disponível
+    refetchOnWindowFocus: false, // Não recarregar quando janela receber foco
+    refetchOnReconnect: false, // Não recarregar ao reconectar
+    staleTime: 60000, // Cache válido por 1 minuto
+    gcTime: 1000 * 60 * 5, // Manter no garbage collector por 5 minutos
     
     // Estratégia de retry personalizada
     retry: (failureCount: number, error: any) => {

@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { CashClosurePreview } from '../../types';
 import FechamentoCaixaSuccessModal from './FechamentoCaixaSuccessModal';
 import FechamentoCaixaResultModal from './FechamentoCaixaResultModal';
+import { useProfessional } from '../../contexts/ProfessionalContext';
 
 interface ServicoFechamento {
   data: string;
@@ -75,13 +76,18 @@ export default function FechamentoCaixaSection({
     );
   }
   const [isMobile, setIsMobile] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [servicosAposFechamento, setServicosAposFechamento] = useState<any[]>([]);
   const [selectedAdvanceIds, setSelectedAdvanceIds] = useState<string[]>([]);
   const [isFechamentoRealizado, setIsFechamentoRealizado] = useState(false);
-  const [servicosAposFechamento, setServicosAposFechamento] = useState<ServicoFechamento[] | null>(null); // Novo estado
+  const [userClosedModal, setUserClosedModal] = useState(false); // Novo estado para controlar fechamento manual
   const { currentSalon } = useApp();
+  const { professionals } = useProfessional();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const selectedProf = professionals.find(p => p.id === selectedProfessional);
 
   // Inicializar selectedAdvanceIds com todos os vales quando previewData muda
   useEffect(() => {
@@ -92,10 +98,10 @@ export default function FechamentoCaixaSection({
 
   // Monitorar quando dados chegam para mostrar modal no mobile
   useEffect(() => {
-    if (isMobile && hasSearched && servicosParaFechamento.length > 0 && !showResultModal) {
+    if (isMobile && hasSearched && servicosParaFechamento.length > 0 && !showResultModal && !userClosedModal) {
       setShowResultModal(true);
     }
-  }, [isMobile, hasSearched, servicosParaFechamento.length, showResultModal]);
+  }, [isMobile, hasSearched, servicosParaFechamento.length, showResultModal, userClosedModal]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -119,11 +125,19 @@ export default function FechamentoCaixaSection({
   const handleBuscar = () => {
     // Resetar estado de fechamento quando fizer nova busca
     setIsFechamentoRealizado(false);
+    setUserClosedModal(false); // Resetar flag de fechamento manual
     onBuscar();
     // O modal será mostrado automaticamente via useEffect quando os dados chegarem
   };
 
-  const handleConfirmarFechamento = async () => {
+  const handleConfirmarFechamento = () => {
+    // Abrir modal de confirmação antes de fazer o fechamento
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmClosure = async () => {
+    setShowConfirmationModal(false);
+    
     if (!currentSalon?.id || !selectedProfessional || isProcessing) {
       console.log('❌ FechamentoCaixaSection: Validação falhou:', {
         hasSalon: !!currentSalon?.id,
@@ -190,19 +204,26 @@ export default function FechamentoCaixaSection({
       // ✅ Exibir mensagem de sucesso com os totais
       toast.success(`✅ Caixa fechado com sucesso! Total líquido: R$ ${resumo.net_total.toFixed(2)}`);
       
-      // ✅ Marcar fechamento como realizado
+      // ✅ PRIMEIRO: Limpar a interface completamente ANTES de qualquer outra coisa
+      console.log('🧹 Limpando interface...');
       setIsFechamentoRealizado(true);
+      setServicosAposFechamento([]); // Limpa serviços locais
+      setCanConfirmClosure(false); // Desabilita botão de confirmação
+      setShowResultModal(false); // Fecha modal se estiver aberto
       
-      // ✅ Atualizar a tela removendo os serviços já incluídos
-      // Chamar callback para limpar os dados da tela
+      // ✅ SEGUNDO: Chamar callback para limpar dados do componente pai
+      console.log('🧹 Chamando callback do pai para limpar dados...');
       onConfirmarFechamentoOriginal();
       
-      // ✅ Mostrar modal de sucesso
-      setShowSuccessModal(true);
+      // ✅ Forçar limpeza adicional após um pequeno delay para garantir que o React processe as mudanças
+      setTimeout(() => {
+        console.log('🧹 Limpeza adicional após timeout...');
+        onConfirmarFechamentoOriginal();
+      }, 100);
       
-      // Limpar dados imediatamente após fechar
-      setServicosAposFechamento([]); // Limpa serviços
-      setCanConfirmClosure(false); // Desabilita o botão após fechar
+      // ✅ TERCEIRO: Mostrar modal de sucesso
+      console.log('✅ Mostrando modal de sucesso...');
+      setShowSuccessModal(true);
       
     } catch (error) {
       console.error('❌ FechamentoCaixaSection: Erro ao realizar fechamento:', error);
@@ -217,9 +238,8 @@ export default function FechamentoCaixaSection({
   // Ao fechar o modal de sucesso, manter tela limpa
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
-    setServicosAposFechamento([]); // Garante que a tela fique limpa
-    setCanConfirmClosure(false); // Mantém botão desabilitado após busca automática
-    onBuscar(); // Dispara nova busca automaticamente
+    // Manter a tela limpa - não fazer busca automática
+    // O usuário pode fazer uma nova busca manualmente se desejar
   };
 
   const handleHistoricoClick = () => {
@@ -273,22 +293,50 @@ export default function FechamentoCaixaSection({
       <div className="bg-white rounded-lg shadow p-4 sticky top-0 z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Seleção de Profissional */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Profissional
-            </label>
-            <select
-              value={selectedProfessional}
-              onChange={(e) => onProfessionalChange(e.target.value)}
-              className="w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Profissional</label>
+            <button
+              type="button"
+              className="w-full flex items-center gap-2 rounded-md border border-gray-300 shadow-sm px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              onClick={() => setShowDropdown(v => !v)}
             >
-              <option value="">Selecione um profissional</option>
-              {profissionais.map((prof) => (
-                <option key={prof.id} value={prof.id}>
-                  {prof.name}
-                </option>
-              ))}
-            </select>
+              {selectedProf?.url_foto ? (
+                <img src={selectedProf.url_foto} alt={selectedProf.name} className="w-7 h-7 rounded-full object-cover border-2 border-purple-200" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm">
+                  {selectedProf?.name?.charAt(0).toUpperCase() || <User size={18} />}
+                </div>
+              )}
+              <span className="truncate text-gray-900 text-sm">{selectedProf?.name || 'Selecione um profissional'}</span>
+              <svg className="ml-auto h-4 w-4 text-gray-400" fill="none" viewBox="0 0 20 20"><path d="M7 7l3-3 3 3m0 6l-3 3-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            {showDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-gray-700 text-sm"
+                  onClick={() => { onProfessionalChange(''); setShowDropdown(false); }}
+                >
+                  <User size={18} className="text-gray-400" />
+                  <span>Selecione um profissional</span>
+                </button>
+                {professionals.map(prof => (
+                  <button
+                    key={prof.id}
+                    className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-gray-900 text-sm ${selectedProfessional === prof.id ? 'bg-purple-50' : ''}`}
+                    onClick={() => { onProfessionalChange(prof.id); setShowDropdown(false); }}
+                  >
+                    {prof.url_foto ? (
+                      <img src={prof.url_foto} alt={prof.name} className="w-7 h-7 rounded-full object-cover border-2 border-purple-200" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm">
+                        {prof.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="truncate">{prof.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Seleção de Período */}
@@ -305,12 +353,12 @@ export default function FechamentoCaixaSection({
           </div>
         </div>
 
-        {/* Botão de Busca */}
-        <div className="mt-4">
+        {/* Botões de Busca e Histórico */}
+        <div className="mt-4 flex gap-2">
           <button
             onClick={handleBuscar}
             disabled={!canSearch || isLoadingPreview}
-            className={`w-full rounded-md px-4 py-2 text-white font-medium ${
+            className={`flex-1 rounded-md px-4 py-2 text-white font-medium text-base transition-colors ${
               canSearch && !isLoadingPreview
                 ? 'bg-blue-600 hover:bg-blue-700'
                 : 'bg-gray-400 cursor-not-allowed'
@@ -318,16 +366,40 @@ export default function FechamentoCaixaSection({
           >
             {isLoadingPreview ? 'Buscando...' : 'Buscar'}
           </button>
+          {canSearch && (
+            <button
+              type="button"
+              onClick={onHistoricoModalOpen}
+              className="px-4 py-2 rounded-md text-sm font-medium text-white bg-black hover:bg-gray-800 transition-colors"
+              style={{ minWidth: 120 }}
+            >
+              Ver Histórico
+            </button>
+          )}
         </div>
       </div>
 
       {/* Resultados - apenas para desktop */}
       {hasSearched && !isMobile && (
         <div className="space-y-6">
-          {/* Se não houver serviços após fechamento, mostra mensagem amigável */}
-          {((servicosAposFechamento && servicosAposFechamento.length === 0) || servicosParaFechamento.length === 0) ? (
-            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-              Nenhum agendamento encontrado para fechamento neste período.
+          {/* Se não houver serviços para fechamento, mostra mensagem amigável */}
+          {servicosParaFechamento.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              {isFechamentoRealizado ? (
+                <div>
+                  <div className="text-green-600 text-4xl mb-4">✅</div>
+                  <h3 className="text-lg font-medium text-green-600 mb-2">
+                    Fechamento Realizado com Sucesso!
+                  </h3>
+                  <p className="text-gray-500">
+                    O caixa foi fechado. Faça uma nova busca para ver outros períodos.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-gray-500">
+                  Nenhum agendamento encontrado para fechamento neste período.
+                </p>
+              )}
             </div>
           ) : (
             // Resumo
@@ -536,7 +608,10 @@ export default function FechamentoCaixaSection({
       {/* Modal de Resultados - Mobile */}
       <FechamentoCaixaResultModal
         isOpen={showResultModal}
-        onClose={() => setShowResultModal(false)}
+        onClose={() => {
+          setShowResultModal(false);
+          setUserClosedModal(true); // Marcar que usuário fechou manualmente
+        }}
         servicosParaFechamento={servicosParaFechamento}
         totalLiquidoFechamento={totalLiquidoFechamento}
         previewData={previewData}
@@ -553,6 +628,37 @@ export default function FechamentoCaixaSection({
         selectedProfessional={selectedProfessional}
         periodFilter={periodFilter}
       />
+
+      {/* Modal de Confirmação */}
+      {showConfirmationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Confirmar Fechamento de Caixa
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Tem certeza que deseja finalizar o fechamento de caixa? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowConfirmationModal(false)}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmClosure}
+                  disabled={isProcessing}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-gray-400"
+                >
+                  {isProcessing ? 'Processando...' : 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Sucesso */}
       <FechamentoCaixaSuccessModal

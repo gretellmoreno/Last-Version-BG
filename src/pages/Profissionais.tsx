@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Edit3, Trash2, User, UserPlus, Loader2, Users, Receipt, DollarSign } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Professional } from '../types';
-import { useProfessional } from '../contexts/ProfessionalContext';
-import { useFinanceiro } from '../contexts/FinanceiroContext';
+import { useProfessional, ProfessionalProvider } from '../contexts/ProfessionalContext';
+import { useFinanceiro, FinanceiroProvider } from '../contexts/FinanceiroContext';
 import ProfessionalModal from '../components/ProfessionalModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import ValesSection from '../components/financeiro/ValesSection';
@@ -15,7 +15,7 @@ import PeriodFilterModal from '../components/PeriodFilterModal';
 import { supabaseService } from '../lib/supabaseService';
 import { getTodayLocal, formatDateForDisplay } from '../utils/dateUtils';
 
-const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: boolean }> = ({ onToggleMobileSidebar, isMobile: isMobileProp }) => {
+const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: boolean }> = ({ onToggleMobileSidebar, isMobile: isMobileProp }) => {
   const { professionals, loading, error, addProfessional, updateProfessional, removeProfessional } = useProfessional();
   const { removeVale } = useFinanceiro();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,15 +50,18 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
     return () => window.removeEventListener('resize', checkMobile);
   }, [isMobileProp]);
 
-  const handleAddProfessional = async (professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => {
+  const handleAddProfessional = async (professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> & { url_foto?: string | null }) => {
     const success = await addProfessional(professionalData);
     if (success) {
+      toast.success('Funcionário criado e convidado com sucesso!');
       setIsModalOpen(false);
       setEditingProfessional(null);
+    } else {
+      toast.error('Erro ao criar funcionário');
     }
   };
 
-  const handleEditProfessional = async (professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => {
+  const handleEditProfessional = async (professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> & { url_foto?: string | null }) => {
     if (!editingProfessional) return;
     
     const success = await updateProfessional(editingProfessional.id, professionalData);
@@ -131,7 +134,12 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
 
   // Função para mapear os dados da API para o formato esperado pelo componente
   const mapApiDataToComponent = (apiData: any) => {
-    if (!apiData?.preview?.services) return defaultServicos;
+    if (!apiData?.preview?.services) {
+      console.log('❌ Nenhum serviço encontrado em preview:', apiData);
+      return defaultServicos;
+    }
+    
+    console.log('✅ Mapeando serviços da API:', apiData.preview.services);
     
     return apiData.preview.services.map((service: any) => ({
       data: service.date.split('T')[0], // Garante que a data está no formato YYYY-MM-DD
@@ -140,7 +148,8 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
       valorBruto: service.grossValue,
       taxa: service.feeValue,
       comissao: service.commissionValue,
-      valorLiquido: service.netValue
+      valorLiquido: service.netValue,
+      appointment_id: service.appointment_id
     }));
   };
 
@@ -217,6 +226,14 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
   };
 
   const handleConfirmarFechamento = () => {
+    console.log('🧹 Profissionais: handleConfirmarFechamento iniciado');
+    console.log('🧹 Estados antes da limpeza:', {
+      previewData: !!previewData,
+      hasSearched,
+      canConfirmClosure,
+      selectedProfessional
+    });
+    
     // Resetar todos os estados relacionados ao fechamento
     setPreviewData(null);
     setHasSearched(false);
@@ -226,8 +243,10 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
       start: getTodayLocal(),
       end: getTodayLocal()
     });
-    // Abrir o modal de histórico
-    setIsHistoricoModalOpen(true);
+    
+    console.log('🧹 Profissionais: Estados limpos com sucesso');
+    // Não abrir o modal de histórico automaticamente - deixar o usuário escolher
+    // setIsHistoricoModalOpen(true);
   };
 
   const renderTabContent = () => {
@@ -248,7 +267,18 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
             periodFilter={periodFilter}
             hasSearched={hasSearched}
             canSearch={!!selectedProfessional}
-            servicosParaFechamento={previewData ? mapApiDataToComponent(previewData) : defaultServicos}
+            servicosParaFechamento={(() => {
+              const servicos = previewData ? mapApiDataToComponent(previewData) : defaultServicos;
+              console.log('🔍 Profissionais: servicosParaFechamento calculado:', {
+                previewData: !!previewData,
+                previewDataContent: previewData,
+                servicosLength: servicos.length,
+                servicos: servicos,
+                hasSearched,
+                defaultServicos
+              });
+              return servicos;
+            })()}
             totalLiquidoFechamento={(() => {
               if (!previewData) return defaultTotal;
               const servicos = mapApiDataToComponent(previewData);
@@ -315,29 +345,22 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
                         className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-pink-200 transition-all duration-200 cursor-pointer active:scale-95"
                       >
                         
-                        <div className="flex items-start justify-between mb-1.5">
-                          <div className="flex-1 pr-4">
-                            <h3 className="font-medium text-gray-900 text-xs">{professional.name}</h3>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-1.5">
-                          <div>
-                            <p className="font-semibold text-xs text-gray-900">
-                              {professional.role || 'Profissional'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-xs text-gray-600">
-                              {professional.phone || 'Sem telefone'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className={`font-semibold text-xs ${
-                              professional.active ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {professional.active ? 'Ativo' : 'Inativo'}
-                            </p>
+                        <div className="flex items-center space-x-3">
+                          {professional.url_foto ? (
+                            <img
+                              src={professional.url_foto}
+                              alt={professional.name}
+                              className="w-10 h-10 rounded-full object-cover border-2 border-pink-200"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                              style={{ backgroundColor: professional.color || '#6366f1' }}>
+                              {professional.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">{professional.name}</h4>
+                            <p className="text-sm text-gray-500">{professional.role}</p>
                           </div>
                         </div>
                       </div>
@@ -365,56 +388,27 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {professionals.map((professional) => (
-                          <tr 
-                            key={professional.id} 
-                            onClick={() => openEditModal(professional)}
-                            className="hover:bg-gray-50 transition-colors cursor-pointer"
-                          >
+                          <tr key={professional.id} onClick={() => openEditModal(professional)} className="hover:bg-gray-50 cursor-pointer">
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div 
-                                  className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden mr-4"
-                                  style={{ backgroundColor: professional.photo ? 'transparent' : professional.color }}
-                                >
-                                  {professional.photo ? (
-                                    <img
-                                      src={professional.photo}
-                                      alt={professional.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <span>{professional.name.charAt(0).toUpperCase()}</span>
-                                  )}
-                                </div>
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {professional.name}
+                              <div className="flex items-center space-x-3">
+                                {professional.url_foto ? (
+                                  <img
+                                    src={professional.url_foto}
+                                    alt={professional.name}
+                                    className="w-8 h-8 rounded-full object-cover border-2 border-pink-200"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+                                    style={{ backgroundColor: professional.color || '#6366f1' }}>
+                                    {professional.name.charAt(0).toUpperCase()}
                                   </div>
-                                  {professional.email && (
-                                    <div className="text-xs text-gray-500">{professional.email}</div>
-                                  )}
-                                </div>
+                                )}
+                                <span>{professional.name}</span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900 font-medium">
-                                {professional.role}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {professional.phone}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                professional.active
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                              }`}>
-                                {professional.active ? 'Ativo' : 'Inativo'}
-                              </span>
-                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">{professional.role}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">{professional.phone}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">{professional.active ? 'Ativo' : 'Convite pendente'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -566,48 +560,42 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 h-full">
         {/* Tabs */}
-        <div className="flex space-x-4 border-b border-gray-200">
-          <button
-            onClick={() => handleTabChange('profissionais')}
-            className={`pb-4 text-sm font-medium ${
-              activeTab === 'profissionais'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <div className="flex items-center space-x-2">
-              <Users size={20} />
+        <div className="bg-gray-100 p-1 rounded-lg mb-6">
+          <div className="grid grid-cols-3 gap-1">
+            <button
+              onClick={() => handleTabChange('profissionais')}
+              className={`flex items-center justify-center space-x-1 px-3 py-2 text-sm rounded-md font-medium transition-all duration-200 whitespace-nowrap min-w-0 overflow-hidden text-ellipsis ${
+                activeTab === 'profissionais'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+              }`}
+            >
+              <Users size={16} />
               <span>Profissionais</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('vales')}
-            className={`pb-4 text-sm font-medium ${
-              activeTab === 'vales'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <div className="flex items-center space-x-2">
-              <Receipt size={20} />
+            </button>
+            <button
+              onClick={() => handleTabChange('vales')}
+              className={`flex items-center justify-center space-x-1 px-3 py-2 text-sm rounded-md font-medium transition-all duration-200 whitespace-nowrap min-w-0 overflow-hidden text-ellipsis ${
+                activeTab === 'vales'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+              }`}
+            >
+              <Receipt size={16} />
               <span>Vales</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('fechamento')}
-            className={`pb-4 text-sm font-medium ${
-              activeTab === 'fechamento'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <div className="flex items-center space-x-2">
-              <DollarSign size={20} />
+            </button>
+            <button
+              onClick={() => handleTabChange('fechamento')}
+              className={`flex items-center justify-center space-x-1 px-3 py-2 text-sm rounded-md font-medium transition-all duration-200 whitespace-nowrap min-w-0 overflow-hidden text-ellipsis ${
+                activeTab === 'fechamento'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+              }`}
+            >
+              <DollarSign size={16} />
               <span>Fechamento</span>
-            </div>
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* Conteúdo */}
@@ -669,4 +657,12 @@ const Profissionais: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: b
   );
 };
 
-export default Profissionais;
+export default function Profissionais(props: { onToggleMobileSidebar?: () => void; isMobile?: boolean }) {
+  return (
+    <ProfessionalProvider>
+      <FinanceiroProvider>
+        <ProfissionaisContent {...props} />
+      </FinanceiroProvider>
+    </ProfessionalProvider>
+  );
+}

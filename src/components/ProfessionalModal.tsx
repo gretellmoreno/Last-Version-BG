@@ -3,6 +3,9 @@ import { X, User, Edit3, Camera, Upload, Trash2 } from 'lucide-react';
 import { formatPhone, isValidPhone, formatCPF } from '../utils/phoneUtils';
 import { Professional } from '../types';
 import DatePickerCalendar from './DatePickerCalendar';
+import { useApp } from '../contexts/AppContext';
+import { supabaseService } from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 
 interface ProfessionalModalProps {
   isOpen: boolean;
@@ -22,7 +25,9 @@ interface ProfessionalFormData {
   cpf: string;
   color: string;
   active: boolean;
-  photo?: string;
+  photo?: string; // base64 legacy, ignorar
+  url_foto?: string | null;
+  commission_rate: number;
 }
 
 const CALENDAR_COLORS = [
@@ -50,7 +55,9 @@ export default function ProfessionalModal({
     cpf: '',
     color: CALENDAR_COLORS[0],
     active: true,
-    photo: ''
+    photo: '',
+    url_foto: null,
+    commission_rate: 50
   });
 
   // Detectar se é mobile (fallback se não vier via props)
@@ -80,7 +87,9 @@ export default function ProfessionalModal({
         cpf: (editingProfessional as any).cpf || '',
         color: editingProfessional.color || CALENDAR_COLORS[0],
         active: editingProfessional.active !== undefined ? editingProfessional.active : true,
-        photo: editingProfessional.photo || ''
+        photo: editingProfessional.photo || '',
+        url_foto: editingProfessional.url_foto || editingProfessional.photo || '',
+        commission_rate: editingProfessional.commission_rate || 50
       });
     } else {
       setProfessionalForm({
@@ -91,10 +100,40 @@ export default function ProfessionalModal({
         cpf: '',
         color: CALENDAR_COLORS[0],
         active: true,
-        photo: ''
+        photo: '',
+        url_foto: null,
+        commission_rate: 50
       });
     }
   }, [editingProfessional, isOpen]);
+
+  const { currentSalon } = useApp();
+
+  // Serviços do salão e seleção do profissional
+  const [allServices, setAllServices] = useState<{ id: string; name: string }[]>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+
+  // Carregar serviços ao abrir modal
+  useEffect(() => {
+    if (!isOpen || !currentSalon?.id) return;
+    setLoadingServices(true);
+    (async () => {
+      // Buscar todos os serviços do salão
+      const { data: services } = await supabaseService.services.list(currentSalon.id);
+      setAllServices(services || []);
+      // Buscar serviços do profissional
+      if (editingProfessional?.id) {
+        const { data: profServices } = await supabase.rpc('list_services_for_professional', {
+          p_professional_id: editingProfessional.id
+        });
+        setSelectedServiceIds((profServices || []).map((s: any) => s.service_id));
+      } else {
+        setSelectedServiceIds([]);
+      }
+      setLoadingServices(false);
+    })();
+  }, [isOpen, currentSalon?.id, editingProfessional?.id]);
 
   const handleUpdateForm = (field: keyof ProfessionalFormData, value: string | number | boolean) => {
     if (field === 'phone') {
@@ -119,25 +158,36 @@ export default function ProfessionalModal({
     }
   };
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string;
-        setProfessionalForm(prev => ({
-          ...prev,
-          photo: base64
-        }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setPhotoUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
+      if (uploadError || !uploadData?.path) {
+        alert('Erro ao fazer upload da imagem.');
+        setPhotoUploading(false);
+        return;
+      }
+      // Obter URL pública correta usando o path retornado
+      const { data: urlData } = await supabase.storage.from('avatars').getPublicUrl(uploadData.path);
+      setProfessionalForm(prev => ({
+        ...prev,
+        url_foto: urlData.publicUrl
+      }));
+    } finally {
+      setPhotoUploading(false);
     }
   };
 
   const removePhoto = () => {
     setProfessionalForm(prev => ({
       ...prev,
-      photo: ''
+      url_foto: null
     }));
   };
 
@@ -152,24 +202,42 @@ export default function ProfessionalModal({
            professionalForm.phone.trim() !== '' && 
            isValidPhone(professionalForm.phone) &&
            professionalForm.email.trim() !== '' &&
-           isValidEmail(professionalForm.email);
+           isValidEmail(professionalForm.email) &&
+           professionalForm.commission_rate >= 0 &&
+           professionalForm.commission_rate <= 100;
+  };
+
+  const handleServiceToggle = (serviceId: string) => {
+    setSelectedServiceIds(prev =>
+      prev.includes(serviceId)
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
   };
 
   const handleSave = async () => {
-    if (!isFormValid()) return;
-    
-    const professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> = {
+    if (!isFormValid() || photoUploading) return;
+    const professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> & { url_foto?: string | null } = {
       name: professionalForm.name.trim(),
       role: professionalForm.role.trim(),
       phone: professionalForm.phone,
       email: professionalForm.email.trim(),
       color: professionalForm.color,
-      commission_rate: 50, // Valor padrão fixo
+      commission_rate: professionalForm.commission_rate,
       active: professionalForm.active,
-      photo: professionalForm.photo || undefined
+      available_online: true,
+      photo: undefined, // legacy, não usar
+      url_foto: professionalForm.url_foto || null
     };
-    
     await onSave(professionalData);
+    // Sincronizar serviços do profissional
+    if (editingProfessional?.id && currentSalon?.id) {
+      await supabase.rpc('upsert_professional_services', {
+        p_salon_id: currentSalon.id,
+        p_professional_id: editingProfessional.id,
+        p_service_ids: selectedServiceIds
+      });
+    }
   };
 
   const handleDelete = () => {
@@ -220,43 +288,41 @@ export default function ProfessionalModal({
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className={`space-y-${isMobileView ? '4' : '3'}`}>
-            {/* Avatar com upload de foto */}
-            <div className="flex items-center justify-center">
-              <div className="relative">
-                <div
-                  className={`${isMobileView ? 'w-16 h-16' : 'w-20 h-20'} rounded-full flex items-center justify-center text-white font-bold overflow-hidden border-2 border-gray-200`}
-                  style={{ backgroundColor: professionalForm.photo ? 'transparent' : professionalForm.color }}
+            {/* Avatar */}
+            <div className="relative w-20 h-20 mx-auto mb-4">
+              {professionalForm.url_foto ? (
+                <img
+                  src={professionalForm.url_foto}
+                  alt="Foto do profissional"
+                  className="w-20 h-20 rounded-full object-cover border-2 border-purple-200"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-3xl text-gray-400">
+                  <User size={40} />
+                </div>
+              )}
+              <label htmlFor="photo-upload" className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow cursor-pointer border border-gray-300">
+                <Camera size={18} />
+                <input
+                  id="photo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                  disabled={loading || photoUploading}
+                />
+              </label>
+              {professionalForm.url_foto && (
+                <button
+                  type="button"
+                  className="absolute top-0 right-0 bg-white rounded-full p-1 shadow border border-gray-300"
+                  onClick={removePhoto}
+                  disabled={loading}
+                  title="Remover foto"
                 >
-                  {professionalForm.photo ? (
-                    <img
-                      src={professionalForm.photo}
-                      alt="Foto do profissional"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className={`${isMobileView ? 'text-lg' : 'text-xl'}`}>
-                      {professionalForm.name.charAt(0).toUpperCase() || 'P'}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Botão de câmera */}
-                <div className="absolute -bottom-1 -right-1">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                    id="photo-upload"
-                  />
-                  <label
-                    htmlFor="photo-upload"
-                    className="w-8 h-8 bg-white border border-gray-300 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-pink-300 transition-colors shadow-sm"
-                  >
-                    <Camera size={14} className="text-gray-600" />
-                  </label>
-                </div>
-              </div>
+                  <Trash2 size={16} className="text-red-500" />
+                </button>
+              )}
             </div>
 
             {/* Botão remover foto */}
@@ -361,57 +427,29 @@ export default function ProfessionalModal({
                 />
               </div>
 
-              {/* Cor do Calendário */}
+              {/* Remover Taxa de Comissão e Status */}
+              {/* Lista de Serviços */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-2">
-                  Cor no Calendário
+                  Serviços que este profissional pode realizar
                 </label>
-                <div className={`grid ${isMobileView ? 'grid-cols-8' : 'grid-cols-10'} gap-2`}>
-                  {CALENDAR_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => handleUpdateForm('color', color)}
-                      className={`w-6 h-6 rounded-full border-2 transition-all ${
-                        professionalForm.color === color
-                          ? 'border-gray-400 ring-2 ring-gray-300'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Status Ativo/Inativo */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">
-                  Status
-                </label>
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateForm('active', true)}
-                    className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all ${
-                      professionalForm.active
-                        ? 'bg-green-500 text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    Ativo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateForm('active', false)}
-                    className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all ${
-                      !professionalForm.active
-                        ? 'bg-red-500 text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    Inativo
-                  </button>
-                </div>
+                {loadingServices ? (
+                  <div className="text-gray-500 text-sm">Carregando serviços...</div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {allServices.map(service => (
+                      <label key={service.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedServiceIds.includes(service.id)}
+                          onChange={() => handleServiceToggle(service.id)}
+                          className="accent-pink-500"
+                        />
+                        <span className="text-sm text-gray-700">{service.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -440,14 +478,14 @@ export default function ProfessionalModal({
           </div>
           <button
             onClick={handleSave}
-            disabled={!isFormValid() || loading}
+            disabled={!isFormValid() || loading || photoUploading}
             className={`px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center space-x-2 ${
-              isFormValid() && !loading
+              isFormValid() && !loading && !photoUploading
                 ? 'bg-pink-600 text-white hover:bg-pink-700 shadow-sm'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {loading ? (
+            {loading || photoUploading ? (
               <>
                 <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
                 <span>Salvando...</span>

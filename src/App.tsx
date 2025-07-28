@@ -1,32 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
 import Sidebar from './components/Sidebar';
 import LoginForm from './components/LoginForm';
 import LoadingScreen from './components/LoadingScreen';
-import Agenda from './pages/Agenda';
-import Clientes from './pages/Clientes';
-import Profissionais from './pages/Profissionais';
-import Servicos from './pages/Servicos';
-import Relatorio from './pages/Financeiro';
-import Configuracoes from './pages/Configuracoes';
-import LinkAgendamento from './pages/LinkAgendamento';
-import AgendamentoPublico from './pages/AgendamentoPublico';
+import InviteRedirect from './components/InviteRedirect';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { AppProvider } from './contexts/AppContext';
-import { ProfessionalProvider } from './contexts/ProfessionalContext';
-import { ServiceProvider } from './contexts/ServiceContext';
-import { ProductProvider } from './contexts/ProductContext';
-import { ClientProvider } from './contexts/ClientContext';
-import { TaxasProvider } from './contexts/TaxasContext';
-import { FinanceiroProvider } from './contexts/FinanceiroContext';
-function AppContent() {
-  const [activeMenu, setActiveMenu] = useState('agenda');
+import { AppProvider, useApp } from './contexts/AppContext';
+import { useIsAppDomain } from './hooks/useSubdomain';
+
+// Lazy loading das páginas
+const Agenda = lazy(() => import('./pages/Agenda'));
+const Clientes = lazy(() => import('./pages/Clientes'));
+const Profissionais = lazy(() => import('./pages/Profissionais'));
+const Servicos = lazy(() => import('./pages/Servicos'));
+const Relatorio = lazy(() => import('./pages/Financeiro'));
+const Configuracoes = lazy(() => import('./pages/Configuracoes'));
+const LinkAgendamento = lazy(() => import('./pages/LinkAgendamento'));
+const AgendamentoPublico = lazy(() => import('./pages/AgendamentoPublico'));
+const DefinirSenha = lazy(() => import('./pages/DefinirSenha'));
+const SalonNotFound = lazy(() => import('./pages/SalonNotFound'));
+const MarketingApp = lazy(() => import('./pages/MarketingApp'));
+
+// Componente de loading para páginas
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <p className="text-gray-600">Carregando página...</p>
+    </div>
+  </div>
+);
+
+function AppLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const { isAuthenticated, loading, userContext } = useAuth();
+  const { isAuthenticated, loading: authLoading, userContext } = useAuth();
+  const { currentSalon, isReady, loading: salonLoading, error: salonError, isMainDomain } = useApp();
 
   // Hook para detectar mobile
   useEffect(() => {
@@ -44,19 +56,39 @@ function AppContent() {
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // Mostrar tela de loading durante a verificação inicial de autenticação
-  if (loading) {
+  // Loading geral (auth + salon)
+  const isLoading = authLoading || salonLoading;
+
+  // Mostrar tela de loading durante verificações iniciais
+  if (isLoading) {
     return <LoadingScreen />;
   }
 
-  // Mostrar tela de login se não estiver autenticado
-  if (!isAuthenticated) {
+  // Se houver erro ao carregar salão (subdomínio inválido)
+  if (salonError && !isMainDomain) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SalonNotFound />
+      </Suspense>
+    );
+  }
+
+  // Se não está no domínio principal e não tem salão, erro
+  if (!isMainDomain && !currentSalon) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SalonNotFound />
+      </Suspense>
+    );
+  }
+
+  // Se está no domínio principal e não está autenticado
+  if (isMainDomain && !isAuthenticated) {
     return <LoginForm />;
   }
 
-  // Se o usuário está autenticado mas o contexto ainda não foi carregado,
-  // mostrar uma tela de loading simples
-  if (!userContext) {
+  // Se está no domínio principal e autenticado mas sem contexto
+  if (isMainDomain && isAuthenticated && !userContext) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
         <div className="text-center">
@@ -74,82 +106,101 @@ function AppContent() {
     );
   }
 
-  const renderContent = () => {
-    const commonProps = {
-      onToggleMobileSidebar: () => setIsMobileSidebarOpen(!isMobileSidebarOpen),
-      isMobile
-    };
+  // Se está em subdomínio mas não está autenticado, mostrar login ou páginas públicas
+  if (!isMainDomain && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/agendamento" element={<AgendamentoPublico />} />
+            <Route path="/*" element={<LoginForm />} />
+          </Routes>
+        </Suspense>
+      </div>
+    );
+  }
 
-    switch (activeMenu) {
-      case 'agenda':
-        return <Agenda {...commonProps} />;
-      case 'clientes':
-        return <Clientes {...commonProps} />;
-      case 'profissionais':
-        return <Profissionais {...commonProps} />;
-      case 'servicos':
-        return <Servicos {...commonProps} />;
-      case 'financeiro':
-        return <Relatorio {...commonProps} />;
-      case 'configuracoes':
-        return <Configuracoes {...commonProps} />;
-      case 'link-agendamento':
-        return <LinkAgendamento {...commonProps} />;
-      default:
-        return <Agenda {...commonProps} />;
-    }
+  const commonProps = {
+    onToggleMobileSidebar: () => setIsMobileSidebarOpen(!isMobileSidebarOpen),
+    isMobile
   };
 
-  // Mantemos apenas os providers que são realmente globais
+  // Layout principal com sidebar (para usuários autenticados)
   return (
-    <AppProvider>
-      <ProfessionalProvider>
-        <ServiceProvider>
-          <ProductProvider>
-            <ClientProvider>
-              <TaxasProvider>
-                <FinanceiroProvider>
-                  <div className={`flex h-screen bg-gray-50 overflow-hidden ${isMobile ? 'mobile-app-layout' : ''}`}>
-                    {/* Desktop Sidebar */}
-                    <div className={isMobile ? 'hidden' : 'block'}>
-                      <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
-                    </div>
-                    
-                    {/* Mobile Sidebar Overlay */}
-                    {isMobile && isMobileSidebarOpen && (
-                      <div className="fixed inset-0 z-50 lg:hidden">
-                        <div 
-                          className="fixed inset-0 bg-black bg-opacity-50"
-                          onClick={() => setIsMobileSidebarOpen(false)}
-                        />
-                        <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
-                          <Sidebar 
-                            activeMenu={activeMenu} 
-                            onMenuChange={(menu) => {
-                              setActiveMenu(menu);
-                              setIsMobileSidebarOpen(false);
-                            }}
-                            isMobile={true}
-                            onClose={() => setIsMobileSidebarOpen(false)}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Main Content */}
-                    <div className={`flex-1 transition-all duration-300 main-content-area ${isMobile ? 'ml-0' : 'ml-16 group-hover:ml-64'}`}>
-                      <div className="h-full w-full page-container">
-                        {renderContent()}
-                      </div>
-                    </div>
-                  </div>
-                </FinanceiroProvider>
-              </TaxasProvider>
-            </ClientProvider>
-          </ProductProvider>
-        </ServiceProvider>
-      </ProfessionalProvider>
-    </AppProvider>
+    <div className={`flex h-screen bg-gray-50 overflow-hidden ${isMobile ? 'mobile-app-layout' : ''}`}>
+      {/* Desktop Sidebar */}
+      <div className={isMobile ? 'hidden' : 'block'}>
+        <Sidebar />
+      </div>
+      
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+          <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
+            <Sidebar 
+              isMobile={true}
+              onClose={() => setIsMobileSidebarOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Main Content */}
+      <div className={`flex-1 transition-all duration-300 main-content-area ${isMobile ? 'ml-0' : 'ml-16 group-hover:ml-64'}`}>
+        <div className="h-full w-full page-container">
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<InviteRedirect />} />
+              <Route path="/agenda" element={<Agenda {...commonProps} />} />
+              <Route path="/clientes" element={<Clientes {...commonProps} />} />
+              <Route path="/profissionais" element={<Profissionais {...commonProps} />} />
+              <Route path="/servicos" element={<Servicos {...commonProps} />} />
+              <Route path="/financeiro" element={<Relatorio {...commonProps} />} />
+              <Route path="/configuracoes" element={<Configuracoes {...commonProps} />} />
+              <Route path="/link-agendamento" element={<LinkAgendamento {...commonProps} />} />
+            </Routes>
+          </Suspense>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DomainRouter() {
+  const isAppDomain = useIsAppDomain();
+
+  // Se estiver no app.localhost:5173, mostrar página de marketing
+  if (isAppDomain) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <MarketingApp />
+      </Suspense>
+    );
+  }
+
+  // Caso contrário, usar as rotas normais
+  return (
+    <Routes>
+      <Route path="/agendamento" element={
+        <Suspense fallback={<PageLoader />}>
+          <AgendamentoPublico />
+        </Suspense>
+      } />
+      <Route path="/definir-senha" element={
+        <Suspense fallback={<PageLoader />}>
+          <DefinirSenha />
+        </Suspense>
+      } />
+      <Route path="/*" element={
+        <AppProvider>
+          <AppLayout />
+        </AppProvider>
+      } />
+    </Routes>
   );
 }
 
@@ -158,10 +209,7 @@ function App() {
     <Router>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Routes>
-            <Route path="/agendamento" element={<AgendamentoPublico />} />
-            <Route path="/*" element={<AppContent />} />
-          </Routes>
+          <DomainRouter />
         </AuthProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Receipt } from 'lucide-react';
 import { useFinanceiro } from '../../contexts/FinanceiroContext';
+import { useProfessional } from '../../contexts/ProfessionalContext';
 
 interface Vale {
   id: string;
@@ -24,6 +25,7 @@ export default function ValesSection({
   formatDate
 }: ValesSectionProps) {
   const { vales, loading, error } = useFinanceiro();
+  const { professionals } = useProfessional();
   const [isMobile, setIsMobile] = useState(false);
   
   // Detectar mobile
@@ -37,6 +39,11 @@ export default function ValesSection({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Função utilitária para buscar a foto do profissional
+  const getProfessionalPhoto = (profId: string) => {
+    const prof = professionals.find(p => p.id === profId);
+    return prof?.url_foto || '';
+  };
 
 
   if (loading) {
@@ -99,11 +106,16 @@ export default function ValesSection({
                   className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-purple-200 transition-all duration-200 cursor-pointer active:scale-95"
                 >
                   
-                  <div className="flex items-start justify-between mb-1.5">
-                    <div className="flex-1 pr-4">
-                      <h3 className="font-medium text-gray-900 text-xs">{vale.profissionalNome}</h3>
+                  <div className="flex items-center mb-1.5">
+                    {getProfessionalPhoto(vale.profissionalId) ? (
+                      <img src={getProfessionalPhoto(vale.profissionalId)} alt={vale.profissionalNome} className="w-8 h-8 rounded-full object-cover border-2 border-purple-200 mr-2" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm mr-2">
+                        {vale.profissionalNome.charAt(0).toUpperCase()}
                       </div>
-                    </div>
+                    )}
+                    <h3 className="font-medium text-gray-900 text-xs">{vale.profissionalNome}</h3>
+                  </div>
 
                   <div className="grid grid-cols-3 gap-1.5">
                     <div>
@@ -156,11 +168,15 @@ export default function ValesSection({
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center mr-4">
-                            <span className="text-purple-600 font-semibold text-sm">
-                              {vale.profissionalNome.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+                          {getProfessionalPhoto(vale.profissionalId) ? (
+                            <img src={getProfessionalPhoto(vale.profissionalId)} alt={vale.profissionalNome} className="h-10 w-10 rounded-full object-cover border-2 border-purple-200 mr-4" />
+                          ) : (
+                            <div className="flex-shrink-0 h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                              <span className="text-purple-600 font-semibold text-sm">
+                                {vale.profissionalNome.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                           <div className="text-sm font-medium text-gray-900">
                             {vale.profissionalNome}
                           </div>

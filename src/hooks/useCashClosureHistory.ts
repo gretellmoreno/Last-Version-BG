@@ -51,24 +51,19 @@ export const useCashClosureHistory = (
       }
 
       // Transformar os dados da API no formato esperado pelo frontend
-      return (data || []).map(closure => ({
+      return (data || []).map((closure: any) => ({
         id: closure.id,
-        data: new Date(closure.date).toLocaleDateString('pt-BR'),
-        hora: new Date(closure.created_at).toLocaleTimeString('pt-BR', { 
+        data: closure?.closed_at ? new Date(closure.closed_at).toLocaleDateString('pt-BR') : '',
+        hora: closure?.closed_at ? new Date(closure.closed_at).toLocaleTimeString('pt-BR', { 
           hour: '2-digit', 
           minute: '2-digit' 
-        }),
-        profissionalNome: closure.professional_name || 'Profissional não especificado',
-        servicos: closure.services.map(service => ({
-          data: new Date(service.date).toLocaleDateString('pt-BR'),
-          cliente: service.client_name,
-          servico: service.service_name,
-          valorBruto: service.gross_value,
-          taxa: service.fee,
-          comissao: service.commission,
-          valorLiquido: service.net_value
-        })),
-        totalLiquido: closure.services.reduce((sum, s) => sum + s.net_value, 0)
+        }) : '',
+        profissionalNome: closure.professional_name || closure.professional_id || 'Profissional não especificado',
+        servicos: [],
+        totalLiquido: closure?.details?.net_total ?? closure?.net_total ?? 0,
+        totalBruto: closure?.details?.services_total ?? closure?.services_total ?? 0,
+        totalTaxas: closure?.details?.fees_total ?? closure?.payment_fees ?? 0,
+        totalComissoes: closure?.details?.commissions_total ?? closure?.commissions ?? 0,
       }));
     },
     

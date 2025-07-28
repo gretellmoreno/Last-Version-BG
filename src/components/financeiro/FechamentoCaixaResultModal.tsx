@@ -114,10 +114,14 @@ export default function FechamentoCaixaResultModal({
         <div className="bg-gray-800 text-white p-4 relative">
           {/* Botão X absoluto no canto superior direito */}
           <button
-            onClick={handleClose}
-            className="absolute top-2 right-2 p-2 hover:bg-gray-700 rounded-lg transition-colors z-[10001] pointer-events-auto"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleClose();
+            }}
+            className="absolute top-3 right-3 p-2 hover:bg-gray-700 rounded-lg transition-colors"
             aria-label="Fechar modal"
-            style={{ zIndex: 10001 }}
+            type="button"
           >
             <X className="h-5 w-5" />
           </button>

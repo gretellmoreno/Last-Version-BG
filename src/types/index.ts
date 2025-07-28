@@ -102,7 +102,9 @@ export interface Professional {
   color: string;
   commission_rate: number;
   active: boolean;
+  available_online: boolean;
   photo?: string; // URL ou base64 da foto
+  url_foto?: string | null; // URL pública da foto de perfil
   created_at: string;
   updated_at: string;
 }
@@ -116,6 +118,8 @@ export interface Service {
   commission_rate: number;
   description?: string;
   active: boolean;
+  available_online: boolean;
+  price_display_mode: 'normal' | 'from' | 'hidden';
   created_at: string;
   updated_at: string;
 }
@@ -219,6 +223,7 @@ export interface Advance {
   value: number;
   created_at: string;
   updated_at: string;
+  discounted?: boolean;
 }
 
 // Interface para eventos do calendário
@@ -335,12 +340,40 @@ export interface CreateProductResponse {
 }
 
 export interface LinkAgendamentoConfig {
-  corPrimaria: string;
-  corSecundaria: string;
-  logotipo: string;
-  mensagemBoasVindas: string;
-  mostrarPrecos: boolean;
-  mostrarDuracaoServicos: boolean;
+  id?: string;
+  salon_id?: string;
+  ativo: boolean;
+  nome_exibicao?: string | null;
+  foto_perfil_url?: string | null;
+  whatsapp?: string | null;
+  instagram?: string | null;
+  endereco?: string | null;
+  cor_primaria: string;
+  cor_secundaria: string;
+  logotipo_url?: string | null;
+  mensagem_boas_vindas: string;
+  mostrar_precos: boolean;
+  mostrar_duracao_servicos: boolean;
+  intervalo_tempo: number;
+  tempo_minimo_antecedencia: number;
+  periodo_maximo_agendamento: number;
+  permitir_cancelamento_cliente: boolean;
+  horario_funcionamento?: any;
+  notificar_via_whatsapp: boolean;
+  notificar_via_email: boolean;
+  template_confirmacao: string;
+  template_lembrete: string;
+  configuracoes_extras?: any;
+  created_at?: string;
+  updated_at?: string;
+  
+  // Campos legados para compatibilidade (deprecated)
+  corPrimaria?: string;
+  corSecundaria?: string;
+  logotipo?: string;
+  mensagemBoasVindas?: string;
+  mostrarPrecos?: boolean;
+  mostrarDuracaoServicos?: boolean;
 }
 
 export interface Database {

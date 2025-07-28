@@ -3,11 +3,26 @@ import { X } from 'lucide-react';
 import { useFinanceiro } from '../contexts/FinanceiroContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
 
+// Importa o tipo Vale da definição centralizada
+import type { Professional } from '../types';
+
+// Importa o tipo Vale da definição centralizada do contexto
+// (Se necessário, pode-se exportar o tipo Vale do contexto para uso externo)
+interface Vale {
+  id: string;
+  data: string;
+  profissionalId: string;
+  profissionalNome: string;
+  valor: number;
+  status: 'pendente' | 'descontado';
+  observacoes?: string;
+}
+
 interface ValeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  editingVale?: any;
-  onSave?: (vale: any) => Promise<void>;
+  editingVale?: Partial<Vale>;
+  onSave?: (vale: Partial<Vale>) => Promise<void>;
   onDelete?: () => void;
 }
 
@@ -16,8 +31,8 @@ export default function ValeModal({ isOpen, onClose, editingVale, onSave, onDele
   const { addVale } = useFinanceiro();
   
 
-  const [selectedProfessional, setSelectedProfessional] = useState(editingVale?.profissionalId || '');
-  const [valor, setValor] = useState(editingVale ? editingVale.valor.toFixed(2).replace('.', ',') : '');
+  const [selectedProfessional, setSelectedProfessional] = useState<string>(editingVale?.profissionalId || '');
+  const [valor, setValor] = useState<string>(editingVale && editingVale.valor !== undefined ? editingVale.valor.toFixed(2).replace('.', ',') : '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,14 +78,14 @@ export default function ValeModal({ isOpen, onClose, editingVale, onSave, onDele
         await onSave({
           ...editingVale,
           profissionalId: selectedProfessional,
-          profissionalNome: professionals.find(p => p.id === selectedProfessional)?.name || '',
+          profissionalNome: professionals.find((p: Professional) => p.id === selectedProfessional)?.name || '',
           valor: valorNumerico
         });
       } else {
         // Se estiver criando novo vale
         const success = await addVale({
           profissionalId: selectedProfessional,
-          profissionalNome: professionals.find(p => p.id === selectedProfessional)?.name || '',
+          profissionalNome: professionals.find((p: Professional) => p.id === selectedProfessional)?.name || '',
           valor: valorNumerico,
           data: new Date().toISOString().split('T')[0],
         });
@@ -134,7 +149,7 @@ export default function ValeModal({ isOpen, onClose, editingVale, onSave, onDele
               disabled={isSubmitting}
             >
               <option value="">Selecione um profissional</option>
-              {professionals.map((prof) => (
+              {professionals.map((prof: Professional) => (
                 <option key={prof.id} value={prof.id}>
                   {prof.name}
                 </option>

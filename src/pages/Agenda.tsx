@@ -15,11 +15,13 @@ import AppointmentTooltip from '../components/AppointmentTooltip';
 import EditAppointmentModal from '../components/EditAppointmentModal';
 import AppointmentDetailsModal from '../components/AppointmentDetailsModal';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
-
-
 import { useBooking } from '../hooks/useBooking';
 import { useProfessional } from '../contexts/ProfessionalContext';
 import { useApp } from '../contexts/AppContext';
+import { ProfessionalProvider } from '../contexts/ProfessionalContext';
+import { ServiceProvider } from '../contexts/ServiceContext';
+import { ProductProvider } from '../contexts/ProductContext';
+import { ClientProvider } from '../contexts/ClientContext';
 import { supabaseService } from '../lib/supabaseService';
 import { Appointment, CalendarEvent, AppointmentDetails } from '../types';
 import { formatDateToLocal } from '../utils/dateUtils';
@@ -91,24 +93,31 @@ const ProfessionalsHeader = ({ professionals }: { professionals: any[] }) => {
       <div className="flex">
         {/* Coluna de horários - espaço vazio */}
         <div className="time-column"></div>
-        
         {/* Colunas dos profissionais */}
         {professionals.map((prof) => (
           <div key={prof.id} className="professional-column">
             <div className="flex flex-col items-center space-y-2">
-              <div 
-                className="professional-avatar"
-                style={{ backgroundColor: prof.color || '#6366f1' }}
-              >
-                {(() => {
-                  const name = prof.name.replace('[Exemplo] ', '');
-                  const names = name.split(' ');
-                  if (names.length === 1) {
-                    return names[0].substring(0, 2).toUpperCase();
-                  }
-                  return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-                })()}
-              </div>
+              {prof.url_foto ? (
+                <img
+                  src={prof.url_foto}
+                  alt={prof.name}
+                  className="professional-avatar w-10 h-10 rounded-full object-cover border-2 border-purple-200"
+                />
+              ) : (
+                <div 
+                  className="professional-avatar w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: prof.color || '#6366f1' }}
+                >
+                  {(() => {
+                    const name = prof.name.replace('[Exemplo] ', '');
+                    const names = name.split(' ');
+                    if (names.length === 1) {
+                      return names[0].substring(0, 2).toUpperCase();
+                    }
+                    return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+                  })()}
+                </div>
+              )}
               <div className="professional-name">
                 {prof.name.replace('[Exemplo] ', '')}
               </div>
@@ -292,79 +301,81 @@ const MobileHeader = ({
   return (
     <div className="mobile-agenda-header bg-white border-b border-gray-200 p-4">
       {/* Linha única - Menu, Navegação de Data, Profissional e Adicionar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-1">
         <button 
           onClick={onToggleSidebar}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
         >
           <Menu size={20} className="text-gray-600" />
         </button>
-        
         {/* Navegação de Data */}
-        <div className="flex items-center space-x-1 flex-1 justify-center">
+        <div className="flex items-center space-x-1 flex-1 justify-center min-w-0">
           <button
             onClick={goToPreviousDay}
             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ChevronLeft size={18} className="text-gray-600" />
           </button>
-          
           <button
             onClick={() => setShowDatePicker(true)}
-            className="px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors text-center"
+            className="px-2 py-1 hover:bg-gray-100 rounded-lg transition-colors text-center min-w-0 flex flex-col items-center justify-center"
+            style={{ minWidth: 0 }}
           >
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500 font-medium">
-                {format(selectedDate, "EEEE", { locale: ptBR })}
-              </span>
-              <span className="text-sm font-semibold text-gray-900">
-                {format(selectedDate, "dd 'de' MMM", { locale: ptBR })}
-              </span>
-        </div>
+            <span className="text-xs text-gray-900 font-semibold truncate leading-tight">
+              {format(selectedDate, "EEE", { locale: ptBR })}
+            </span>
+            <span className="text-xs text-gray-700 font-medium truncate leading-tight">
+              {format(selectedDate, "d/M", { locale: ptBR })}
+            </span>
           </button>
-        
-        <button
+          <button
             onClick={goToNextDay}
             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-        >
+          >
             <ChevronRight size={18} className="text-gray-600" />
-        </button>
-          
+          </button>
           {!isToday() && (
             <button
               onClick={goToToday}
-              className="ml-2 px-2 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-xs font-medium"
+              className="ml-1 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors text-xs font-medium min-w-[36px] h-7 flex items-center justify-center"
+              style={{ minWidth: 0, paddingLeft: 8, paddingRight: 8 }}
             >
               Hoje
             </button>
           )}
-      </div>
-      
-        {/* Seletor de Profissional e Botão Adicionar */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
-        <button
-          onClick={onProfessionalClick}
+        </div>
+        {/* Seletor de Profissional e Botões */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={onProfessionalClick}
             className="flex items-center space-x-1.5 px-2 py-1.5 bg-white rounded-lg hover:bg-gray-50 transition-all duration-200 border border-gray-200 hover:border-indigo-300 shadow-sm"
-        >
-          <div 
-              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-            style={{ backgroundColor: selectedProfessional?.color || '#6366f1' }}
           >
-              {(() => {
-                const name = selectedProfessional?.name?.replace('[Exemplo] ', '') || 'P';
-                const names = name.split(' ');
-                if (names.length === 1) {
-                  return names[0].substring(0, 1).toUpperCase();
-                }
-                return (names[0][0] + (names[names.length - 1]?.[0] || '')).toUpperCase();
-              })()}
-          </div>
+            {selectedProfessional?.url_foto ? (
+              <img
+                src={selectedProfessional.url_foto}
+                alt={selectedProfessional.name}
+                className="w-5 h-5 rounded-full object-cover border border-gray-300"
+              />
+            ) : (
+              <div 
+                className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
+                style={{ backgroundColor: selectedProfessional?.color || '#6366f1' }}
+              >
+                {(() => {
+                  const name = selectedProfessional?.name?.replace('[Exemplo] ', '') || 'P';
+                  const names = name.split(' ');
+                  if (names.length === 1) {
+                    return names[0].substring(0, 1).toUpperCase();
+                  }
+                  return (names[0][0] + (names[names.length - 1]?.[0] || '')).toUpperCase();
+                })()}
+              </div>
+            )}
             <ChevronDown size={12} className="text-gray-400" />
           </button>
-          
           <button
             onClick={onShowOnlineModal}
-            className="mx-2 p-2 rounded-full hover:bg-indigo-50 text-indigo-600 transition"
+            className="p-2 rounded-full hover:bg-indigo-50 text-indigo-600 transition"
             title="Agendamentos Online"
           >
             <Globe size={22} />
@@ -374,8 +385,8 @@ const MobileHeader = ({
             className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Plus size={20} />
-        </button>
-      </div>
+          </button>
+        </div>
       </div>
       
       {/* Modal do DatePicker */}
@@ -414,7 +425,7 @@ const MobileHeader = ({
   );
 };
 
-export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }: { onToggleMobileSidebar?: () => void; isMobile?: boolean } = {}) {
+function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onToggleMobileSidebar?: () => void; isMobile?: boolean } = {}) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>('');
@@ -450,10 +461,28 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
 
   // 1. Estado para modal de agendamentos online
   const [showOnlineModal, setShowOnlineModal] = useState(false);
+  const [onlineAppointments, setOnlineAppointments] = useState<any[]>([]);
+  const [loadingOnline, setLoadingOnline] = useState(false);
 
   const { appointments, refreshAppointments } = useBooking();
   const { professionals } = useProfessional();
   const { currentSalon } = useApp();
+
+  // Removido: useBooking já carrega automaticamente
+
+  const handleShowOnlineModal = async () => {
+    if (!currentSalon?.id) return;
+    setLoadingOnline(true);
+    setShowOnlineModal(true);
+    const { data, error } = await supabaseService.appointments.listOnlineAppointments({ salonId: currentSalon.id });
+    if (!error && Array.isArray(data)) {
+      setOnlineAppointments(data);
+    } else {
+      setOnlineAppointments([]);
+      if (error) toast.error('Erro ao buscar agendamentos online!');
+    }
+    setLoadingOnline(false);
+  };
 
   // Hook para detectar mobile
   useEffect(() => {
@@ -802,8 +831,8 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
   const handleCloseBookingModal = () => {
     setIsBookingModalOpen(false);
     setSelectedBookingSlot(null);
-    // Recarregar agendamentos após fechar modal
-    refreshAppointments();
+    // Remover refreshAppointments() desnecessário aqui - 
+    // O createAppointment já faz refresh quando necessário
   };
   
 
@@ -985,6 +1014,21 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
     }
   }, [events]);
 
+  // Função utilitária para formatar o tempo decorrido
+  function formatElapsedTime(minutes: number): string {
+    if (minutes < 60) {
+      return `há ${minutes} min`;
+    } else if (minutes < 1440) { // menos de 24h
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      return `há ${h}h${m > 0 ? ` ${m}min` : ''}`;
+    } else {
+      const d = Math.floor(minutes / 1440);
+      const h = Math.floor((minutes % 1440) / 60);
+      return `há ${d}d${h > 0 ? ` ${h}h` : ''}`;
+    }
+  }
+
   return (
     <div className={`flex-1 flex flex-col h-full page-content ${isMobile ? 'mobile-agenda-container' : ''}`}>
       <Toaster position="top-right" />
@@ -997,7 +1041,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
           onProfessionalClick={() => setShowProfessionalSelector(true)}
           onAddClick={handleAddClick}
           onToggleSidebar={onToggleMobileSidebar}
-          onShowOnlineModal={() => setShowOnlineModal(true)}
+          onShowOnlineModal={handleShowOnlineModal}
         />
       ) : (
         <>
@@ -1007,7 +1051,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             onAddClick={handleAddClick}
-            onOnlineClick={() => setShowOnlineModal(true)}
+            onOnlineClick={handleShowOnlineModal}
           />
           {/* Cabeçalho fixo dos profissionais - apenas desktop */}
           {professionals && professionals.length > 0 && (
@@ -1130,7 +1174,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
           onClose={() => {
             setIsEditModalOpen(false);
             setSelectedAppointmentId(null);
-            refreshAppointments();
+            // Remover refreshAppointments() desnecessário - TanStack Query já gerencia cache
           }}
         />
       )}
@@ -1142,7 +1186,7 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
           onClose={() => {
             setIsDetailsModalOpen(false);
             setSelectedAppointmentId(null);
-            refreshAppointments();
+            // Remover refreshAppointments() desnecessário - apenas visualização de detalhes
           }}
           appointmentId={selectedAppointmentId}
         />
@@ -1156,37 +1200,47 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
               <X size={isMobile ? 20 : 22} />
             </button>
             <h2 className={`text-center font-bold text-gray-900 mb-3 ${isMobile ? 'text-lg' : 'text-xl'}`}>Agendamentos Online</h2>
-            {/* Lista de agendamentos online (mock) */}
-            <div className="divide-y divide-gray-100">
-              {[{
-                cliente: 'Gretell',
-                data: '22/07/25 (Ter)',
-                hora: '08:00',
-                servicos: 'Escova, Corte',
-                profissional: 'Ana',
-                valor: 'R$ 130,00',
-                criado: '19/07/2025 às 21:48 (segundos atrás)'
-              }].map((ag, idx) => (
-                <div key={idx} className={`flex flex-col gap-1 ${isMobile ? 'py-2' : 'py-4'}`}> 
-                  <div className={`flex items-center gap-2 text-indigo-700 font-semibold ${isMobile ? 'text-sm' : ''}`}>
-                    <UserCircle size={isMobile ? 15 : 18} /> {ag.cliente}
-                  </div>
-                  <div className={`flex items-center gap-2 text-gray-700 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                    <CalendarIcon size={isMobile ? 13 : 16} /> {ag.data}
-                    <span className="flex items-center gap-1 ml-2"><Clock size={isMobile ? 13 : 16} /> {ag.hora}</span>
-                    <Globe size={isMobile ? 12 : 15} className="ml-2 text-indigo-500" />
-                  </div>
-                  <div className={`flex items-center gap-2 text-gray-800 ${isMobile ? 'text-sm' : ''}`}>
-                    <Scissors size={isMobile ? 12 : 15} /> {ag.servicos}
-                    <span className="ml-auto font-bold">{ag.valor}</span>
-                  </div>
-                  <div className={`flex items-center gap-2 text-gray-700 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                    <UserCircle size={isMobile ? 12 : 15} /> {ag.profissional}
-                  </div>
-                  <div className={`italic mt-1 ${isMobile ? 'text-[10px] text-gray-300' : 'text-xs text-gray-400'}`}>Criado: {ag.criado}</div>
-                </div>
-              ))}
-            </div>
+            {loadingOnline ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Carregando agendamentos online...</p>
+              </div>
+            ) : onlineAppointments.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Nenhum agendamento online encontrado para esta data.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto px-1">
+                {onlineAppointments.map((ag: any) => {
+                  let minutos: number | null = null;
+                  if (ag.created_at) {
+                    const created = new Date(ag.created_at);
+                    const now = new Date();
+                    minutos = Math.floor((now.getTime() - created.getTime()) / 60000);
+                  }
+                  return (
+                    <div key={ag.id} className="w-full bg-white border border-gray-100 shadow-sm rounded-xl px-4 py-3 flex flex-col gap-1 min-w-0">
+                      {/* Nome do cliente */}
+                      <div className="font-semibold text-gray-900 text-base truncate">
+                        {ag.client?.name}
+                      </div>
+                      {/* Data/horário e profissional */}
+                      <div className="flex items-center gap-2 text-xs text-gray-700 mt-1">
+                        <span>{ag.date && ag.date.split('-').reverse().join('/')} - {ag.start_time?.slice(0,5)}</span>
+                        <span className="ml-2 px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-700" style={{ background: ag.professional?.color || '#eee', color: '#333' }}>{ag.professional?.name}</span>
+                      </div>
+                      {/* Serviço */}
+                      <div className="text-xs text-gray-700 truncate mt-1">
+                        {Array.isArray(ag.services) ? ag.services.map((s: any) => s.name).join(', ') : ''}
+                      </div>
+                      {/* Quanto tempo faz */}
+                      {minutos !== null && (
+                        <div className="text-[11px] text-gray-400 italic mt-1">{formatElapsedTime(minutos)}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1218,24 +1272,26 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
                       : 'bg-white border-gray-200 hover:bg-gray-50'}
                   `}
                 >
-                  <div 
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-base font-bold text-white shadow-md"
-                    style={{ backgroundColor: professional.color || '#6366f1' }}
-                  >
-                    {(() => {
-                      const name = professional.name.replace('[Exemplo] ', '');
-                      const names = name.split(' ');
-                      if (names.length === 1) {
-                        return names[0].substring(0, 2).toUpperCase();
-                      }
-                      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-                    })()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm truncate">
-                      {professional.name.replace('[Exemplo] ', '')}
-                    </p>
-                  </div>
+                  {professional.url_foto ? (
+                    <img
+                      src={professional.url_foto}
+                      alt={professional.name}
+                      className="w-9 h-9 rounded-full object-cover border-2 border-purple-200"
+                    />
+                  ) : (
+                    <div 
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-base font-bold text-white shadow-md"
+                      style={{ backgroundColor: professional.color || '#6366f1' }}
+                    >
+                      {professional.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="flex-1 truncate">{professional.name}</span>
+                  {selectedProfessionalId === professional.id && (
+                    <span className="ml-2 w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -1256,17 +1312,11 @@ export default function Agenda({ onToggleMobileSidebar, isMobile: isMobileProp }
 
 function AppointmentStatusGate({ appointmentId, isOpen, onClose }: { appointmentId: string, isOpen: boolean, onClose: () => void }) {
   const { currentSalon } = useApp();
-  const { appointment, isLoading } = useAppointmentDetails(appointmentId, currentSalon?.id || null, isOpen);
-  if (isLoading) return null;
-  if (appointment?.status === 'finalizado') {
-    return (
-      <AppointmentDetailsModal
-        isOpen={isOpen}
-        onClose={onClose}
-        appointmentId={appointmentId}
-      />
-    );
-  }
+  
+  // Não fazer requisição aqui - deixar para os modais individuais
+  // const { appointment, isLoading } = useAppointmentDetails(appointmentId, currentSalon?.id || null, isOpen);
+  
+  // Sempre abrir o modal de edição primeiro - ele determinará internamente se deve mostrar edição ou detalhes
   return (
     <EditAppointmentModal
       isOpen={isOpen}
@@ -1274,5 +1324,19 @@ function AppointmentStatusGate({ appointmentId, isOpen, onClose }: { appointment
       appointment={null}
       appointmentId={appointmentId}
     />
+  );
+}
+
+export default function Agenda(props: { onToggleMobileSidebar?: () => void; isMobile?: boolean }) {
+  return (
+    <ProfessionalProvider>
+      <ServiceProvider>
+        <ProductProvider>
+          <ClientProvider>
+            <AgendaContent {...props} />
+          </ClientProvider>
+        </ProductProvider>
+      </ServiceProvider>
+    </ProfessionalProvider>
   );
 }

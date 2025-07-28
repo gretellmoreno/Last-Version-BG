@@ -196,12 +196,12 @@
 /* Layout responsivo para desktop */
 @media (min-width: 1024px) {
   .main-content-area {
-    margin-left: 4rem; /* 64px - largura do sidebar recolhido */
+    margin-left: 0; /* Removido o margin-left que causava o gap */
     transition: margin-left 0.3s ease;
   }
   
   .main-content-area.sidebar-expanded {
-    margin-left: 16rem; /* 256px - largura do sidebar expandido */
+    margin-left: 0; /* Removido o margin-left que causava o gap */
   }
 }
 

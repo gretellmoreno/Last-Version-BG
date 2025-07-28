@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Settings, User, CreditCard, Clock, Building, Mail, Lock, Eye, EyeOff, Save, Edit3, Trash2, Plus, UserCheck, Bell } from 'lucide-react';
 import Header from '../components/Header';
 import TaxaModal from '../components/TaxaModal';
 import { TaxasProvider, useTaxas } from '../contexts/TaxasContext';
+import { supabase } from '../lib/supabase';
+import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import { useProfessional, ProfessionalProvider } from '../contexts/ProfessionalContext';
+import { supabaseService } from '../lib/supabaseService';
 
 interface ConfiguracoesProps {
   onToggleMobileSidebar?: () => void;
@@ -30,22 +36,22 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   
   // Estados para dados do usuário
   const [userData, setUserData] = useState({
-    nome: 'João Silva',
-    email: 'joao@belagestao.com',
-    empresa: 'Salão Bella Vista',
+    nome: '',
+    email: '',
+    empresa: '',
     novaSenha: ''
   });
 
   // Estados para horários de atendimento
   const [selectedProfissional, setSelectedProfissional] = useState('');
   const [horariosAtendimento, setHorariosAtendimento] = useState([
-    { diaSemana: 'Segunda-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-    { diaSemana: 'Terça-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-    { diaSemana: 'Quarta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-    { diaSemana: 'Quinta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-    { diaSemana: 'Sexta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-    { diaSemana: 'Sábado', ativo: true, turnos: [{ inicio: '08:00', fim: '16:00' }] },
-    { diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '08:00', fim: '16:00' }] },
+    { wday: 1, diaSemana: 'Segunda-feira', ativo: true, turnos: [{ inicio: '', fim: '' }] },
+    { wday: 2, diaSemana: 'Terça-feira', ativo: true, turnos: [{ inicio: '', fim: '' }] },
+    { wday: 3, diaSemana: 'Quarta-feira', ativo: true, turnos: [{ inicio: '', fim: '' }] },
+    { wday: 4, diaSemana: 'Quinta-feira', ativo: true, turnos: [{ inicio: '', fim: '' }] },
+    { wday: 5, diaSemana: 'Sexta-feira', ativo: true, turnos: [{ inicio: '', fim: '' }] },
+    { wday: 6, diaSemana: 'Sábado', ativo: true, turnos: [{ inicio: '', fim: '' }] },
+    { wday: 0, diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '', fim: '' }] },
   ]);
 
   // Lista mock de profissionais
@@ -73,12 +79,34 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   };
 
   // Estados para o novo conteúdo da aba 'lembrete'
-  const [lembreteSaudacao, setLembreteSaudacao] = useState('Oi #{cliente}, tudo bem?');
-  const [lembreteDespedida, setLembreteDespedida] = useState('Obrigado.');
+  const [lembreteSaudacao, setLembreteSaudacao] = useState('');
+  const [lembreteDespedida, setLembreteDespedida] = useState('');
   const [mostrarValorServico, setMostrarValorServico] = useState(false);
   const [modoAvancadoLembrete, setModoAvancadoLembrete] = useState(false);
-  const [lembreteMensagem, setLembreteMensagem] = useState('Oi #{cliente}, tudo bem?\nEste é um lembrete para o seu atendimento, #{data_horario}.\nServiço: #{servico}\nObrigado.');
+  const [lembreteMensagem, setLembreteMensagem] = useState('');
   const [showVariaveisModal, setShowVariaveisModal] = useState(false);
+  const [showVariaveisLembrete, setShowVariaveisLembrete] = useState(false);
+  const [lembretePreview, setLembretePreview] = useState('');
+
+  // Função para gerar preview substituindo variáveis por exemplos
+  function gerarPreviewLembrete(msg: string) {
+    if (!msg) return '';
+    return msg
+      .replace(/#\{cliente\}/g, 'Michele')
+      .replace(/#\{data_horario\}/g, '(Hoje) 20 de Julho às 08:00')
+      .replace(/#\{profissional\}/g, 'João')
+      .replace(/#\{servico\}/g, 'Corte Cabelo');
+  }
+
+  // Atualizar preview sempre que a mensagem mudar
+  useEffect(() => {
+    setLembretePreview(gerarPreviewLembrete(lembreteMensagem));
+  }, [lembreteMensagem]);
+
+  const { currentSalon } = useApp();
+  const { user } = useAuth();
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const { professionals } = useProfessional();
 
   // Detectar mobile
   useEffect(() => {
@@ -90,6 +118,129 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Carregue apenas o e-mail do usuário e nome do salão
+  useEffect(() => {
+    async function loadUserAndSalon() {
+      if (!user?.id || !currentSalon?.id) return;
+      const { data: userDataDb } = await supabase
+        .from('users')
+        .select('name, email')
+        .eq('id', user.id)
+        .single();
+      const { data: salonDataDb } = await supabase
+        .from('salons')
+        .select('name')
+        .eq('id', currentSalon.id)
+        .single();
+      setUserData({
+        nome: userDataDb?.name || '',
+        email: userDataDb?.email || '',
+        empresa: salonDataDb?.name || '',
+        novaSenha: ''
+      });
+    }
+    loadUserAndSalon();
+  }, [user?.id, currentSalon?.id]);
+
+  // Carregar taxas de pagamento ao abrir a aba 'taxas'
+  useEffect(() => {
+    async function loadPaymentMethods() {
+      if (activeTab === 'taxas' && currentSalon?.id) {
+        const { data, error } = await supabase
+          .rpc('list_payment_methods', { salon_id: currentSalon.id });
+        if (error) {
+          toast.error('Erro ao carregar as formas de pagamento.');
+          setPaymentMethods([]);
+        } else {
+          setPaymentMethods(data || []);
+        }
+      }
+    }
+    loadPaymentMethods();
+  }, [activeTab, currentSalon?.id]);
+
+  // Carregar horários ao selecionar profissional
+  useEffect(() => {
+    async function loadProfSchedule() {
+      if (!currentSalon?.id || !selectedProfissional) return;
+      const { data, error } = await supabase.rpc('list_professional_schedule', {
+        p_salon_id: currentSalon.id,
+        p_professional_id: selectedProfissional
+      });
+      if (error) {
+        toast.error('Erro ao carregar horários do profissional.');
+        return;
+      }
+      // Mapear resposta para o estado local
+      const diasPadrao = [
+        { wday: 1, diaSemana: 'Segunda-feira' },
+        { wday: 2, diaSemana: 'Terça-feira' },
+        { wday: 3, diaSemana: 'Quarta-feira' },
+        { wday: 4, diaSemana: 'Quinta-feira' },
+        { wday: 5, diaSemana: 'Sexta-feira' },
+        { wday: 6, diaSemana: 'Sábado' },
+        { wday: 0, diaSemana: 'Domingo' },
+      ];
+      setHorariosAtendimento(
+        diasPadrao.map((dia) => {
+          const found = data.find((d: any) => d.wday === dia.wday);
+          if (!found) {
+            return { ...dia, ativo: false, turnos: [{ inicio: '', fim: '' }] };
+          }
+          return {
+            ...dia,
+            ativo: found.work,
+            turnos: [
+              { inicio: found.start_time_1 || '', fim: found.end_time_1 || '' },
+              ...(found.start_time_2 || found.end_time_2 ? [{ inicio: found.start_time_2 || '', fim: found.end_time_2 || '' }] : [])
+            ]
+          };
+        })
+      );
+    }
+    loadProfSchedule();
+  }, [selectedProfissional, currentSalon?.id]);
+
+  // Salvar horários (ao clicar em Salvar ou ao editar campo)
+  const handleSaveHorarios = async () => {
+    if (!currentSalon?.id || !selectedProfissional) return;
+    try {
+      for (const dia of horariosAtendimento) {
+        await supabase.rpc('upsert_professional_schedule', {
+          p_salon_id: currentSalon.id,
+          p_professional_id: selectedProfissional,
+          p_wday: dia.wday,
+          p_work: dia.ativo,
+          p_start_time_1: dia.ativo && dia.turnos[0]?.inicio !== '' ? dia.turnos[0].inicio : null,
+          p_end_time_1: dia.ativo && dia.turnos[0]?.fim !== '' ? dia.turnos[0].fim : null,
+          p_start_time_2: dia.ativo && dia.turnos[1]?.inicio !== '' ? dia.turnos[1].inicio : null,
+          p_end_time_2: dia.ativo && dia.turnos[1]?.fim !== '' ? dia.turnos[1].fim : null
+        });
+      }
+      toast.success('Horários salvos com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao salvar horários.');
+    }
+  };
+
+  // Remover horário de um dia
+  const handleRemoverDia = async (diaIndex: number) => {
+    if (!currentSalon?.id || !selectedProfissional) return;
+    const dia = horariosAtendimento[diaIndex];
+    try {
+      await supabase.rpc('delete_professional_schedule', {
+        salon_id: currentSalon.id,
+        professional_id: selectedProfissional,
+        wday: dia.wday
+      });
+      // Atualize o estado local para refletir remoção
+      setHorariosAtendimento((prev) => prev.map((d, idx) => idx === diaIndex ? { ...d, ativo: false, turnos: [{ inicio: '', fim: '' }] } : d));
+      toast.success('Horário removido!');
+    } catch (error) {
+      toast.error('Erro ao remover horário.');
+    }
+  };
 
   const handleMenuClick = () => {
     if (onToggleMobileSidebar) {
@@ -104,16 +255,33 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
     { id: 'lembrete', name: 'Configurar Lembrete', icon: Bell },
   ];
 
-  const handleSaveUserData = () => {
-    // Aqui implementaria a lógica para salvar os dados do usuário
-    console.log('Salvando dados do usuário:', userData);
-    showSuccessModal('Dados salvos com sucesso!');
-  };
-
-  const handleSaveHorarios = () => {
-    // Aqui implementaria a lógica para salvar os horários do profissional selecionado
-    console.log('Salvando horários para profissional:', selectedProfissional, horariosAtendimento);
-    alert(`Horários salvos com sucesso para ${getProfissionalName(selectedProfissional)}!`);
+  // Atualize o handleSaveUserData para salvar apenas users.email e não salons.email
+  const handleSaveUserData = async () => {
+    try {
+      // 1. Atualizar nome e email do usuário (informativo)
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ name: userData.nome, email: userData.email })
+        .eq('id', user?.id);
+      // 2. Atualizar nome da empresa (salão)
+      const { error: salonError } = await supabase
+        .from('salons')
+        .update({ name: userData.empresa })
+        .eq('id', currentSalon?.id);
+      // 3. Atualizar e-mail e senha no Supabase Auth
+      const updateAuthData: { email: string; password?: string } = { email: userData.email };
+      if (userData.novaSenha && userData.novaSenha.length > 0) {
+        updateAuthData.password = userData.novaSenha;
+      }
+      const { error: authError } = await supabase.auth.updateUser(updateAuthData);
+      if (userError || salonError || authError) {
+        showSuccessModal('Erro ao salvar dados!');
+      } else {
+        showSuccessModal('Dados salvos com sucesso!');
+      }
+    } catch (error) {
+      showSuccessModal('Erro inesperado ao salvar dados!');
+    }
   };
 
   const handleTurnoChange = (diaIndex: number, turnoIndex: number, field: 'inicio' | 'fim', value: string) => {
@@ -143,13 +311,13 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
     // Aqui carregaria os horários específicos do profissional
     // Por enquanto, usar horários padrão
     setHorariosAtendimento([
-      { diaSemana: 'Segunda-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-      { diaSemana: 'Terça-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-      { diaSemana: 'Quarta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-      { diaSemana: 'Quinta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-      { diaSemana: 'Sexta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
-      { diaSemana: 'Sábado', ativo: true, turnos: [{ inicio: '08:00', fim: '16:00' }] },
-      { diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '08:00', fim: '16:00' }] },
+      { wday: 1, diaSemana: 'Segunda-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { wday: 2, diaSemana: 'Terça-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { wday: 3, diaSemana: 'Quarta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { wday: 4, diaSemana: 'Quinta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { wday: 5, diaSemana: 'Sexta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
+      { wday: 6, diaSemana: 'Sábado', ativo: true, turnos: [{ inicio: '08:00', fim: '16:00' }] },
+      { wday: 0, diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '08:00', fim: '16:00' }] },
     ]);
   };
 
@@ -159,34 +327,82 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   };
 
   const handleEditTaxa = (taxa: any) => {
-    setEditingTaxa(taxa);
+    setEditingTaxa({
+      id: taxa.id,
+      nome: taxa.name || taxa.nome || '',
+      taxa: taxa.fee ?? taxa.taxa ?? 0,
+      ativo: taxa.ativo !== undefined ? taxa.ativo : true
+    });
     setShowTaxaModal(true);
   };
 
   const handleAddTaxa = () => {
-    setEditingTaxa(null);
+    setEditingTaxa({ id: '', nome: '', taxa: 0, ativo: true });
     setShowTaxaModal(true);
   };
 
   const handleSaveTaxa = async (taxaData: any) => {
     try {
-      // Temporariamente usando console.log até termos as funções corretas do contexto
-      console.log('Salvando taxa:', taxaData);
-      setShowTaxaModal(false);
-      setEditingTaxa(null);
+      if (!currentSalon?.id) return;
+      if (!taxaData.id) {
+        // Criar nova taxa
+        const { data, error } = await supabase.rpc('create_payment_method', {
+          salon_id: currentSalon.id,
+          name: taxaData.nome,
+          fee: taxaData.taxa
+        });
+        if (error || !data[0]?.success) {
+          toast.error('Erro ao criar a forma de pagamento.');
+        } else {
+          toast.success('Forma de pagamento criada com sucesso!');
+          setShowTaxaModal(false);
+          setEditingTaxa(null);
+          // Recarregar lista
+          const { data: list, error: listError } = await supabase.rpc('list_payment_methods', { salon_id: currentSalon.id });
+          setPaymentMethods(listError ? [] : list || []);
+        }
+      } else {
+        // Editar taxa existente
+        const { data, error } = await supabase.rpc('update_payment_method', {
+          p_payment_method_id: taxaData.id,
+          p_salon_id: currentSalon.id,
+          p_name: taxaData.nome,
+          p_fee: taxaData.taxa
+        });
+        if (error || !data[0]?.success) {
+          toast.error('Erro ao atualizar a forma de pagamento.');
+        } else {
+          toast.success('Forma de pagamento atualizada com sucesso!');
+          setShowTaxaModal(false);
+          setEditingTaxa(null);
+          // Recarregar lista
+          const { data: list, error: listError } = await supabase.rpc('list_payment_methods', { salon_id: currentSalon.id });
+          setPaymentMethods(listError ? [] : list || []);
+        }
+      }
     } catch (error) {
-      console.error('Erro ao salvar taxa:', error);
+      toast.error('Erro inesperado ao salvar taxa.');
     }
   };
 
-  const handleDeleteTaxa = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta taxa?')) {
-      try {
-        // Temporariamente usando console.log até termos as funções corretas do contexto
-        console.log('Deletando taxa:', id);
-      } catch (error) {
-        console.error('Erro ao deletar taxa:', error);
+  const handleDeleteTaxa = async (taxa: any) => {
+    if (!currentSalon?.id) return;
+    if (!confirm('Tem certeza que deseja excluir esta taxa?')) return;
+    try {
+      const { data, error } = await supabase.rpc('delete_payment_method', {
+        p_payment_method_id: taxa.id,
+        p_salon_id: currentSalon.id
+      });
+      if (error || !data[0]?.success) {
+        toast.error('Erro ao excluir a forma de pagamento.');
+      } else {
+        toast.success('Forma de pagamento excluída com sucesso!');
+        // Recarregar lista
+        const { data: list, error: listError } = await supabase.rpc('list_payment_methods', { salon_id: currentSalon.id });
+        setPaymentMethods(listError ? [] : list || []);
       }
+    } catch (error) {
+      toast.error('Erro inesperado ao excluir taxa.');
     }
   };
 
@@ -207,6 +423,56 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
       setLembreteMensagem(lembreteMensagem + variavel);
     }
   }
+
+  // Adicione no início do componente:
+  const lembreteTextareaRef = useRef<HTMLTextAreaElement>(null);
+  function inserirVariavelLembrete(variavel: string) {
+    if (!lembreteTextareaRef.current) return;
+    const textarea = lembreteTextareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const textoAntes = lembreteMensagem.substring(0, start);
+    const textoDepois = lembreteMensagem.substring(end);
+    setLembreteMensagem(textoAntes + variavel + textoDepois);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + variavel.length;
+    }, 0);
+  }
+
+  // Remover o useEffect duplicado e garantir apenas UM carregamento robusto:
+  useEffect(() => {
+    async function loadReminderTemplate() {
+      if (activeTab === 'lembrete' && currentSalon?.id) {
+        const { data, error } = await supabase.rpc('get_reminder_template', { p_salon_id: currentSalon.id });
+        if (!error && data) {
+          if (Array.isArray(data) && data[0]?.message) {
+            setLembreteMensagem(data[0].message);
+          } else if (data.message) {
+            setLembreteMensagem(data.message);
+          } else {
+            setLembreteMensagem('');
+          }
+        } else {
+          setLembreteMensagem('');
+        }
+      }
+    }
+    loadReminderTemplate();
+  }, [activeTab, currentSalon?.id]);
+
+  const handleSaveLembrete = async () => {
+    if (!currentSalon?.id) return;
+    const { error } = await supabase.rpc('upsert_reminder_template', {
+      p_salon_id: currentSalon.id,
+      p_message: lembreteMensagem
+    });
+    if (!error) {
+      toast.success('Mensagem do lembrete salva com sucesso!');
+    } else {
+      toast.error('Erro ao salvar mensagem do lembrete');
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col h-screen page-content">
@@ -254,29 +520,18 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                       <h3 className="text-xl font-bold text-gray-900">Informações Pessoais</h3>
                     </div>
                     <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 gap-6'}`}> {/* menos gap em mobile */}
-                      {/* Nome */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Nome Completo</label>
-                        <input
-                          type="text"
-                          value={userData.nome}
-                          onChange={(e) => setUserData({...userData, nome: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
-                          placeholder="Digite seu nome completo"
-                        />
-                      </div>
-                      {/* Email */}
+                      {/* Email do usuário */}
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
                           <Mail size={16} className="inline mr-1" />
-                          Email
+                          E-mail do usuário (login)
                         </label>
                         <input
                           type="email"
                           value={userData.email}
-                          onChange={(e) => setUserData({...userData, email: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
-                          placeholder="Digite seu email"
+                          readOnly
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 focus:ring-0 focus:border-gray-200 cursor-not-allowed"
+                          placeholder="E-mail de login"
                         />
                       </div>
                       {/* Empresa */}
@@ -339,51 +594,51 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                 {/* Tab Taxas de Pagamento */}
                 {activeTab === 'taxas' && (
                   <div className="space-y-6">
-                    <div className={`flex ${isMobile ? 'justify-center mb-2' : 'items-center justify-between mb-6'}`}> 
+                    <div className="flex items-center mb-6">
+                      <CreditCard className="mr-3 text-green-600" size={20} />
+                      {!isMobile && <h3 className="text-lg font-semibold text-gray-900">Taxas de Pagamento</h3>}
                       {!isMobile && (
-                      <div className="flex items-center">
-                        <CreditCard className="mr-3 text-green-600" size={20} />
-                        <h3 className="text-lg font-semibold text-gray-900">Taxas de Pagamento</h3>
-                      </div>
+                        <button
+                          onClick={handleAddTaxa}
+                          className="ml-auto flex items-center px-4 py-2 bg-green-600 text-white rounded-xl font-bold text-base shadow-sm hover:bg-green-700 transition-all duration-200"
+                        >
+                          <Plus size={16} className="mr-2" />
+                          Nova Taxa
+                        </button>
                       )}
-                      <button
-                        onClick={handleAddTaxa}
-                        className={`flex items-center px-4 py-2 bg-green-600 text-white rounded-xl font-bold text-base shadow-sm hover:bg-green-700 transition-all duration-200 ${isMobile ? 'mx-auto w-full max-w-xs justify-center' : ''}`}
-                      >
-                        <Plus size={16} className="mr-2" />
-                        {isMobile ? 'Agregar Taxa de Pagamento' : 'Nova Taxa'}
-                      </button>
+                      {isMobile && (
+                        <button
+                          onClick={handleAddTaxa}
+                          className="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-xl font-bold text-base shadow-sm hover:bg-green-700 transition-all duration-200"
+                        >
+                          <Plus size={18} className="mr-2" />
+                          Nova Taxa
+                        </button>
+                      )}
                     </div>
-                    {/* Lista de Taxas */}
                     {isMobile ? (
                       <div className="space-y-2">
-                        {taxas.map((taxa) => (
-                          <div key={taxa.id} className="bg-white rounded-xl p-2 border border-gray-100 flex items-center justify-between">
+                        {paymentMethods.map((method) => (
+                          <div key={method.id} className="bg-white rounded-xl p-3 border border-gray-100 flex items-center justify-between">
                             <div>
-                              <h4 className="font-semibold text-gray-900 text-sm mb-0.5">{taxa.nome}</h4>
-                              <p className="text-xs text-gray-500">Taxa: {taxa.taxa}%</p>
-                              {/* Não renderizar o status em mobile */}
+                              <h4 className="font-semibold text-gray-900 text-sm mb-0.5">{method.name}</h4>
+                              <p className="text-xs text-gray-500">Taxa: {method.fee}%</p>
+                              <span className="inline-flex px-2 text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Ativo</span>
                             </div>
                             <div className="flex flex-col space-y-1 items-end ml-2">
-                                <button
-                                  onClick={() => handleEditTaxa(taxa)}
-                                  className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                                >
-                                <Edit3 size={16} />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteTaxa(taxa.id)}
-                                  className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                >
-                                <Trash2 size={16} />
-                                </button>
+                              <button onClick={() => handleEditTaxa(method)} className="p-2 text-blue-600 hover:bg-blue-100 rounded">
+                                <Edit3 size={18} />
+                              </button>
+                              <button onClick={() => handleDeleteTaxa(method)} className="p-2 text-red-600 hover:bg-red-100 rounded">
+                                <Trash2 size={18} />
+                              </button>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MÉTODO DE PAGAMENTO</th>
@@ -392,37 +647,17 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AÇÕES</th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-100">
-                            {taxas.map((taxa) => (
-                              <tr key={taxa.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="text-sm font-medium text-gray-900">{taxa.nome}</span>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {paymentMethods.map((method) => (
+                              <tr key={method.id}>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{method.name}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{method.fee}%</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                  <span className="inline-flex px-2 text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Ativo</span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="text-sm text-gray-900">{taxa.taxa}%</span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    taxa.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {taxa.ativo ? 'Ativo' : 'Inativo'}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleEditTaxa(taxa)}
-                                      className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-100 rounded"
-                                    >
-                                      <Edit3 size={16} />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteTaxa(taxa.id)}
-                                      className="text-red-600 hover:text-red-900 p-1 hover:bg-red-100 rounded"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm flex gap-2">
+                                  <button onClick={() => handleEditTaxa(method)} className="text-blue-600 hover:text-blue-900"><Edit3 size={16} /></button>
+                                  <button onClick={() => handleDeleteTaxa(method)} className="text-red-600 hover:text-red-900"><Trash2 size={16} /></button>
                                 </td>
                               </tr>
                             ))}
@@ -442,83 +677,127 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                     </div>
 
                     {/* Filtro de Profissional - sem título */}
-                    <div className="mb-6">
+                    <div className="mb-6 relative">
                       {/* <label className="block text-sm font-medium text-gray-700 mb-2"> */}
                       {/*   <UserCheck size={16} className="inline mr-2" /> */}
                       {/*   Selecione o Profissional */}
                       {/* </label> */}
                       <select
                         value={selectedProfissional}
-                        onChange={(e) => handleProfissionalChange(e.target.value)}
-                        className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white appearance-none"
-                        style={{ fontSize: isMobile ? '16px' : '14px', backgroundImage: 'none' }}
+                        onChange={e => setSelectedProfissional(e.target.value)}
+                        className="w-full mb-4 px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400 appearance-none pr-10"
+                        style={{ backgroundImage: 'none' }}
                       >
                         <option value="">Selecione um profissional</option>
-                        {profissionais.map((profissional) => (
-                          <option key={profissional.id} value={profissional.id}>
-                            {profissional.nome}
+                        {professionals.map(prof => (
+                          <option key={prof.id} value={prof.id}>
+                            {prof.name}
                           </option>
                         ))}
                       </select>
+                      {/* Ícone customizado de seta */}
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
                     </div>
 
                     {/* Conteúdo dos horários */}
                     {selectedProfissional && (
                         <div className="space-y-4">
-                        {horariosAtendimento.map((dia, diaIdx) => (
-                          <div key={dia.diaSemana} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <div className="flex items-center space-x-3 mb-2">
-                                <input
-                                  type="checkbox"
+                        {horariosAtendimento.map((dia, diaIndex) => (
+                          <div key={dia.diaSemana} className="mb-4 bg-white rounded-xl p-4 border border-gray-100">
+                            <div className="flex items-center mb-2">
+                              <input
+                                type="checkbox"
                                 checked={dia.ativo}
-                                onChange={e => handleDiaAtivoChange(diaIdx, e.target.checked)}
-                                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                                />
-                              <span className={`font-medium text-lg ${dia.ativo ? 'text-gray-900' : 'text-gray-400'}`}>{dia.diaSemana}</span>
-                              </div>
+                                onChange={(e) => handleDiaAtivoChange(diaIndex, e.target.checked)}
+                                className="mr-2"
+                              />
+                              <span className="font-semibold text-gray-900">{dia.diaSemana}</span>
+                            </div>
                             {dia.ativo && (
-                              <div className={`${isMobile ? 'ml-0' : 'ml-7'} flex ${isMobile ? 'flex-col gap-y-2' : 'flex-row gap-x-4 gap-y-0'}`}>
-                                {dia.turnos.map((turno, turnoIdx) => (
-                                  <div key={turnoIdx} className={`flex items-center space-x-2 mb-1 ${isMobile ? '' : 'mb-0'}`}>
-                                    <label className="text-xs font-medium text-gray-600">Início {turnoIdx + 1}</label>
-                                          <input
-                                            type="time"
-                                      value={turno.inicio}
-                                      onChange={e => handleTurnoChange(diaIdx, turnoIdx, 'inicio', e.target.value)}
-                                      className="px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm w-20 sm:w-24"
-                                          />
-                                    <label className="text-xs font-medium text-gray-600">Fim {turnoIdx + 1}</label>
-                                          <input
-                                            type="time"
-                                      value={turno.fim}
-                                      onChange={e => handleTurnoChange(diaIdx, turnoIdx, 'fim', e.target.value)}
-                                      className="px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm w-20 sm:w-24"
-                                          />
-                                    {turnoIdx > 0 && (
+                              <div className={isMobile ? 'flex flex-col gap-2' : 'flex items-center gap-4'}>
+                                {/* Turno 1 */}
+                                <div className={isMobile ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
+                                  <span>Início 1</span>
+                                  <input
+                                    type="time"
+                                    value={dia.turnos[0].inicio}
+                                    onChange={(e) => handleTurnoChange(diaIndex, 0, 'inicio', e.target.value)}
+                                    className="border rounded px-2 py-1"
+                                  />
+                                  <span>Fim 1</span>
+                                  <input
+                                    type="time"
+                                    value={dia.turnos[0].fim}
+                                    onChange={(e) => handleTurnoChange(diaIndex, 0, 'fim', e.target.value)}
+                                    className="border rounded px-2 py-1"
+                                  />
+                                </div>
+                                {/* Turno 2 (se existir) */}
+                                {dia.turnos.length === 2 && (
+                                  <div className={isMobile ? 'flex flex-col gap-1 items-start' : 'flex gap-2 items-center'}>
+                                    <div className={isMobile ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
+                                      <span>Início 2</span>
+                                      <input
+                                        type="time"
+                                        value={dia.turnos[1].inicio}
+                                        onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
+                                        className="border rounded px-2 py-1"
+                                      />
+                                      <span>Fim 2</span>
+                                      <input
+                                        type="time"
+                                        value={dia.turnos[1].fim}
+                                        onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
+                                        className="border rounded px-2 py-1"
+                                      />
+                                      {!isMobile && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveTurno(diaIndex, 1)}
+                                          className="text-purple-600 hover:underline ml-2"
+                                        >
+                                          Remover Turno 2
+                                        </button>
+                                      )}
+                                    </div>
+                                    {isMobile && (
                                       <button
                                         type="button"
-                                        onClick={() => handleRemoveTurno(diaIdx, turnoIdx)}
-                                        className={`ml-1 ${isMobile ? 'p-1' : ''} text-purple-600 hover:text-purple-800 font-bold flex items-center justify-center`}
-                                        title="Remover Turno"
+                                        onClick={() => handleRemoveTurno(diaIndex, 1)}
+                                        className="text-purple-600 hover:underline ml-2 text-sm"
                                       >
-                                        {isMobile ? <Trash2 size={18} /> : <>Remover Turno {turnoIdx + 1}</>}
+                                        Remover Turno 2
                                       </button>
                                     )}
-                                    {turnoIdx === dia.turnos.length - 1 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAddTurno(diaIdx)}
-                                        className="ml-2 text-purple-600 hover:text-purple-800 text-xl font-bold"
-                                      >
-                                        +
-                                      </button>
-                                      )}
                                   </div>
-                                ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                                )}
+                                {/* Botão de adicionar turno (só se houver 1 turno) */}
+                                {dia.turnos.length === 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddTurno(diaIndex)}
+                                    className="text-purple-600 ml-2"
+                                  >
+                                    +
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                            {dia.ativo && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoverDia(diaIndex)}
+                                className="ml-2 text-red-600 hover:underline text-xs"
+                              >
+                                Remover Dia
+                              </button>
+                            )}
+                          </div>
+                        ))}
                         </div>
                     )}
 
@@ -537,127 +816,63 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
 
                 {/* Tab Configurar Lembrete */}
                 {activeTab === 'lembrete' && (
-                  <div className="space-y-6 max-w-lg mx-auto">
-                    {/* Aviso em rosa */}
-                    <div className="text-center text-xs text-pink-600 font-semibold mb-2">
-                      OBS: Data, horário, e serviço são preenchidos automaticamente com base no agendamento.
+                  <div className="max-w-md mx-auto w-full px-2 py-4 sm:px-6 sm:py-6">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 text-center">Lembrete Whats</h3>
+                    {/* Preview dinâmico */}
+                    <div className="bg-gray-100 rounded-lg p-3 text-gray-700 text-sm border border-gray-200 mb-2 whitespace-pre-line">
+                      {lembretePreview}
                     </div>
-                    {/* Modal de variáveis */}
-                    {showVariaveisModal && (
-                      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-50">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs mx-4 p-4 relative animate-fade-in">
-                          <h3 className="text-center text-base font-bold text-gray-900 mb-4">Selecione uma variável</h3>
-                          <div className="space-y-2 mb-4">
-                            <button onClick={() => { inserirVariavelNoCursor('#{cliente}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
-                              <span className="font-semibold text-purple-700">#&#123;cliente&#125;</span>
-                              <span className="text-xs text-gray-500">Primeiro nome do cliente</span>
-                            </button>
-                            <button onClick={() => { inserirVariavelNoCursor('#{data_horario}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
-                              <span className="font-semibold text-purple-700">#&#123;data_horario&#125;</span>
-                              <span className="text-xs text-gray-500">Data e horário do atendimento</span>
-                            </button>
-                            <button onClick={() => { inserirVariavelNoCursor('#{servico}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
-                              <span className="font-semibold text-purple-700">#&#123;servico&#125;</span>
-                              <span className="text-xs text-gray-500">Nome do serviço do atendimento</span>
-                            </button>
-                            <button onClick={() => { inserirVariavelNoCursor('#{valorTotal}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
-                              <span className="font-semibold text-purple-700">#&#123;valorTotal&#125;</span>
-                              <span className="text-xs text-gray-500">Valor total do atendimento</span>
-                            </button>
-                            <button onClick={() => { inserirVariavelNoCursor('#{profissional}'); setShowVariaveisModal(false); }} className="w-full flex flex-col items-start p-3 rounded-lg hover:bg-purple-50 transition-all border border-gray-100">
-                              <span className="font-semibold text-purple-700">#&#123;profissional&#125;</span>
-                              <span className="text-xs text-gray-500">Nome do profissional do atendimento</span>
-                            </button>
-                          </div>
-                          <button onClick={() => setShowVariaveisModal(false)} className="w-full py-3 rounded-xl bg-purple-100 text-purple-700 font-bold text-base shadow hover:bg-purple-200 transition-all duration-200 mt-2">Fechar</button>
-                        </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Mensagem do Lembrete</label>
+                      <textarea
+                        ref={lembreteTextareaRef}
+                        value={lembreteMensagem}
+                        onChange={e => setLembreteMensagem(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg min-h-[100px] text-base sm:text-lg"
+                        placeholder={
+                          'Ex: Oi #{cliente}, tudo bem?\nEste é um lembrete para o seu atendimento, dia #{data_horario}.\nProfissional: #{profissional}\nServiço: #{servico}\nObrigado.'
+                        }
+                      />
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
+                          onClick={() => inserirVariavelLembrete('#{cliente}')}
+                        >
+                          Cliente
+                        </button>
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
+                          onClick={() => inserirVariavelLembrete('#{data_horario}')}
+                        >
+                          Data/Horário
+                        </button>
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
+                          onClick={() => inserirVariavelLembrete('#{profissional}')}
+                        >
+                          Profissional
+                        </button>
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
+                          onClick={() => inserirVariavelLembrete('#{servico}')}
+                        >
+                          Serviço
+                        </button>
                       </div>
-                    )}
-                    {/* Modo avançado */}
-                    {modoAvancadoLembrete ? (
-                      <>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="block text-sm font-medium text-gray-700">Texto da Mensagem</label>
-                          <button className="text-purple-700 font-semibold text-sm hover:underline" onClick={() => setShowVariaveisModal(true)}>Adicionar variáveis</button>
-                        </div>
-                        <textarea
-                          id="lembrete-textarea"
-                          value={lembreteMensagem}
-                          onChange={e => setLembreteMensagem(e.target.value)}
-                          rows={6}
-                          className="w-full p-4 border-2 border-purple-500 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg font-medium text-gray-900 placeholder-gray-400 mb-2"
-                        />
-                        <button
-                          onClick={() => setModoAvancadoLembrete(false)}
-                          className="text-purple-700 font-semibold text-xs hover:underline mb-2"
-                        >
-                          Voltar para modo simples
-                        </button>
-                        <button
-                          onClick={() => alert('Lembrete salvo!')}
-                          className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-lg shadow-md hover:bg-purple-700 transition-all duration-200 mt-2"
-                        >
-                          Salvar
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        {/* Card cinza com exemplo */}
-                        <div className="bg-gray-100 rounded-lg p-3 text-gray-700 text-sm border border-gray-200">
-                          Oi Michele, tudo bem?<br/>
-                          Este é um lembrete para o seu atendimento, dia (Hoje) 20 de Julho às 08:00.<br/>
-                          Serviço: Corte Cabelo<br/>
-                          Obrigado.
-                        </div>
-                        {/* Saudação */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Saudação</label>
-                          <input
-                            type="text"
-                            value={lembreteSaudacao}
-                            onChange={e => setLembreteSaudacao(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
-                            placeholder="Oi #{cliente}, tudo bem?"
-                          />
-                        </div>
-                        {/* Despedida + Avançado */}
-                        <div className="flex items-center mb-2">
-                          <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Despedida</label>
-                            <input
-                              type="text"
-                              value={lembreteDespedida}
-                              onChange={e => setLembreteDespedida(e.target.value)}
-                              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
-                              placeholder="Obrigado."
-                            />
-                          </div>
-                          <button className="ml-2 text-purple-700 font-semibold text-xs hover:underline" onClick={() => setModoAvancadoLembrete(true)}>Avançado</button>
-                        </div>
-                        {/* Switch Mostrar Valor */}
-                        <div className="flex items-center space-x-3 mb-2">
-                          <button
-                            type="button"
-                            onClick={() => setMostrarValorServico(v => !v)}
-                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus:outline-none ${mostrarValorServico ? 'bg-purple-600' : 'bg-gray-300'}`}
-                          >
-                            <span
-                              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200 ${mostrarValorServico ? 'translate-x-5' : 'translate-x-1'}`}
-                            />
-                          </button>
-                          <span className="text-sm font-medium text-gray-700 select-none">
-                            Mostrar Valor do Serviço: <span className="font-bold">{mostrarValorServico ? 'Sim' : 'Não'}</span>
-                          </span>
-                        </div>
-                        {/* Botão Salvar */}
-                        <button
-                          onClick={() => alert('Lembrete salvo!')}
-                          className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-lg shadow-md hover:bg-purple-700 transition-all duration-200 mt-2"
-                        >
-                          Salvar
-                        </button>
-                      </>
-                    )}
+                    </div>
+                    <div className="flex justify-end mt-4">
+                      <button
+                        onClick={handleSaveLembrete}
+                        className="w-full flex items-center justify-center px-8 py-3 bg-purple-600 text-white rounded-xl font-bold text-base shadow-md hover:bg-purple-700 transition-all duration-200"
+                      >
+                        <Save size={18} className="mr-2" />
+                        Salvar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -702,8 +917,10 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
 
 export default function Configuracoes(props: ConfiguracoesProps) {
   return (
-    <TaxasProvider>
-      <ConfiguracoesContent {...props} />
-    </TaxasProvider>
+    <ProfessionalProvider>
+      <TaxasProvider>
+        <ConfiguracoesContent {...props} />
+      </TaxasProvider>
+    </ProfessionalProvider>
   );
 }

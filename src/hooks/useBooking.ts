@@ -21,9 +21,9 @@ export const useBooking = () => {
     reset
   } = useBookingStore();
 
-  // Carregamento automático quando o salão estiver pronto
+  // Carregamento automático quando o salão estiver pronto (uma vez)
   useEffect(() => {
-    if (isReady && currentSalon) {
+    if (isReady && currentSalon?.id) {
       fetchAppointments(currentSalon.id);
     }
   }, [isReady, currentSalon?.id, fetchAppointments]);

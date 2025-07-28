@@ -87,14 +87,13 @@ export const FinanceiroProvider: React.FC<FinanceiroProviderProps> = ({ children
 
   const convertAdvanceToVale = (advance: Advance): Vale => {
     const professional = professionals?.find(p => p.id === advance.professional_id);
-    
     return {
       id: advance.id,
       data: advance.created_at.split('T')[0], // Converte ISO date para YYYY-MM-DD
       profissionalId: advance.professional_id,
       profissionalNome: professional?.name || 'Profissional não encontrado',
       valor: advance.value,
-      status: 'pendente',
+      status: advance.discounted ? 'descontado' : 'pendente',
       observacoes: ''
     };
   };

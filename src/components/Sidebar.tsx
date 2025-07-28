@@ -1,23 +1,32 @@
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Calendar, Users, UserCircle, Scissors, DollarSign, BarChart2, Settings, Link2, X } from 'lucide-react';
 
 interface SidebarProps {
-  activeMenu: string;
-  onMenuChange: (menu: string) => void;
   isMobile?: boolean;
   onClose?: () => void;
 }
 
-export default function Sidebar({ activeMenu, onMenuChange, isMobile = false, onClose }: SidebarProps) {
+export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const menuItems = [
-    { id: 'agenda', name: 'Agenda', icon: Calendar },
-    { id: 'clientes', name: 'Clientes', icon: Users },
-    { id: 'profissionais', name: 'Profissionais', icon: UserCircle },
-    { id: 'servicos', name: 'Serviços', icon: Scissors },
-    { id: 'financeiro', name: 'Relatório', icon: DollarSign },
-    { id: 'link-agendamento', name: 'Link de Agendamento', icon: Link2 },
-    { id: 'configuracoes', name: 'Configurações', icon: Settings },
+    { id: 'agenda', name: 'Agenda', icon: Calendar, path: '/agenda' },
+    { id: 'clientes', name: 'Clientes', icon: Users, path: '/clientes' },
+    { id: 'profissionais', name: 'Profissionais', icon: UserCircle, path: '/profissionais' },
+    { id: 'servicos', name: 'Serviços', icon: Scissors, path: '/servicos' },
+    { id: 'financeiro', name: 'Relatório', icon: DollarSign, path: '/financeiro' },
+    { id: 'link-agendamento', name: 'Link de Agendamento', icon: Link2, path: '/link-agendamento' },
+    { id: 'configuracoes', name: 'Configurações', icon: Settings, path: '/configuracoes' },
   ];
+
+  const handleMenuClick = (path: string) => {
+    navigate(path);
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
 
   return (
     <div className={`group h-full bg-white border-r border-gray-200 ${isMobile ? 'w-64' : 'w-16 hover:w-64'} transition-all duration-300 flex flex-col`}>
@@ -46,11 +55,11 @@ export default function Sidebar({ activeMenu, onMenuChange, isMobile = false, on
         <ul className="space-y-1 px-2 mt-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeMenu === item.id;
+            const isActive = location.pathname === item.path;
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => onMenuChange(item.id)}
+                  onClick={() => handleMenuClick(item.path)}
                   className={`w-full flex items-center gap-x-2 px-3 py-2 rounded-lg transition-all duration-200
             ${isActive ? 'bg-indigo-50 border-l-4 border-indigo-500 text-indigo-700 font-semibold shadow-sm' : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'}
           `}

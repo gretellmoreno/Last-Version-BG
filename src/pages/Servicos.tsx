@@ -5,11 +5,11 @@ import ServiceModal from '../components/ServiceModal';
 import ProductModal from '../components/ProductModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 
-import { useService } from '../contexts/ServiceContext';
-import { useProduct } from '../contexts/ProductContext';
+import { useService, ServiceProvider } from '../contexts/ServiceContext';
+import { useProduct, ProductProvider } from '../contexts/ProductContext';
 import { Service, Product, Servico, Produto } from '../types';
 
-export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSidebar?: () => void } = {}) {
+function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: () => void } = {}) {
   const [activeTab, setActiveTab] = useState<'servicos' | 'produtos'>('servicos');
 
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -452,5 +452,15 @@ export default function Servicos({ onToggleMobileSidebar }: { onToggleMobileSide
         message={`Tem certeza que deseja excluir este ${activeTab === 'servicos' ? 'serviço' : 'produto'}? Esta ação não pode ser desfeita.`}
       />
     </div>
+  );
+}
+
+export default function Servicos(props: { onToggleMobileSidebar?: () => void }) {
+  return (
+    <ServiceProvider>
+      <ProductProvider>
+        <ServicosContent {...props} />
+      </ProductProvider>
+    </ServiceProvider>
   );
 }
