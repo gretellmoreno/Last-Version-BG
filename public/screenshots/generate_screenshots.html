@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gerar Screenshots BelaGestão</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f3f4f6;
+        }
+        
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6366f1;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .card h3 {
+            margin: 0 0 10px 0;
+            color: #374151;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6366f1;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">BelaGestão</div>
+            <nav>
+                <button style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 4px;">
+                    Novo Agendamento
+                </button>
+            </nav>
+        </div>
+        
+        <div class="content">
+            <div class="card">
+                <h3>Agendamentos do Dia</h3>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">Confirmados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">3</div>
+                        <div class="stat-label">Pendentes</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Faturamento</h3>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value">R$ 850</div>
+                        <div class="stat-label">Hoje</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">R$ 5.230</div>
+                        <div class="stat-label">Semana</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Função para capturar os screenshots
+        async function captureScreenshots() {
+            // Aguardar um momento para garantir que tudo foi renderizado
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Capturar screenshot desktop
+            const desktopCanvas = document.createElement('canvas');
+            desktopCanvas.width = 1280;
+            desktopCanvas.height = 800;
+            const desktopCtx = desktopCanvas.getContext('2d');
+            desktopCtx.fillStyle = '#f3f4f6';
+            desktopCtx.fillRect(0, 0, 1280, 800);
+            
+            // Renderizar conteúdo
+            const container = document.querySelector('.container');
+            const containerHtml = container.outerHTML;
+            const containerBlob = new Blob([containerHtml], {type: 'text/html'});
+            const containerUrl = URL.createObjectURL(containerBlob);
+            
+            // Criar link para download
+            const desktopLink = document.createElement('a');
+            desktopLink.download = 'desktop.png';
+            desktopLink.href = desktopCanvas.toDataURL('image/png');
+            desktopLink.click();
+            
+            // Capturar screenshot mobile
+            const mobileCanvas = document.createElement('canvas');
+            mobileCanvas.width = 750;
+            mobileCanvas.height = 1334;
+            const mobileCtx = mobileCanvas.getContext('2d');
+            mobileCtx.fillStyle = '#f3f4f6';
+            mobileCtx.fillRect(0, 0, 750, 1334);
+            
+            // Criar link para download
+            const mobileLink = document.createElement('a');
+            mobileLink.download = 'mobile.png';
+            mobileLink.href = mobileCanvas.toDataURL('image/png');
+            mobileLink.click();
+        }
+        
+        // Capturar screenshots quando a página carregar
+        window.addEventListener('load', captureScreenshots);
+    </script>
+</body>
+</html> 

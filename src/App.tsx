@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar';
 import LoginForm from './components/LoginForm';
 import LoadingScreen from './components/LoadingScreen';
 import InviteRedirect from './components/InviteRedirect';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { useIsAppDomain } from './hooks/useSubdomain';
@@ -189,6 +190,9 @@ function AppLayout() {
           </Suspense>
         </div>
       </div>
+      
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
     </div>
   );
 }
