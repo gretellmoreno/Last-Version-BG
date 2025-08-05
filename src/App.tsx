@@ -8,6 +8,9 @@ import LoginForm from './components/LoginForm';
 import LoadingScreen from './components/LoadingScreen';
 import InviteRedirect from './components/InviteRedirect';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
+import LandingPage from './pages/LandingPage';
+import LandingPageLoader from './components/LandingPageLoader';
+import { usePWAInstallation } from './hooks/usePWAInstallation';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { useIsAppDomain } from './hooks/useSubdomain';
@@ -199,9 +202,11 @@ function AppLayout() {
 
 function DomainRouter() {
   const isAppDomain = useIsAppDomain();
+  const { shouldShowLandingPage } = usePWAInstallation();
 
   // Se estiver no app.localhost:5173, mostrar página de marketing
   if (isAppDomain) {
+    console.log('🎨 Mostrando MarketingApp (app domain)');
     return (
       <Suspense fallback={<PageLoader />}>
         <MarketingApp />
@@ -209,6 +214,28 @@ function DomainRouter() {
     );
   }
 
+  // Se estiver no domínio principal e não for PWA instalado, mostrar landing page
+  const isMainDomain = window.location.hostname === 'belagestao.com' || 
+                      (window.location.hostname === 'localhost' && window.location.port === '5173');
+  
+  console.log('🏠 DomainRouter Debug:', {
+    isAppDomain,
+    shouldShowLandingPage,
+    isMainDomain,
+    hostname: window.location.hostname,
+    port: window.location.port
+  });
+  
+  if (shouldShowLandingPage && isMainDomain) {
+    console.log('🎯 Mostrando LandingPage');
+    return (
+      <Suspense fallback={<LandingPageLoader />}>
+        <LandingPage />
+      </Suspense>
+    );
+  }
+
+  console.log('🔧 Mostrando rotas normais (AppLayout)');
   // Caso contrário, usar as rotas normais
   return (
     <Routes>
