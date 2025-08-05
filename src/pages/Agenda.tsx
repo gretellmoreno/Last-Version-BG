@@ -1080,21 +1080,77 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
 
   // Componente customizado para slots de tempo com clique otimizado para mobile
   const TimeSlotWrapper = ({ children, value, resource }: any) => {
-    // Handler para forçar o clique em mobile
-    const handleSlotClick = (e: React.MouseEvent) => {
-      if (isMobile) {
-        // Prevenir que o evento de clique se propague para o calendário,
-        // evitando que onSelectSlot seja chamado duas vezes.
-        e.stopPropagation();
+    const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+    const touchMoveRef = useRef<{ x: number; y: number } | null>(null);
+    const isDraggingRef = useRef(false);
 
+    // Handler para detectar diferença entre tap e drag
+    const handleTouchStart = (e: React.TouchEvent) => {
+      if (!isMobile) return;
+      
+      const touch = e.touches[0];
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now()
+      };
+      touchMoveRef.current = null;
+      isDraggingRef.current = false;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      if (!isMobile || !touchStartRef.current) return;
+      
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+      
+      // Se moveu mais de 10px em qualquer direção, é um drag
+      if (deltaX > 10 || deltaY > 10) {
+        isDraggingRef.current = true;
+        touchMoveRef.current = { x: touch.clientX, y: touch.clientY };
+      }
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+      if (!isMobile || !touchStartRef.current) return;
+      
+      const touchEndTime = Date.now();
+      const touchDuration = touchEndTime - touchStartRef.current.time;
+      
+      // Se foi um tap rápido (menos de 200ms) e não foi drag, processar como clique
+      if (touchDuration < 200 && !isDraggingRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        
         const slotInfo = {
           start: value,
-          end: new Date(value.getTime() + 15 * 60000), // Adiciona 15 min, baseado na config do calendário
+          end: new Date(value.getTime() + 15 * 60000),
           slots: [value],
           action: 'click' as const,
           resourceId: resource,
         };
-        console.log('👆 Toque mobile detectado, forçando handleSelectSlot:', slotInfo);
+        console.log('👆 Tap detectado, abrindo modal:', slotInfo);
+        handleSelectSlot(slotInfo);
+      }
+      
+      // Reset refs
+      touchStartRef.current = null;
+      touchMoveRef.current = null;
+      isDraggingRef.current = false;
+    };
+
+    // Handler para clique mouse (desktop)
+    const handleClick = (e: React.MouseEvent) => {
+      if (!isMobile) {
+        e.stopPropagation();
+        const slotInfo = {
+          start: value,
+          end: new Date(value.getTime() + 15 * 60000),
+          slots: [value],
+          action: 'click' as const,
+          resourceId: resource,
+        };
         handleSelectSlot(slotInfo);
       }
     };
@@ -1103,24 +1159,31 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
       <div 
         className="rbc-time-slot" 
         data-time={format(value, 'HH:mm')}
-        // Adiciona o handler de clique otimizado
-        onClick={handleSlotClick}
+        // Eventos touch para mobile
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        // Evento click para desktop
+        onClick={handleClick}
         style={{ 
           minHeight: '20px',
           width: '100%',
           height: '100%',
           position: 'relative',
           display: 'block',
-          pointerEvents: 'auto', // Garantir cliques
-          // DESABILITAR SELEÇÃO MÚLTIPLA
+          pointerEvents: 'auto',
+          // OTIMIZAÇÕES PARA SCROLL SUAVE
           userSelect: 'none',
           WebkitUserSelect: 'none',
           MozUserSelect: 'none',
           msUserSelect: 'none',
-          // PERMITIR SCROLL
+          // PERMITIR SCROLL FLUIDO
           touchAction: 'pan-y',
           WebkitTouchCallout: 'none',
-          WebkitTapHighlightColor: 'transparent'
+          WebkitTapHighlightColor: 'transparent',
+          // MELHORAR PERFORMANCE
+          willChange: 'scroll-position',
+          WebkitOverflowScrolling: 'touch'
         }}
       >
         {children}
@@ -1357,11 +1420,11 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
               className={`barber-calendar ${isMobile ? 'mobile-calendar mobile-responsive' : ''}`}
               
               // Funcionalidades de Interação - DESABILITAR SELEÇÃO MÚLTIPLA
-              selectable={true}
+              selectable={!isMobile} // Desabilitar seleção em mobile
               resizable={!isMobile} // Desabilitar resize em mobile
               
               // Event Handlers
-              onSelectSlot={handleSelectSlot}
+              onSelectSlot={!isMobile ? handleSelectSlot : undefined} // Apenas desktop
               onSelectEvent={handleSelectEvent}
               onNavigate={handleNavigate}
               onEventDrop={isMobile ? undefined : handleEventMove} // Desabilitar drag em mobile
@@ -1375,17 +1438,14 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
               {...(isMobile && {
                 drilldownView: null,
                 getDrilldownView: null,
-                // DESABILITAR SELEÇÃO MÚLTIPLA EM MOBILE
-                selectable: 'ignoreEvents', // Só seleciona slots vazios, não eventos
+                // DESABILITAR COMPLETAMENTE SELEÇÃO MÚLTIPLA EM MOBILE
+                selectable: false, // Desabilitar seleção do calendário
                 onSelecting: () => false, // Desabilita seleção múltipla
-                // DESABILITAR COMPLETAMENTE SELEÇÃO MÚLTIPLA
-                onSelectSlot: (slotInfo: any) => {
-                  // Apenas processar cliques simples, não arrastar
-                  if (slotInfo.action === 'click') {
-                    handleSelectSlot(slotInfo);
-                  }
-                  return false; // Prevenir seleção múltipla
-                },
+                // REMOVER HANDLER PADRÃO DO CALENDÁRIO
+                onSelectSlot: undefined, // Deixar apenas o TimeSlotWrapper lidar com cliques
+                // OTIMIZAÇÕES PARA SCROLL
+                onScroll: () => {}, // Handler vazio para scroll
+                scrollToTime: new Date(), // Scroll para horário atual
               })}
             
             // Personalização Visual

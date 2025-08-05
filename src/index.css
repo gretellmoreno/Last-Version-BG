@@ -1276,6 +1276,85 @@
     -webkit-overflow-scrolling: touch;
   }
   
+  /* OTIMIZAÇÕES ADICIONAIS PARA SCROLL FLUIDO */
+  .mobile-calendar-container .rbc-time-view {
+    /* Garantir que o scroll funcione corretamente */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth !important;
+    
+    /* Melhorar performance */
+    will-change: scroll-position;
+    transform: translateZ(0);
+  }
+  
+  /* Container principal do calendário mobile */
+  .mobile-calendar-container .rbc-calendar {
+    /* Otimizações de performance */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    
+    /* Scroll otimizado */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Slots de tempo com scroll otimizado */
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot {
+    /* Permitir scroll sem interferência */
+    touch-action: pan-y !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    
+    /* Desabilitar seleção */
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    
+    /* Melhorar performance */
+    will-change: auto;
+    transform: translateZ(0);
+  }
+  
+  /* Desabilitar completamente seleção múltipla */
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot.rbc-slot-selecting,
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot.rbc-slot-selected,
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot.rbc-slot-selecting-start,
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot.rbc-slot-selecting-end {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  
+  /* Garantir que eventos não interfiram com scroll */
+  .mobile-calendar-container .rbc-event {
+    /* Permitir scroll através dos eventos */
+    pointer-events: auto;
+    
+    /* Manter eventos clicáveis */
+    cursor: pointer;
+    
+    /* Otimizar performance */
+    will-change: transform;
+    transform: translateZ(0);
+  }
+  
+  /* Container de eventos não deve bloquear scroll */
+  .mobile-calendar-container .rbc-events-container {
+    pointer-events: none !important;
+  }
+  
+  /* Slots vazios devem permitir scroll */
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot:not(:has(.rbc-event)) {
+    pointer-events: auto !important;
+    cursor: pointer;
+  }
+  
   /* Safe area para dispositivos com notch */
   .mobile-agenda-container {
     padding-top: env(safe-area-inset-top);
