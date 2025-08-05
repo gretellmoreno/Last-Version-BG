@@ -101,6 +101,11 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   const [showVariaveisModal, setShowVariaveisModal] = useState(false);
   const [showVariaveisLembrete, setShowVariaveisLembrete] = useState(false);
   const [lembretePreview, setLembretePreview] = useState('');
+  
+  // Estados para os modais de observação do lembrete
+  const [showObservacaoPreview, setShowObservacaoPreview] = useState(false);
+  const [showObservacaoMensagem, setShowObservacaoMensagem] = useState(false);
+  const [showObservacaoVariaveis, setShowObservacaoVariaveis] = useState(false);
 
   // Função para gerar preview substituindo variáveis por exemplos
   function gerarPreviewLembrete(msg: string) {
@@ -268,7 +273,22 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   };
 
   // Remover horário de um dia
-
+  const handleRemoverDia = async (diaIndex: number) => {
+    if (!currentSalon?.id || !selectedProfissional) return;
+    const dia = horariosAtendimento[diaIndex];
+    try {
+      await supabase.rpc('delete_professional_schedule', {
+        salon_id: currentSalon.id,
+        professional_id: selectedProfissional,
+        wday: dia.wday
+      });
+      // Atualize o estado local para refletir remoção
+      setHorariosAtendimento((prev) => prev.map((d, idx) => idx === diaIndex ? { ...d, ativo: false, turnos: [{ inicio: '', fim: '' }] } : d));
+      toast.success('Horário removido!');
+    } catch (error) {
+      toast.error('Erro ao remover horário.');
+    }
+  };
 
   const handleMenuClick = () => {
     if (onToggleMobileSidebar) {
@@ -719,11 +739,16 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                 {activeTab === 'horarios' && (
                   <div className="space-y-6">
                     <div className="flex items-center mb-6">
+                      <Clock className="mr-3 text-purple-600" size={20} />
                       <h3 className="text-lg font-semibold text-gray-900">Horários de Atendimento</h3>
                     </div>
 
                     {/* Filtro de Profissional - sem título */}
                     <div className="mb-6 relative">
+                      {/* <label className="block text-sm font-medium text-gray-700 mb-2"> */}
+                      {/*   <UserCheck size={16} className="inline mr-2" /> */}
+                      {/*   Selecione o Profissional */}
+                      {/* </label> */}
                       <select
                         value={selectedProfissional}
                         onChange={e => setSelectedProfissional(e.target.value)}
@@ -738,7 +763,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                         ))}
                       </select>
                       {/* Ícone customizado de seta */}
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center pr-3">
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                           <path d="M19 9l-7 7-7-7" />
                         </svg>
@@ -747,75 +772,96 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
 
                     {/* Conteúdo dos horários */}
                     {selectedProfissional && (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                         {horariosAtendimento.map((dia, diaIndex) => (
-                          <div key={dia.diaSemana} className="bg-white rounded-lg p-3 border border-gray-100">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  checked={dia.ativo}
-                                  onChange={(e) => handleDiaAtivoChange(diaIndex, e.target.checked)}
-                                  className="mr-2"
-                                />
-                                <span className="font-medium text-gray-900 text-sm">{dia.diaSemana}</span>
-                              </div>
+                          <div key={dia.diaSemana} className="mb-4 bg-white rounded-xl p-4 border border-gray-100">
+                            <div className="flex items-center mb-2">
+                              <input
+                                type="checkbox"
+                                checked={dia.ativo}
+                                onChange={(e) => handleDiaAtivoChange(diaIndex, e.target.checked)}
+                                className="mr-2"
+                              />
+                              <span className="font-semibold text-gray-900">{dia.diaSemana}</span>
                             </div>
                             {dia.ativo && (
-                              <div className="space-y-2">
+                              <div className={isMobile ? 'flex flex-col gap-2' : 'flex items-center gap-4'}>
                                 {/* Turno 1 */}
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-600 w-12">Turno 1</span>
+                                <div className={isMobile ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
+                                  <span>Início 1</span>
                                   <input
                                     type="time"
                                     value={dia.turnos[0].inicio}
                                     onChange={(e) => handleTurnoChange(diaIndex, 0, 'inicio', e.target.value)}
-                                    className="border rounded px-2 py-1 text-sm w-20 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
+                                    className="border rounded px-2 py-1"
                                   />
-                                  <span className="text-xs text-gray-400">-</span>
+                                  <span>Fim 1</span>
                                   <input
                                     type="time"
                                     value={dia.turnos[0].fim}
                                     onChange={(e) => handleTurnoChange(diaIndex, 0, 'fim', e.target.value)}
-                                    className="border rounded px-2 py-1 text-sm w-20 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
+                                    className="border rounded px-2 py-1"
                                   />
-                                  {dia.turnos.length === 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleAddTurno(diaIndex)}
-                                      className="text-purple-600 hover:text-purple-800 p-1 ml-2"
-                                    >
-                                      <Plus size={16} />
-                                    </button>
-                                  )}
                                 </div>
                                 {/* Turno 2 (se existir) */}
                                 {dia.turnos.length === 2 && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-600 w-12">Turno 2</span>
-                                    <input
-                                      type="time"
-                                      value={dia.turnos[1].inicio}
-                                      onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
-                                      className="border rounded px-2 py-1 text-sm w-20 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
-                                    />
-                                    <span className="text-xs text-gray-400">-</span>
-                                    <input
-                                      type="time"
-                                      value={dia.turnos[1].fim}
-                                      onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
-                                      className="border rounded px-2 py-1 text-sm w-20 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRemoveTurno(diaIndex, 1)}
-                                      className="text-red-500 hover:text-red-700 p-1 ml-2"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
+                                  <div className={isMobile ? 'flex flex-col gap-1 items-start' : 'flex gap-2 items-center'}>
+                                    <div className={isMobile ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
+                                      <span>Início 2</span>
+                                      <input
+                                        type="time"
+                                        value={dia.turnos[1].inicio}
+                                        onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
+                                        className="border rounded px-2 py-1"
+                                      />
+                                      <span>Fim 2</span>
+                                      <input
+                                        type="time"
+                                        value={dia.turnos[1].fim}
+                                        onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
+                                        className="border rounded px-2 py-1"
+                                      />
+                                      {!isMobile && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveTurno(diaIndex, 1)}
+                                          className="text-purple-600 hover:underline ml-2"
+                                        >
+                                          Remover Turno 2
+                                        </button>
+                                      )}
+                                    </div>
+                                    {isMobile && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveTurno(diaIndex, 1)}
+                                        className="text-purple-600 hover:underline ml-2 text-sm"
+                                      >
+                                        Remover Turno 2
+                                      </button>
+                                    )}
                                   </div>
                                 )}
+                                {/* Botão de adicionar turno (só se houver 1 turno) */}
+                                {dia.turnos.length === 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddTurno(diaIndex)}
+                                    className="text-purple-600 ml-2"
+                                  >
+                                    +
+                                  </button>
+                                )}
                               </div>
+                            )}
+                            {dia.ativo && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoverDia(diaIndex)}
+                                className="ml-2 text-red-600 hover:underline text-xs"
+                              >
+                                Remover Dia
+                              </button>
                             )}
                           </div>
                         ))}
@@ -823,7 +869,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                     )}
 
                         {/* Botão Salvar Horários */}
-                        <div className="flex justify-end pt-4 border-t border-gray-200">
+                        <div className="flex justify-end pt-6 border-t border-gray-200">
                           <button
                             onClick={handleSaveHorarios}
                             className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
@@ -838,13 +884,39 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                 {/* Tab Configurar Lembrete */}
                 {activeTab === 'lembrete' && (
                   <div className="max-w-md mx-auto w-full px-2 py-4 sm:px-6 sm:py-6">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 text-center">Lembrete Whats</h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 text-center">Lembrete Whats</h3>
+                    
+                    {/* Observação sobre o preview */}
+                    <div className="flex justify-end mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowObservacaoPreview(true)}
+                        className="text-gray-400 hover:text-gray-600 p-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+                    </div>
+                    
                     {/* Preview dinâmico */}
-                    <div className="bg-gray-100 rounded-lg p-3 text-gray-700 text-sm border border-gray-200 mb-2 whitespace-pre-line">
+                    <div className="bg-gray-100 rounded-lg p-3 text-gray-700 text-sm border border-gray-200 mb-4 whitespace-pre-line">
                       {lembretePreview}
                     </div>
+                    
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Mensagem do Lembrete</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium text-gray-600">Mensagem do Lembrete</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowObservacaoMensagem(true)}
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      </div>
                       <textarea
                         ref={lembreteTextareaRef}
                         value={lembreteMensagem}
@@ -854,7 +926,19 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                           'Ex: Oi #{cliente}, tudo bem?\nEste é um lembrete para o seu atendimento, dia #{data_horario}.\nProfissional: #{profissional}\nServiço: #{servico}\nObrigado.'
                         }
                       />
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="flex items-center justify-between mt-2 mb-2">
+                        <span className="text-xs text-gray-600">Variáveis disponíveis:</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowObservacaoVariaveis(true)}
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
@@ -913,6 +997,76 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
           onSave={handleSaveTaxa}
           editingTaxa={editingTaxa}
         />
+      )}
+
+      {/* Modal de Observação - Preview */}
+      {showObservacaoPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-4 max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-3">Preview do Lembrete</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              O preview mostra como sua mensagem será exibida para o cliente. 
+              As informações como data, horário, serviço e profissional são automaticamente 
+              preenchidas com base no agendamento específico.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowObservacaoPreview(false)}
+                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Observação - Mensagem */}
+      {showObservacaoMensagem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-4 max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-3">Personalização da Mensagem</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Você pode personalizar a mensagem de lembrete como desejar. Use as variáveis 
+              disponíveis (cliente, data/horário, profissional, serviço) que serão 
+              automaticamente substituídas pelas informações reais do agendamento.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowObservacaoMensagem(false)}
+                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Observação - Variáveis */}
+      {showObservacaoVariaveis && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-4 max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-3">Variáveis Disponíveis</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              As variáveis são substituídas automaticamente pelas informações reais do agendamento:
+            </p>
+            <ul className="text-xs text-gray-600 mb-3 space-y-1">
+              <li><strong>{'#{cliente}'}</strong> - Nome do cliente</li>
+              <li><strong>{'#{data_horario}'}</strong> - Data e horário do agendamento</li>
+              <li><strong>{'#{profissional}'}</strong> - Nome do profissional</li>
+              <li><strong>{'#{servico}'}</strong> - Nome do serviço agendado</li>
+            </ul>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowObservacaoVariaveis(false)}
+                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showSuccessAnimation && (
