@@ -108,7 +108,7 @@ export default function LoginForm() {
             <p className="text-gray-600">{headerInfo.subtitle}</p>
             {salonData && (
               <p className="text-xs text-gray-500 mt-2">
-                {salonData.subdomain}.localhost:5173
+                                    {salonData.subdomain}.belagestao.com
               </p>
             )}
           </div>

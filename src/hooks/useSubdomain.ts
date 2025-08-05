@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { isProduction, getCurrentDomain, getSubdomainPattern } from '../config/environment';
 
 interface SubdomainInfo {
   subdomain: string | null;
@@ -39,21 +40,37 @@ export const useSubdomain = (): SubdomainInfo => {
       }
     }
 
-    // Para produção (quando implementar)
-    // Exemplo: salao-a.belagestao.com
-    const parts = hostname.split('.');
-    if (parts.length >= 3) {
-      const subdomain = parts[0];
-      // Verificar se não é um subdomínio de sistema (www, app, api, etc.)
-      const systemSubdomains = ['www', 'app', 'api', 'admin', 'staging'];
+    // Para produção - belagestao.com
+    if (isProduction()) {
+      const parts = hostname.split('.');
+      const currentDomain = getCurrentDomain();
       
-      if (!systemSubdomains.includes(subdomain)) {
-        console.log('🏪 Subdomínio do salão detectado (produção inicial):', subdomain);
-        return {
-          subdomain,
-          isMainDomain: false,
-          salonSlug: subdomain
-        };
+      // Se for apenas "belagestao.com" ou "www.belagestao.com", é o domínio principal
+      if (parts.length === 2 && parts[1] === currentDomain) {
+        if (parts[0] === 'www' || parts[0] === 'belagestao') {
+          console.log('📍 Domínio principal detectado (produção inicial)');
+          return {
+            subdomain: null,
+            isMainDomain: true,
+            salonSlug: null
+          };
+        }
+      }
+      
+      // Se for "salao-a.belagestao.com", extrair o subdomínio
+      if (parts.length >= 3) {
+        const subdomain = parts[0];
+        // Verificar se não é um subdomínio de sistema
+        const systemSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'belagestao'];
+        
+        if (!systemSubdomains.includes(subdomain)) {
+          console.log('🏪 Subdomínio do salão detectado (produção inicial):', subdomain);
+          return {
+            subdomain,
+            isMainDomain: false,
+            salonSlug: subdomain
+          };
+        }
       }
     }
 
@@ -98,21 +115,37 @@ export const useSubdomain = (): SubdomainInfo => {
         }
       }
 
-      // Para produção (quando implementar)
-      // Exemplo: salao-a.belagestao.com
-      const parts = hostname.split('.');
-      if (parts.length >= 3) {
-        const subdomain = parts[0];
-        // Verificar se não é um subdomínio de sistema (www, app, api, etc.)
-        const systemSubdomains = ['www', 'app', 'api', 'admin', 'staging'];
+      // Para produção - belagestao.com
+      if (isProduction()) {
+        const parts = hostname.split('.');
+        const currentDomain = getCurrentDomain();
         
-        if (!systemSubdomains.includes(subdomain)) {
-          console.log('🏪 Subdomínio do salão detectado (produção):', subdomain);
-          return {
-            subdomain,
-            isMainDomain: false,
-            salonSlug: subdomain
-          };
+        // Se for apenas "belagestao.com" ou "www.belagestao.com", é o domínio principal
+        if (parts.length === 2 && parts[1] === currentDomain) {
+          if (parts[0] === 'www' || parts[0] === 'belagestao') {
+            console.log('📍 Domínio principal detectado (produção)');
+            return {
+              subdomain: null,
+              isMainDomain: true,
+              salonSlug: null
+            };
+          }
+        }
+        
+        // Se for "salao-a.belagestao.com", extrair o subdomínio
+        if (parts.length >= 3) {
+          const subdomain = parts[0];
+          // Verificar se não é um subdomínio de sistema
+          const systemSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'belagestao'];
+          
+          if (!systemSubdomains.includes(subdomain)) {
+            console.log('🏪 Subdomínio do salão detectado (produção):', subdomain);
+            return {
+              subdomain,
+              isMainDomain: false,
+              salonSlug: subdomain
+            };
+          }
         }
       }
 
@@ -178,6 +211,21 @@ export const useSalonSlug = (): string | null => {
       return hostname.replace('.localhost', '');
     }
     
+    // Para produção - belagestao.com
+    if (isProduction()) {
+      const parts = hostname.split('.');
+      const currentDomain = getCurrentDomain();
+      
+      if (parts.length >= 3) {
+        const subdomain = parts[0];
+        const systemSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'belagestao'];
+        
+        if (!systemSubdomains.includes(subdomain)) {
+          return subdomain;
+        }
+      }
+    }
+    
     return null;
   }, []);
 };
@@ -186,7 +234,7 @@ export const useSalonSlug = (): string | null => {
 export const useIsMainDomain = (): boolean => {
   return useMemo(() => {
     const hostname = window.location.hostname;
-    return hostname === 'localhost';
+    return hostname === 'localhost' || hostname === 'belagestao.com' || hostname === 'www.belagestao.com';
   }, []);
 };
 

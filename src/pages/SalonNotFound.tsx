@@ -7,7 +7,7 @@ export default function SalonNotFound() {
   const salonSlug = useSalonSlug();
 
   const handleGoHome = () => {
-    window.location.href = 'http://localhost:5173';
+    window.location.href = 'https://belagestao.com';
   };
 
   return (

@@ -250,7 +250,7 @@ const MarketingApp: React.FC = () => {
                     required
                   />
                   <div className="px-4 py-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-gray-600 text-sm flex items-center">
-                    .localhost:5173
+                    .belagestao.com
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
