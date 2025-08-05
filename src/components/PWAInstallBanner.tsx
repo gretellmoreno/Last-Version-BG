@@ -8,12 +8,8 @@ export const PWAInstallBanner: React.FC = () => {
   const [isVisible, setIsVisible] = React.useState(false);
 
   React.useEffect(() => {
-    // Verificar se está em um subdomínio (não no domínio principal)
-    const hostname = window.location.hostname;
-    const isSubdomain = hostname.includes('.') && hostname.split('.').length > 2;
-    
-    // Mostrar banner apenas se não estiver instalado, houver prompt disponível e estiver em subdomínio
-    if (!isInstalled && deferredPrompt && isSubdomain) {
+    // Mostrar banner se não estiver instalado e houver prompt disponível
+    if (!isInstalled && deferredPrompt) {
       setIsVisible(true);
     }
   }, [deferredPrompt, isInstalled]);

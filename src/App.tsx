@@ -8,11 +8,9 @@ import LoginForm from './components/LoginForm';
 import LoadingScreen from './components/LoadingScreen';
 import InviteRedirect from './components/InviteRedirect';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
-import { NotificationPermission } from './components/NotificationPermission';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { useIsAppDomain } from './hooks/useSubdomain';
-import { useSubdomainManifest } from './hooks/useSubdomainManifest';
 
 // Lazy loading das páginas
 const Agenda = lazy(() => import('./pages/Agenda'));
@@ -197,7 +195,6 @@ function AppLayout() {
       
       {/* PWA Install Banner */}
       <PWAInstallBanner />
-      <NotificationPermission />
     </div>
   );
 }
@@ -214,44 +211,16 @@ function DomainRouter() {
     );
   }
 
-  // Se estiver no domínio principal (belagestao.com), mostrar landing page
-  if (window.location.hostname === 'belagestao.com' || window.location.hostname === 'localhost') {
-    return (
-      <Routes>
-        <Route path="/" element={
-          <Suspense fallback={<PageLoader />}>
-            <LandingPage />
-          </Suspense>
-        } />
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/agendamento" element={
-          <Suspense fallback={<PageLoader />}>
-            <AgendamentoPublico />
-          </Suspense>
-        } />
-        <Route path="/meus-agendamentos" element={
-          <Suspense fallback={<PageLoader />}>
-            <MeusAgendamentos />
-          </Suspense>
-        } />
-        <Route path="/definir-senha" element={
-          <Suspense fallback={<PageLoader />}>
-            <DefinirSenha />
-          </Suspense>
-        } />
-        <Route path="/*" element={
-          <AppProvider>
-            <AppLayout />
-          </AppProvider>
-        } />
-      </Routes>
-    );
-  }
-
-  // Para subdomínios (salões), usar o sistema normal
+  // Caso contrário, usar as rotas normais
   return (
     <Routes>
+      <Route path="/" element={
+        <Suspense fallback={<PageLoader />}>
+          <LandingPage />
+        </Suspense>
+      } />
+      <Route path="/login" element={<LoginForm />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/agendamento" element={
         <Suspense fallback={<PageLoader />}>
           <AgendamentoPublico />
@@ -277,8 +246,6 @@ function DomainRouter() {
 }
 
 function App() {
-  useSubdomainManifest();
-  
   return (
     <Router>
       <QueryClientProvider client={queryClient}>

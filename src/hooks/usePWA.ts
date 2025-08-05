@@ -1,115 +1,108 @@
 import { useState, useEffect } from 'react';
 
-interface PWAInstallPrompt extends Event {
-  prompt(): Promise<void>;
+interface PWAInstallPrompt {
+  prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
 export const usePWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<PWAInstallPrompt | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    // Verificar se já está instalado
+    // Verificar se o app já está instalado
     const checkIfInstalled = () => {
-      if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+      if (window.matchMedia('(display-mode: standalone)').matches) {
         setIsInstalled(true);
-        return true;
       }
-      return false;
     };
 
-    // Verificar se está em modo standalone (PWA)
-    if (checkIfInstalled()) {
-      return;
-    }
-
-    // Capturar o evento beforeinstallprompt
+    // Listener para o evento beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as unknown as PWAInstallPrompt);
     };
 
-    // Capturar o evento appinstalled
+    // Listener para mudanças de conectividade
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    // Listener para app instalado
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
     };
 
+    // Adicionar event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Verificar se já está instalado
+    checkIfInstalled();
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
-  const installApp = async (): Promise<boolean> => {
-    if (!deferredPrompt) {
-      console.log('No install prompt available');
-      return false;
-    }
+  const installApp = async () => {
+    if (!deferredPrompt) return false;
 
     try {
-      // Mostrar o prompt de instalação
-      await deferredPrompt.prompt();
-      
-      // Aguardar a escolha do usuário
+      deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       
       if (outcome === 'accepted') {
-        console.log('PWA instalado com sucesso');
         setIsInstalled(true);
         setDeferredPrompt(null);
         return true;
-      } else {
-        console.log('Instalação do PWA cancelada pelo usuário');
-        return false;
       }
     } catch (error) {
       console.error('Erro ao instalar PWA:', error);
-      return false;
     }
+    
+    return false;
   };
 
-  const showNotification = async (title: string, options?: NotificationOptions) => {
+  const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
       console.log('Este navegador não suporta notificações');
       return false;
     }
 
     if (Notification.permission === 'granted') {
-      const notification = new Notification(title, {
+      return true;
+    }
+
+    if (Notification.permission === 'denied') {
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  };
+
+  const showNotification = (title: string, options?: NotificationOptions) => {
+    if (Notification.permission === 'granted') {
+      new Notification(title, {
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-72x72.png',
         ...options
       });
-      return true;
-    } else if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        const notification = new Notification(title, {
-          icon: '/icons/icon-192x192.png',
-          badge: '/icons/icon-72x72.png',
-          ...options
-        });
-        return true;
-      }
     }
-    return false;
   };
 
-  const registerBackgroundSync = async () => {
-    if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        if ('sync' in registration) {
-          await (registration as any).sync.register('background-sync');
-          console.log('Background sync registrado');
-        }
-      } catch (error) {
-        console.error('Erro ao registrar background sync:', error);
+  const syncData = async () => {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      if ('sync' in registration) {
+        await (registration as any).sync.register('background-sync');
       }
     }
   };
@@ -117,8 +110,10 @@ export const usePWA = () => {
   return {
     deferredPrompt,
     isInstalled,
+    isOnline,
     installApp,
+    requestNotificationPermission,
     showNotification,
-    registerBackgroundSync
+    syncData
   };
 }; 

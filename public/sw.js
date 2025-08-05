@@ -1,7 +1,9 @@
-const CACHE_NAME = 'belagestao-v1';
+const CACHE_NAME = 'salao-app-v1';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/static/js/bundle.js',
+  '/static/css/main.css',
   '/manifest.json',
   '/icons/icon-72x72.png',
   '/icons/icon-96x96.png',
@@ -10,148 +12,128 @@ const urlsToCache = [
   '/icons/icon-152x152.png',
   '/icons/icon-192x192.png',
   '/icons/icon-384x384.png',
-  '/icons/icon-512x512.png',
-  '/screenshots/desktop.png',
-  '/screenshots/mobile.png'
+  '/icons/icon-512x512.png'
 ];
 
-// Install event
+// Instalação do Service Worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache');
+        console.log('Cache aberto');
         return cache.addAll(urlsToCache);
       })
   );
 });
 
-// Fetch event
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  
-  // Interceptar manifest.json para modificar dinamicamente
-  if (url.pathname === '/manifest.json') {
-    event.respondWith(
-      caches.match('/manifest.json')
-        .then((response) => {
-          if (response) {
-            return response.json().then((manifest) => {
-              // Detectar subdomínio do hostname
-              const hostname = url.hostname;
-              let subdomain = null;
-              
-              if (hostname.includes('.') && hostname.split('.').length > 2) {
-                subdomain = hostname.split('.')[0];
-              }
-              
-              // Modificar manifest se estiver em subdomínio
-              if (subdomain) {
-                manifest.name = `BelaGestão - ${subdomain}`;
-                manifest.start_url = `https://${subdomain}.belagestao.com/`;
-                manifest.scope = `https://${subdomain}.belagestao.com/`;
-                
-                console.log('Service Worker: Manifest modificado para subdomínio:', subdomain);
-                console.log('Service Worker: Start URL:', manifest.start_url);
-                console.log('Service Worker: Scope:', manifest.scope);
-              }
-              
-              return new Response(JSON.stringify(manifest), {
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-              });
-            });
+// Ativação do Service Worker
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Removendo cache antigo:', cacheName);
+            return caches.delete(cacheName);
           }
-          
-          // Se não estiver em cache, buscar da rede
-          return fetch(event.request);
         })
-    );
-    return;
-  }
-  
-  // Para outras requisições, usar estratégia cache-first
+      );
+    })
+  );
+});
+
+// Interceptação de requisições
+self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Retornar do cache se disponível
+        // Retorna do cache se disponível
         if (response) {
           return response;
         }
         
-        // Se não estiver em cache, buscar da rede
-        return fetch(event.request);
-      }
-    )
+        // Se não estiver no cache, busca da rede
+        return fetch(event.request)
+          .then((response) => {
+            // Verifica se a resposta é válida
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+            
+            // Clona a resposta para armazenar no cache
+            const responseToCache = response.clone();
+            
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+            
+            return response;
+          })
+          .catch(() => {
+            // Fallback para páginas offline
+            if (event.request.destination === 'document') {
+              return caches.match('/index.html');
+            }
+          });
+      })
   );
 });
 
-// Push notification event
+// Sincronização em background
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(doBackgroundSync());
+  }
+});
+
+// Função para sincronização em background
+function doBackgroundSync() {
+  // Implementar sincronização de dados quando a conexão for restaurada
+  console.log('Sincronizando dados em background...');
+}
+
+// Notificações push
 self.addEventListener('push', (event) => {
-  let data = {
-    title: 'BelaGestão',
-    body: 'Você tem uma nova notificação!',
+  const options = {
+    body: event.data ? event.data.text() : 'Nova notificação do BelaGestão',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
+    vibrate: [100, 50, 100],
     data: {
-      url: '/agenda'
-    }
-  };
-
-  // Tentar parsear dados da notificação
-  if (event.data) {
-    try {
-      const pushData = event.data.json();
-      data = {
-        ...data,
-        ...pushData
-      };
-    } catch (error) {
-      console.log('Erro ao parsear dados da notificação:', error);
-    }
-  }
-
-  const options = {
-    body: data.body,
-    icon: data.icon,
-    badge: data.badge,
-    data: data.data,
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    },
     actions: [
       {
-        action: 'view',
-        title: 'Ver',
+        action: 'explore',
+        title: 'Ver Agendamentos',
         icon: '/icons/icon-72x72.png'
       },
       {
-        action: 'dismiss',
+        action: 'close',
         title: 'Fechar',
         icon: '/icons/icon-72x72.png'
       }
-    ],
-    requireInteraction: true,
-    tag: 'belagestao-notification'
+    ]
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification('BelaGestão', options)
   );
 });
 
-// Notification click event
+// Clique em notificação
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'view') {
-    const urlToOpen = event.notification.data?.url || '/agenda';
-    
+  if (event.action === 'explore') {
     event.waitUntil(
-      clients.openWindow(urlToOpen)
+      clients.openWindow('/agenda')
+    );
+  } else {
+    event.waitUntil(
+      clients.openWindow('/')
     );
   }
-});
-
-// Notification close event
-self.addEventListener('notificationclose', (event) => {
-  console.log('Notification closed:', event.notification.tag);
 }); 
