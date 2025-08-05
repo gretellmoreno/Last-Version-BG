@@ -399,7 +399,7 @@ const MobileHeader = ({
             {newOnlineAppointmentsCount > 0 && (
               <div className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
                 <span className="text-[11px] font-normal leading-none">
-                  {newOnlineAppointmentsCount > 99 ? '99+' : newOnlineAppointmentsCount}
+                {newOnlineAppointmentsCount > 99 ? '99+' : newOnlineAppointmentsCount}
                 </span>
               </div>
             )}

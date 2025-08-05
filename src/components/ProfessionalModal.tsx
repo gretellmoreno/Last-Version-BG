@@ -65,6 +65,10 @@ export default function ProfessionalModal({
     commission_rate: 50
   });
 
+  // ESTADO INTERNO DE LOADING - APENAS PARA A FOTO
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [isInternalLoading, setIsInternalLoading] = useState(false);
+
   // Detectar se é mobile (fallback se não vier via props)
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   
@@ -182,8 +186,6 @@ export default function ProfessionalModal({
     }
   };
 
-  const [photoUploading, setPhotoUploading] = useState(false);
-
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -241,27 +243,42 @@ export default function ProfessionalModal({
   };
 
   const handleSave = async () => {
-    if (!isFormValid() || photoUploading) return;
-    const professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> & { url_foto?: string | null } = {
-      name: professionalForm.name.trim(),
-      role: professionalForm.role.trim(),
-      phone: professionalForm.phone,
-      email: professionalForm.email.trim(),
-      color: professionalForm.color,
-      commission_rate: professionalForm.commission_rate,
-      active: professionalForm.active,
-      available_online: true,
-      photo: undefined, // legacy, não usar
-      url_foto: professionalForm.url_foto || null
-    };
-    await onSave(professionalData);
-    // Sincronizar serviços do profissional
-    if (editingProfessional?.id && currentSalon?.id) {
-      await supabase.rpc('upsert_professional_services', {
-        p_salon_id: currentSalon.id,
-        p_professional_id: editingProfessional.id,
-        p_service_ids: selectedServiceIds
-      });
+    if (!isFormValid() || photoUploading || isInternalLoading) return;
+    
+    setIsInternalLoading(true);
+    
+    try {
+      // Criar o objeto de dados
+      const professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> & { url_foto?: string | null } = {
+        name: professionalForm.name.trim(),
+        role: professionalForm.role.trim(),
+        phone: professionalForm.phone,
+        email: professionalForm.email.trim(),
+        color: professionalForm.color,
+        commission_rate: professionalForm.commission_rate,
+        active: professionalForm.active,
+        available_online: true,
+        photo: undefined, // legacy, não usar
+        url_foto: professionalForm.url_foto || null
+      };
+
+      // Chamar a função onSave que veio da página pai
+      await onSave(professionalData);
+      
+      // Sincronizar serviços APENAS se estiver editando
+      if (editingProfessional?.id && currentSalon?.id) {
+        await supabase.rpc('upsert_professional_services', {
+          p_salon_id: currentSalon.id,
+          p_professional_id: editingProfessional.id,
+          p_service_ids: selectedServiceIds
+        });
+      }
+
+      // A lógica de sucesso foi movida para a página pai
+    } catch (error) {
+      console.error('Erro ao salvar profissional:', error);
+    } finally {
+      setIsInternalLoading(false);
     }
   };
 
@@ -281,7 +298,7 @@ export default function ProfessionalModal({
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={loading ? undefined : onClose} />
+      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={(loading || photoUploading || isInternalLoading) ? undefined : handleCancel} />
       
       {/* Modal - Layout responsivo */}
       <div className={`
@@ -302,9 +319,9 @@ export default function ProfessionalModal({
             </h2>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCancel}
             className="p-1 hover:bg-gray-100 rounded transition-colors"
-            disabled={loading}
+            disabled={loading || photoUploading || isInternalLoading}
           >
             <X size={14} className="text-gray-500" />
           </button>
@@ -561,9 +578,9 @@ export default function ProfessionalModal({
           </div>
           <button
             onClick={handleSave}
-            disabled={!isFormValid() || loading || photoUploading}
+            disabled={!isFormValid() || loading || photoUploading || isInternalLoading}
             className={`px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center space-x-2 ${
-              isFormValid() && !loading && !photoUploading
+              isFormValid() && !loading && !photoUploading && !isInternalLoading
                 ? 'bg-pink-600 text-white hover:bg-pink-700 shadow-sm'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
@@ -575,10 +592,17 @@ export default function ProfessionalModal({
                 : ''
             }
           >
-            {loading || photoUploading ? (
+            {loading || photoUploading || isInternalLoading ? (
               <>
                 <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
-                <span>Salvando...</span>
+                <span>
+                  {isInternalLoading 
+                    ? (editingProfessional ? 'Atualizando...' : 'Criando convite...')
+                    : photoUploading 
+                    ? 'Enviando foto...' 
+                    : 'Salvando...'
+                  }
+                </span>
               </>
             ) : (
               <span>{editingProfessional ? 'Atualizar' : 'Criar Profissional'}</span>
@@ -586,6 +610,8 @@ export default function ProfessionalModal({
           </button>
         </div>
       </div>
+      
+      {/* Modal de Sucesso */}
     </div>
   );
 }

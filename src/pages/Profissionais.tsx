@@ -22,6 +22,8 @@ import PeriodFilterModal from '../components/PeriodFilterModal';
 import { supabaseService } from '../lib/supabaseService';
 import { getTodayLocal, formatDateForDisplay } from '../utils/dateUtils';
 import { DEFAULT_PROFESSIONAL_COLOR } from '../utils/colorUtils';
+import ProfessionalSuccessModal from '../components/ProfessionalSuccessModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: boolean }> = ({ onToggleMobileSidebar, isMobile: isMobileProp }) => {
   const { professionals, loading, error, addProfessional, updateProfessional, removeProfessional } = useProfessional();
@@ -32,6 +34,10 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
   const [isMobile, setIsMobile] = useState(isMobileProp || false);
   const [activeTab, setActiveTab] = useState<'profissionais' | 'vales' | 'fechamento'>('profissionais');
   
+  // Estados para o modal de sucesso
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [newProfessionalInfo, setNewProfessionalInfo] = useState<{ name: string; email: string } | null>(null);
+
   // Estados para ValeModal
   const [isValeModalOpen, setIsValeModalOpen] = useState(false);
   const [editingVale, setEditingVale] = useState<any>(null);
@@ -42,6 +48,7 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
   
   // Estado para modal de período
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     if (isMobileProp !== undefined) {
@@ -62,20 +69,23 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
     const success = await addProfessional(professionalData);
     if (success) {
       toast.success('Funcionário criado e convidado com sucesso!');
-      setIsModalOpen(false);
-      setEditingProfessional(null);
+      setIsModalOpen(false); // Fecha o modal de criação
+      setNewProfessionalInfo({ name: professionalData.name, email: professionalData.email });
+      setIsSuccessModalOpen(true); // Abre o modal de sucesso
     } else {
-      toast.error('Erro ao criar funcionário');
+      toast.error('Erro ao criar funcionário.');
     }
   };
 
   const handleEditProfessional = async (professionalData: Omit<Professional, 'id' | 'created_at' | 'updated_at' | 'salon_id'> & { url_foto?: string | null }) => {
     if (!editingProfessional) return;
-    
     const success = await updateProfessional(editingProfessional.id, professionalData);
     if (success) {
+      toast.success('Funcionário atualizado com sucesso!');
       setIsModalOpen(false);
       setEditingProfessional(null);
+    } else {
+      toast.error('Erro ao atualizar funcionário.');
     }
   };
 
@@ -88,7 +98,12 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
     }
   };
 
-  const openEditModal = (professional: Professional) => {
+  const openModalForNew = () => {
+    setEditingProfessional(null);
+    setIsModalOpen(true);
+  };
+
+  const openModalForEdit = (professional: Professional) => {
     setEditingProfessional(professional);
     setIsModalOpen(true);
   };
@@ -349,7 +364,7 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
                     {professionals.map((professional) => (
                       <div
                         key={professional.id}
-                        onClick={() => openEditModal(professional)}
+                        onClick={() => openModalForEdit(professional)}
                         className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-2 hover:shadow-md hover:border-pink-200 transition-all duration-200 cursor-pointer active:scale-95"
                       >
                         
@@ -396,7 +411,7 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {professionals.map((professional) => (
-                          <tr key={professional.id} onClick={() => openEditModal(professional)} className="hover:bg-gray-50 cursor-pointer">
+                          <tr key={professional.id} onClick={() => openModalForEdit(professional)} className="hover:bg-gray-50 cursor-pointer">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center space-x-3">
                                 {professional.url_foto ? (
@@ -611,16 +626,21 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
       </div>
 
       {/* Modais */}
-      {isModalOpen && (
-        <ProfessionalModal
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          onSave={editingProfessional ? handleEditProfessional : handleAddProfessional}
-          editingProfessional={editingProfessional}
-          onDelete={editingProfessional ? () => handleDeleteClick(editingProfessional) : undefined}
-          isMobile={isMobile}
-        />
-      )}
+      <ProfessionalModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={editingProfessional ? handleEditProfessional : handleAddProfessional}
+        editingProfessional={editingProfessional}
+        onDelete={professionalToDelete ? () => handleDeleteClick(professionalToDelete) : undefined}
+        isMobile={isMobile}
+      />
+
+      <ProfessionalSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        professionalName={newProfessionalInfo?.name || ''}
+        professionalEmail={newProfessionalInfo?.email || ''}
+      />
 
       {professionalToDelete && (
         <DeleteConfirmationModal
