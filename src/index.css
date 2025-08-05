@@ -1489,7 +1489,7 @@
   }
   
   /* Melhorar área de toque para botões de foto */
-  .relative .absolute[class*="rounded-full"]:not(.bg-red-500) {
+  .relative .absolute[class*="rounded-full"]:not(.bg-red-500):not(.bg-purple-600) {
     min-width: 32px !important;
     min-height: 32px !important;
     touch-action: manipulation;
@@ -1560,5 +1560,25 @@ input[type="checkbox"]:hover {
     font-weight: normal !important;
     line-height: 1 !important;
     text-align: center !important;
+  }
+  
+  /* Controlar tamanho dos botões roxos no mobile */
+  .bg-purple-100.rounded-full {
+    width: auto !important;
+    height: auto !important;
+    min-width: auto !important;
+    min-height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+  }
+  
+  /* Controlar tamanho dos ícones de adicionar roxos */
+  .bg-purple-600.rounded-full {
+    width: auto !important;
+    height: auto !important;
+    min-width: auto !important;
+    min-height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
   }
 }
