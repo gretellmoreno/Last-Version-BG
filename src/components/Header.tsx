@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Menu, Eye, EyeOff } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Menu from 'lucide-react/dist/esm/icons/menu';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
 import DatePicker from './DatePicker';
 
 interface HeaderProps {
@@ -15,7 +18,8 @@ interface HeaderProps {
   isHistoryOpen?: boolean;
   onHistoryClose?: () => void;
   isMobile?: boolean;
-  onOnlineClick?: () => void; // ADICIONADO
+  onOnlineClick?: () => void;
+  newOnlineAppointmentsCount?: number; // ADICIONADO
 }
 
 export default function Header({ 
@@ -31,7 +35,8 @@ export default function Header({
   isHistoryOpen = false,
   onHistoryClose,
   isMobile = false,
-  onOnlineClick
+  onOnlineClick,
+  newOnlineAppointmentsCount = 0
 }: HeaderProps) {
   const handleHistoryClick = () => {
     if (isHistoryOpen && onHistoryClose) {
@@ -125,11 +130,18 @@ export default function Header({
           {onOnlineClick && (
             <button
               onClick={onOnlineClick}
-              className="p-2 rounded-full hover:bg-indigo-50 text-indigo-600 transition mr-1"
+              className="p-2 rounded-full hover:bg-indigo-50 text-indigo-600 transition mr-1 relative"
               title="Agendamentos Online"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="lucide lucide-globe hidden lg:block" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
               <svg xmlns="http://www.w3.org/2000/svg" className="lucide lucide-globe lg:hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+              
+              {/* Notificação de novos agendamentos */}
+              {newOnlineAppointmentsCount > 0 && (
+                <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                  {newOnlineAppointmentsCount > 99 ? '99+' : newOnlineAppointmentsCount}
+                </div>
+              )}
             </button>
           )}
           {onAddClick && (

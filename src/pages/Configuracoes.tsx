@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, User, CreditCard, Clock, Building, Mail, Lock, Eye, EyeOff, Save, Edit3, Trash2, Plus, UserCheck, Bell } from 'lucide-react';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import User from 'lucide-react/dist/esm/icons/user';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Building from 'lucide-react/dist/esm/icons/building';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import Lock from 'lucide-react/dist/esm/icons/lock';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
+import Bell from 'lucide-react/dist/esm/icons/bell';
 import Header from '../components/Header';
 import TaxaModal from '../components/TaxaModal';
 import { TaxasProvider, useTaxas } from '../contexts/TaxasContext';
@@ -51,7 +65,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
     { wday: 4, diaSemana: 'Quinta-feira', ativo: true, turnos: [{ inicio: '', fim: '' }] },
     { wday: 5, diaSemana: 'Sexta-feira', ativo: true, turnos: [{ inicio: '', fim: '' }] },
     { wday: 6, diaSemana: 'Sábado', ativo: true, turnos: [{ inicio: '', fim: '' }] },
-    { wday: 0, diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '', fim: '' }] },
+    { wday: 7, diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '', fim: '' }] },
   ]);
 
   // Lista mock de profissionais
@@ -180,7 +194,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
         { wday: 4, diaSemana: 'Quinta-feira' },
         { wday: 5, diaSemana: 'Sexta-feira' },
         { wday: 6, diaSemana: 'Sábado' },
-        { wday: 0, diaSemana: 'Domingo' },
+        { wday: 7, diaSemana: 'Domingo' },
       ];
       setHorariosAtendimento(
         diasPadrao.map((dia) => {
@@ -205,22 +219,51 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   // Salvar horários (ao clicar em Salvar ou ao editar campo)
   const handleSaveHorarios = async () => {
     if (!currentSalon?.id || !selectedProfissional) return;
+    
     try {
-      for (const dia of horariosAtendimento) {
-        await supabase.rpc('upsert_professional_schedule', {
-          p_salon_id: currentSalon.id,
-          p_professional_id: selectedProfissional,
-          p_wday: dia.wday,
-          p_work: dia.ativo,
-          p_start_time_1: dia.ativo && dia.turnos[0]?.inicio !== '' ? dia.turnos[0].inicio : null,
-          p_end_time_1: dia.ativo && dia.turnos[0]?.fim !== '' ? dia.turnos[0].fim : null,
-          p_start_time_2: dia.ativo && dia.turnos[1]?.inicio !== '' ? dia.turnos[1].inicio : null,
-          p_end_time_2: dia.ativo && dia.turnos[1]?.fim !== '' ? dia.turnos[1].fim : null
-        });
+      // Montar o JSON com os horários no formato esperado pelo backend
+      const hoursData = horariosAtendimento.map((dia) => {
+        const turno1 = dia.turnos[0];
+        const turno2 = dia.turnos[1];
+        
+        return {
+          wday: dia.wday,
+          work: dia.ativo,
+          start_time_1: dia.ativo && turno1?.inicio ? turno1.inicio : null,
+          end_time_1: dia.ativo && turno1?.fim ? turno1.fim : null,
+          start_time_2: dia.ativo && turno2?.inicio ? turno2.inicio : null,
+          end_time_2: dia.ativo && turno2?.fim ? turno2.fim : null
+        };
+      });
+
+      console.log('📅 Enviando horários para o backend:', hoursData);
+
+      const { data, error } = await supabase.rpc('set_business_hours', {
+        p_salon_id: currentSalon.id,
+        p_professional_id: selectedProfissional,
+        p_hours_data: hoursData
+      });
+
+      if (error) {
+        console.error('❌ Erro ao salvar horários:', error);
+        toast.error('Erro ao salvar horários.');
+        return;
       }
-      toast.success('Horários salvos com sucesso!');
+
+      // Verificar resposta do backend
+      if (data && typeof data === 'object') {
+        if (data.success === true) {
+          toast.success(data.message || 'Horários salvos com sucesso!');
+        } else {
+          toast.error(data.message || 'Erro ao salvar horários.');
+        }
+      } else {
+        // Fallback para compatibilidade
+        toast.success('Horários salvos com sucesso!');
+      }
     } catch (error) {
-      toast.error('Erro ao salvar horários.');
+      console.error('💥 Erro inesperado ao salvar horários:', error);
+      toast.error('Erro inesperado ao salvar horários.');
     }
   };
 
@@ -317,7 +360,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
       { wday: 4, diaSemana: 'Quinta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
       { wday: 5, diaSemana: 'Sexta-feira', ativo: true, turnos: [{ inicio: '08:00', fim: '18:00' }] },
       { wday: 6, diaSemana: 'Sábado', ativo: true, turnos: [{ inicio: '08:00', fim: '16:00' }] },
-      { wday: 0, diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '08:00', fim: '16:00' }] },
+      { wday: 7, diaSemana: 'Domingo', ativo: false, turnos: [{ inicio: '08:00', fim: '16:00' }] },
     ]);
   };
 
@@ -463,14 +506,33 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
 
   const handleSaveLembrete = async () => {
     if (!currentSalon?.id) return;
-    const { error } = await supabase.rpc('upsert_reminder_template', {
-      p_salon_id: currentSalon.id,
-      p_message: lembreteMensagem
-    });
-    if (!error) {
-      toast.success('Mensagem do lembrete salva com sucesso!');
-    } else {
-      toast.error('Erro ao salvar mensagem do lembrete');
+    
+    try {
+      const { data, error } = await supabase.rpc('upsert_reminder_template', {
+        p_salon_id: currentSalon.id,
+        p_message: lembreteMensagem
+      });
+      
+      if (error) {
+        console.error('❌ Erro na RPC upsert_reminder_template:', error);
+        toast.error('Erro ao salvar mensagem do lembrete');
+        return;
+      }
+      
+      // Verificar a resposta do backend
+      if (data && typeof data === 'object') {
+        if (data.success === true) {
+          toast.success(data.message || 'Salvo!');
+        } else {
+          toast.error(data.message || 'Erro ao salvar mensagem do lembrete');
+        }
+      } else {
+        // Fallback para compatibilidade com versão anterior
+        toast.success('Mensagem do lembrete salva com sucesso!');
+      }
+    } catch (err) {
+      console.error('💥 Erro inesperado ao salvar lembrete:', err);
+      toast.error('Erro inesperado ao salvar mensagem do lembrete');
     }
   };
 

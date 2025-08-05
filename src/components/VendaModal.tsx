@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { X, Plus, User } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import User from 'lucide-react/dist/esm/icons/user';
 import ProductSelection from './venda/ProductSelection';
 import PaymentMethodSelection from './venda/PaymentMethodSelection';
 import ClientSelectionVenda from './venda/ClientSelectionVenda';

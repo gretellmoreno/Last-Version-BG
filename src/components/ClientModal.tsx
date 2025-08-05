@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Trash2, Phone, Mail, Hash, Calendar } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import User from 'lucide-react/dist/esm/icons/user';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import Hash from 'lucide-react/dist/esm/icons/hash';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import { formatPhone, isValidPhone, formatCPF } from '../utils/phoneUtils';
 import { Client } from '../types';
 

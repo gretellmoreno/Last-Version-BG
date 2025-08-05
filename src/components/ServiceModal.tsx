@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Scissors, Clock, Percent, DollarSign, Trash2 } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Percent from 'lucide-react/dist/esm/icons/percent';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { Servico } from '../types';
 
 interface ServiceModalProps {
@@ -16,7 +21,6 @@ interface ServiceFormData {
   tempoAproximado: string;
   comissao: string;
   observacoes: string;
-  disponivel: boolean;
 }
 
 export default function ServiceModal({
@@ -31,8 +35,7 @@ export default function ServiceModal({
     preco: '',
     tempoAproximado: '',
     comissao: '',
-    observacoes: '',
-    disponivel: true
+    observacoes: ''
   });
   const [isMobile, setIsMobile] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,17 +60,15 @@ export default function ServiceModal({
         preco: editingService.preco.toString() || '',
         tempoAproximado: editingService.duracao.toString() || '',
         comissao: editingService.comissao.toString() || '',
-        observacoes: '',
-        disponivel: true
+        observacoes: ''
       });
     } else {
       setServiceForm({
         nome: '',
         preco: '',
-        tempoAproximado: '',
+        tempoAproximado: '30',
         comissao: '',
-        observacoes: '',
-        disponivel: true
+        observacoes: ''
       });
     }
     setErrors({});
@@ -88,8 +89,8 @@ export default function ServiceModal({
     
     if (!serviceForm.tempoAproximado.trim()) {
       newErrors.tempoAproximado = 'Tempo é obrigatório';
-    } else if (parseInt(serviceForm.tempoAproximado) <= 0) {
-      newErrors.tempoAproximado = 'Tempo deve ser maior que zero';
+    } else if (parseInt(serviceForm.tempoAproximado) < 5) {
+      newErrors.tempoAproximado = 'Tempo mínimo é 5 minutos';
     }
     
     if (!serviceForm.comissao.trim()) {
@@ -121,12 +122,19 @@ export default function ServiceModal({
     return serviceForm.nome.trim() !== '' && 
            serviceForm.preco.trim() !== '' &&
            serviceForm.tempoAproximado.trim() !== '' &&
+           parseInt(serviceForm.tempoAproximado) >= 5 &&
            serviceForm.comissao.trim() !== '' &&
            Object.keys(errors).length === 0;
   };
 
   const handleSave = () => {
-    if (!validateForm()) return;
+    console.log('🔥 ServiceModal - handleSave chamado!');
+    console.log('Formulário:', serviceForm);
+    
+    if (!validateForm()) {
+      console.log('❌ Validação falhou');
+      return;
+    }
     
     const servico: Servico = {
       id: editingService?.id || Date.now().toString(),
@@ -136,6 +144,7 @@ export default function ServiceModal({
       comissao: parseFloat(serviceForm.comissao) || 0
     };
     
+    console.log('✅ Serviço criado:', servico);
     onSave(servico);
     onClose();
   };
@@ -242,23 +251,56 @@ export default function ServiceModal({
                 <Clock size={12} className="inline mr-1" />
                 Tempo
               </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  placeholder="30"
-                  min="1"
-                  value={serviceForm.tempoAproximado}
-                  onChange={(e) => handleUpdateForm('tempoAproximado', e.target.value)}
-                  className={`w-full px-3 pr-10 py-2.5 border rounded-lg text-sm transition-colors ${
-                    errors.tempoAproximado 
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
-                      : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500/20'
-                  } focus:ring-2 focus:outline-none`}
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
-                  min
-                </span>
+              <div className="grid grid-cols-2 gap-2">
+                {/* Seletor de Horas */}
+                <div className="relative">
+                  <select
+                    value={Math.floor(parseInt(serviceForm.tempoAproximado) / 60) || 0}
+                    onChange={(e) => {
+                      const hours = parseInt(e.target.value);
+                      const minutes = parseInt(serviceForm.tempoAproximado) % 60;
+                      const totalMinutes = hours * 60 + minutes;
+                      handleUpdateForm('tempoAproximado', totalMinutes.toString());
+                    }}
+                    className={`w-full px-3 py-2.5 border rounded-lg text-sm transition-colors ${
+                      errors.tempoAproximado 
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
+                        : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500/20'
+                    } focus:ring-2 focus:outline-none`}
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    {Array.from({ length: 9 }, (_, i) => (
+                      <option key={i} value={i}>
+                        {i}h
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Seletor de Minutos */}
+                <div className="relative">
+                  <select
+                    value={parseInt(serviceForm.tempoAproximado) % 60 || 0}
+                    onChange={(e) => {
+                      const minutes = parseInt(e.target.value);
+                      const hours = Math.floor(parseInt(serviceForm.tempoAproximado) / 60);
+                      const totalMinutes = hours * 60 + minutes;
+                      handleUpdateForm('tempoAproximado', totalMinutes.toString());
+                    }}
+                    className={`w-full px-3 py-2.5 border rounded-lg text-sm transition-colors ${
+                      errors.tempoAproximado 
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
+                        : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500/20'
+                    } focus:ring-2 focus:outline-none`}
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i * 5} value={i * 5}>
+                        {i * 5}min
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               {errors.tempoAproximado && <p className="text-xs text-red-600 mt-1">{errors.tempoAproximado}</p>}
             </div>
@@ -292,36 +334,7 @@ export default function ServiceModal({
             {errors.comissao && <p className="text-xs text-red-600 mt-1">{errors.comissao}</p>}
           </div>
 
-          {/* Toggle de disponibilidade compacto */}
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <div className="flex bg-gray-50 rounded-lg p-1">
-              <button
-                type="button"
-                onClick={() => handleUpdateForm('disponivel', true)}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all ${
-                  serviceForm.disponivel
-                    ? 'bg-green-500 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                Ativo
-              </button>
-              <button
-                type="button"
-                onClick={() => handleUpdateForm('disponivel', false)}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all ${
-                  !serviceForm.disponivel
-                    ? 'bg-red-500 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                Inativo
-              </button>
-            </div>
-          </div>
+
         </div>
 
         {/* Footer fixo e compacto */}

@@ -1,5 +1,7 @@
 import React from 'react';
-import { X, CheckCircle, DollarSign } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
 
 interface FechamentoCaixaModalProps {
   isOpen: boolean;

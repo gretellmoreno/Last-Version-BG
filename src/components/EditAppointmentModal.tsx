@@ -3,7 +3,13 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { X, CheckCircle, XCircle, ArrowLeft, User, UserCheck, Plus } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import User from 'lucide-react/dist/esm/icons/user';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import ServiceSelection from './booking/ServiceSelection';
 import ProductSelection from './booking/ProductSelection';
 import ServiceConfirmation from './booking/ServiceConfirmation';

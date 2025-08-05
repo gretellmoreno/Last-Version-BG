@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, History, DollarSign, Calendar, Clock, User, Package, Receipt } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import History from 'lucide-react/dist/esm/icons/history';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import User from 'lucide-react/dist/esm/icons/user';
+import Package from 'lucide-react/dist/esm/icons/package';
+import Receipt from 'lucide-react/dist/esm/icons/receipt';
 import { useCashClosureHistory } from '../hooks/useCashClosureHistory';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency } from '../utils/formatters';

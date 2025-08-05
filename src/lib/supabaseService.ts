@@ -242,17 +242,34 @@ export const professionalService = {
   // Deletar profissional
   async delete(professionalId: string, salonId: string): Promise<RPCResponse<any>> {
     try {
+      console.log('🗑️ Tentando deletar profissional:', { professionalId, salonId });
+      
       const { data, error } = await supabase.rpc('delete_professional', {
-        professional_id: professionalId,
-        salon_id: salonId
+        p_professional_id: professionalId,
+        p_salon_id: salonId
       })
       
       if (error) {
+        console.error('❌ Erro na chamada RPC:', error);
         return { data: null, error: error.message }
       }
       
-      return { data: data?.[0] || { success: false }, error: null }
+      console.log('📦 Resposta da função delete_professional:', data);
+      
+      // Se a resposta é um array, pegar o primeiro elemento
+      const result = Array.isArray(data) ? data[0] : data;
+      
+      if (!result || !result.success) {
+        const message = result?.message || 'Falha ao deletar profissional';
+        const code = result?.code || 'UNKNOWN_ERROR';
+        console.error('❌ Deletar profissional falhou:', { message, code, details: result?.details });
+        return { data: null, error: message }
+      }
+      
+      console.log('✅ Profissional deletado com sucesso');
+      return { data: result, error: null }
     } catch (err) {
+      console.error('💥 Erro inesperado ao deletar profissional:', err);
       return { data: null, error: `Erro ao deletar profissional: ${err}` }
     }
   },
@@ -304,14 +321,46 @@ export const professionalService = {
   },
 
   // Obter disponibilidade
-  async getAvailability(professionalId: string, date: string, totalDuration: number): Promise<RPCResponse<any>> {
+  async getAvailability(professionalId: string, date: string, totalDuration: number, slotInterval?: number): Promise<RPCResponse<any>> {
     try {
-      console.log('🕐 Buscando disponibilidade:', { professionalId, date, totalDuration });
+      console.log('🕐 Buscando disponibilidade:', { 
+        professionalId, 
+        date, 
+        totalDuration, 
+        slotInterval,
+        totalDurationType: typeof totalDuration,
+        isTotalDurationValid: totalDuration > 0
+      });
+
+      // Validação dos parâmetros
+      if (!professionalId) {
+        console.error('❌ professionalId está vazio');
+        return { data: null, error: 'Professional ID é obrigatório' };
+      }
+
+      if (!date) {
+        console.error('❌ date está vazio');
+        return { data: null, error: 'Data é obrigatória' };
+      }
+
+      if (!totalDuration || totalDuration <= 0) {
+        console.error('❌ totalDuration é inválido:', totalDuration);
+        return { data: null, error: 'Duração total deve ser maior que zero' };
+      }
+
+      // LOG DEFINITIVO - ANTES DA CHAMADA DA RPC
+      console.log('🚨 DEBUG: Chamando get_availability com:', {
+        professional_id: professionalId,
+        target_date: date,
+        total_duration: totalDuration, // <<< ESSE É O VALOR MAIS IMPORTANTE
+        slot_interval: slotInterval || 30
+      });
 
       const { data, error } = await supabase.rpc('get_availability', {
         p_professional_id: professionalId,
         p_target_date: date,
-        p_total_duration: totalDuration
+        p_total_duration: totalDuration,
+        p_slot_interval: slotInterval || 30 // Padrão de 30 minutos se não especificado
       });
 
       console.log('📅 Resposta da disponibilidade:', { data, error });
@@ -321,7 +370,7 @@ export const professionalService = {
         const isPGRST202 = typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'PGRST202';
         if (isPGRST202) {
           console.log('🔄 Função get_availability não encontrada, gerando horários padrão');
-          const defaultTimes = this.generateDefaultTimeSlots();
+          const defaultTimes = this.generateDefaultTimeSlots(slotInterval);
           return { data: defaultTimes, error: null };
         }
         return { data: null, error: error.message }
@@ -331,17 +380,17 @@ export const professionalService = {
       console.error('❌ Exceção na disponibilidade:', err);
       // Em caso de erro, gerar horários padrão
       console.log('🔄 Gerando horários padrão devido à exceção');
-      const defaultTimes = this.generateDefaultTimeSlots();
+      const defaultTimes = this.generateDefaultTimeSlots(slotInterval);
       return { data: defaultTimes, error: null };
     }
   },
 
   // Gerar horários padrão quando a função RPC não existir
-  generateDefaultTimeSlots(): string[] {
+  generateDefaultTimeSlots(intervalMinutes: number = 30): string[] {
     const slots = [];
-    // Gerar horários de 8:00 às 22:00 com intervalos de 15 minutos
+    // Gerar horários de 8:00 às 22:00 com intervalos dinâmicos
     for (let hour = 8; hour <= 22; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
+      for (let minute = 0; minute < 60; minute += intervalMinutes) {
         if (hour === 22 && minute > 0) break;
         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         slots.push(timeString);
@@ -1782,6 +1831,44 @@ export const linkAgendamentoService = {
     }
   },
 
+  // Listar serviços específicos de um profissional
+  listServicesForProfessional: async (professionalId: string, salonId: string) => {
+    try {
+      console.log('🔍 Buscando serviços do profissional:', professionalId, 'salão:', salonId);
+
+      const { data, error } = await supabase.rpc('list_services_for_professional', {
+        p_salon_id: salonId,
+        p_professional_id: professionalId
+      });
+
+      if (error) {
+        console.error('❌ Erro ao buscar serviços do profissional:', error);
+        return { data: null, error: error.message };
+      }
+
+      console.log('✅ Serviços do profissional carregados:', data);
+      
+      // Debug: verificar estrutura dos dados
+      if (data && Array.isArray(data)) {
+        console.log('📊 Estrutura dos serviços:');
+        data.forEach((service, index) => {
+          console.log(`  Serviço ${index + 1}:`, {
+            id: service.id,
+            name: service.name,
+            estimated_time: service.estimated_time,
+            price: service.price
+          });
+        });
+      }
+
+      return { data: data || [], error: null };
+
+    } catch (err) {
+      console.error('💥 Erro inesperado ao buscar serviços do profissional:', err);
+      return { data: null, error: `Erro ao buscar serviços do profissional: ${err}` };
+    }
+  },
+
   // Criar agendamento público
   createPublicAppointment: async (params: {
     salonId: string
@@ -1867,6 +1954,119 @@ export const linkAgendamentoService = {
     } catch (err) {
       console.error('💥 Erro inesperado ao criar agendamento público:', err);
       return { data: null, error: `Erro ao criar agendamento público: ${err}` };
+    }
+  },
+
+  // Buscar agendamentos de um cliente específico
+  getClientAppointments: async (params: { salonId: string; clientName: string; clientPhone: string }) => {
+    try {
+      console.log('📅 Buscando agendamentos do cliente:', params);
+      // Por enquanto, retornar dados simulados até que a função RPC seja criada no backend
+      const simulatedData = [
+        {
+          id: '1',
+          date: '2024-12-20',
+          start_time: '14:00:00',
+          client_name: params.clientName,
+          client_phone: params.clientPhone,
+          professional_name: 'Ana Silva',
+          services: [
+            { name: 'Corte de Cabelo', price: 50.00 },
+            { name: 'Escova', price: 30.00 }
+          ],
+          status: 'confirmado',
+          created_at: '2024-12-15T10:00:00'
+        },
+        {
+          id: '2',
+          date: '2024-12-10',
+          start_time: '16:30:00',
+          client_name: params.clientName,
+          client_phone: params.clientPhone,
+          professional_name: 'Carlos Santos',
+          services: [
+            { name: 'Manicure', price: 25.00 }
+          ],
+          status: 'concluido',
+          created_at: '2024-12-05T15:30:00'
+        }
+      ];
+      
+      return { data: simulatedData, error: null };
+      
+      // Código real quando a RPC estiver disponível:
+      /*
+      const { data, error } = await supabase.rpc('get_client_appointments', {
+        p_salon_id: params.salonId,
+        p_client_name: params.clientName,
+        p_client_phone: params.clientPhone
+      });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar agendamentos do cliente:', error);
+        return { data: null, error: error.message };
+      }
+      
+      return { data: data || [], error: null };
+      */
+    } catch (err) {
+      console.error('💥 Erro inesperado ao buscar agendamentos do cliente:', err);
+      return { data: null, error: `Erro ao buscar agendamentos do cliente: ${err}` };
+    }
+  },
+
+  // Buscar agendamentos públicos por telefone
+  getPublicAppointmentsByPhone: async (params: { salonId: string; clientPhone: string }) => {
+    try {
+      console.log('📱 Buscando agendamentos por telefone:', params);
+      
+      const { data, error } = await supabase.rpc('get_public_appointments_by_phone', {
+        p_salon_id: params.salonId,
+        p_client_phone: params.clientPhone
+      });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar agendamentos por telefone:', error);
+        return { data: null, error: error.message };
+      }
+      
+      console.log('✅ Agendamentos encontrados:', data);
+      
+      // Garantir que a estrutura de resposta está correta
+      const formattedData = {
+        atuais: data?.atuais || [],
+        passados: data?.passados || [],
+        can_client_cancel: data?.can_client_cancel || false
+      };
+      
+      return { data: formattedData, error: null };
+    } catch (err) {
+      console.error('💥 Erro inesperado ao buscar agendamentos por telefone:', err);
+      return { data: null, error: `Erro ao buscar agendamentos por telefone: ${err}` };
+    }
+  },
+
+  // Cancelar agendamento público
+  cancelPublicAppointment: async (params: { appointmentId: string; salonId: string; clientPhone: string }) => {
+    try {
+      console.log('❌ Cancelando agendamento público:', params);
+      
+      const { data, error } = await supabase.rpc('public_cancel_appointment', {
+        p_appointment_id: params.appointmentId,
+        p_salon_id: params.salonId,
+        p_client_phone: params.clientPhone
+      });
+      
+      if (error) {
+        console.error('❌ Erro ao cancelar agendamento:', error);
+        return { data: null, error: error.message };
+      }
+      
+      console.log('✅ Agendamento cancelado com sucesso:', data);
+      return { data: data, error: null };
+    } catch (err) {
+      console.error('💥 Erro inesperado ao cancelar agendamento:', err);
+      return { data: null, error: `Erro ao cancelar agendamento: ${err}` };
     }
   }
 };

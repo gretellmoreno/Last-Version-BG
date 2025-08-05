@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import X from 'lucide-react/dist/esm/icons/x';
 import { useFinanceiro } from '../contexts/FinanceiroContext';
 import { useProfessional } from '../contexts/ProfessionalContext';
 

@@ -1,5 +1,10 @@
 import React from 'react';
-import { Calendar, Clock, User, Scissors, Package, MapPin } from 'lucide-react';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import User from 'lucide-react/dist/esm/icons/user';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
+import Package from 'lucide-react/dist/esm/icons/package';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
 import { useService } from '../../contexts/ServiceContext';
 import { useProfessional } from '../../contexts/ProfessionalContext';
 import { useProduct } from '../../contexts/ProductContext';

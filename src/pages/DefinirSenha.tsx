@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
+import Lock from 'lucide-react/dist/esm/icons/lock';
+import User from 'lucide-react/dist/esm/icons/user';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import type { User as SupabaseUser } from '@supabase/supabase-js';

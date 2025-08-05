@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, User, ArrowLeft } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import User from 'lucide-react/dist/esm/icons/user';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { useProfessional } from '../../contexts/ProfessionalContext';
 
 interface ProfessionalSelectionProps {

@@ -1,5 +1,12 @@
 import React from 'react';
-import { X, User, Clock, Scissors, MapPin, Calendar, CheckCircle, Package } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import User from 'lucide-react/dist/esm/icons/user';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import Package from 'lucide-react/dist/esm/icons/package';
 import { useApp } from '../contexts/AppContext';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 

@@ -1,5 +1,6 @@
 import React from 'react';
-import { CheckCircle, X } from 'lucide-react';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import X from 'lucide-react/dist/esm/icons/x';
 
 interface FechamentoCaixaSuccessModalProps {
   isOpen: boolean;

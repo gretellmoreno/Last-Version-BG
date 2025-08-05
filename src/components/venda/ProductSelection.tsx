@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
-import { Package, Plus, Minus, User, Edit2, Check, X as XIcon, UserCheck } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import Package from 'lucide-react/dist/esm/icons/package';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Minus from 'lucide-react/dist/esm/icons/minus';
+import User from 'lucide-react/dist/esm/icons/user';
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
+import Check from 'lucide-react/dist/esm/icons/check';
+import XIcon from 'lucide-react/dist/esm/icons/x';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
 import { useProduct } from '../../contexts/ProductContext';
 
 interface SelectedProduct {

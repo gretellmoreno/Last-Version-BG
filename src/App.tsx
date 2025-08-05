@@ -20,6 +20,7 @@ const Relatorio = lazy(() => import('./pages/Financeiro'));
 const Configuracoes = lazy(() => import('./pages/Configuracoes'));
 const LinkAgendamento = lazy(() => import('./pages/LinkAgendamento'));
 const AgendamentoPublico = lazy(() => import('./pages/AgendamentoPublico'));
+const MeusAgendamentos = lazy(() => import('./pages/MeusAgendamentos'));
 const DefinirSenha = lazy(() => import('./pages/DefinirSenha'));
 const SalonNotFound = lazy(() => import('./pages/SalonNotFound'));
 const MarketingApp = lazy(() => import('./pages/MarketingApp'));
@@ -37,6 +38,7 @@ const PageLoader = () => (
 function AppLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [forceReady, setForceReady] = useState(false);
   const { isAuthenticated, loading: authLoading, userContext } = useAuth();
   const { currentSalon, isReady, loading: salonLoading, error: salonError, isMainDomain } = useApp();
 
@@ -56,8 +58,18 @@ function AppLayout() {
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
+  // Timeout de fallback para evitar carregamento infinito
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      console.log('⏰ Timeout de carregamento atingido, forçando ready...');
+      setForceReady(true);
+    }, 15000); // 15 segundos
+
+    return () => clearTimeout(timeout);
+  }, []);
+
   // Loading geral (auth + salon)
-  const isLoading = authLoading || salonLoading;
+  const isLoading = (authLoading || salonLoading) && !forceReady;
 
   // Mostrar tela de loading durante verificações iniciais
   if (isLoading) {
@@ -188,6 +200,11 @@ function DomainRouter() {
       <Route path="/agendamento" element={
         <Suspense fallback={<PageLoader />}>
           <AgendamentoPublico />
+        </Suspense>
+      } />
+      <Route path="/meus-agendamentos" element={
+        <Suspense fallback={<PageLoader />}>
+          <MeusAgendamentos />
         </Suspense>
       } />
       <Route path="/definir-senha" element={

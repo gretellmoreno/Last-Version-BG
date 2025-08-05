@@ -1,12 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabaseService } from '../lib/supabaseService';
 import { salonService } from '../lib/salonService';
 import { LinkAgendamentoConfig } from '../types';
-import { Loader2, Calendar, User, Scissors, Phone, Mail, ChevronLeft, ChevronRight, Check, ArrowLeft, Search, ChevronDown } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import User from 'lucide-react/dist/esm/icons/user';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Check from 'lucide-react/dist/esm/icons/check';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import Search from 'lucide-react/dist/esm/icons/search';
+import X from 'lucide-react/dist/esm/icons/x';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Menu from 'lucide-react/dist/esm/icons/menu';
 import { useSalonSlug, useIsMainDomain } from '../hooks/useSubdomain';
 import { FaWhatsapp, FaInstagram, FaMapMarkerAlt } from 'react-icons/fa';
 import { AiFillInstagram } from 'react-icons/ai';
+import { DEFAULT_PROFESSIONAL_COLOR } from '../utils/colorUtils';
+
+
 
 // Tipos para o wizard
 type WizardStep = 'services' | 'professional' | 'datetime' | 'client' | 'confirmation';
@@ -32,10 +48,9 @@ interface PublicBookingData {
   professionals: Professional[];
 }
 
-
-
 export default function AgendamentoPublico() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const salonSlug = useSalonSlug();
   const isMainDomain = useIsMainDomain();
   
@@ -48,7 +63,7 @@ export default function AgendamentoPublico() {
   const [salonData, setSalonData] = useState<any>(null);
   
   // Estados do wizard
-  const [currentStep, setCurrentStep] = useState<WizardStep>('services');
+  const [currentStep, setCurrentStep] = useState<WizardStep>('professional');
   const [bookingData, setBookingData] = useState<PublicBookingData>({ services: [], professionals: [] });
   
   // Estados das seleções
@@ -58,6 +73,11 @@ export default function AgendamentoPublico() {
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  
+  // Estado para o calendário customizado
+  const [showCustomCalendar, setShowCustomCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   
   // Estados do cliente
   const [clientName, setClientName] = useState('');
@@ -67,9 +87,17 @@ export default function AgendamentoPublico() {
   const [isCreating, setIsCreating] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [completionMessage, setCompletionMessage] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Estado para busca de serviços
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Estados para serviços específicos do profissional
+  const [servicesForProfessional, setServicesForProfessional] = useState<Service[]>([]);
+  const [isLoadingServices, setIsLoadingServices] = useState(false);
+  
+  // Estados para configurações da agenda
+  const [agendaConfig, setAgendaConfig] = useState<any>(null);
 
   useEffect(() => {
     const loadSalonAndConfig = async () => {
@@ -115,6 +143,7 @@ export default function AgendamentoPublico() {
 
         if (configData) {
           setConfig(configData);
+          setAgendaConfig(configData); // Armazenar configurações da agenda
           
           // Verificar se o agendamento online está ativo
           if (!configData.ativo) {
@@ -138,6 +167,8 @@ export default function AgendamentoPublico() {
           setBookingData(bookingInfo);
         }
 
+
+
       } catch (err) {
         console.error('💥 Erro ao carregar agendamento público:', err);
         setError('Erro ao carregar página de agendamento');
@@ -149,10 +180,85 @@ export default function AgendamentoPublico() {
     loadSalonAndConfig();
   }, [salonSlug, isMainDomain, salonIdFromQuery]);
 
+  // Este useEffect roda uma vez quando a página carrega
+  useEffect(() => {
+    try {
+      const savedDataString = localStorage.getItem('belaGestao_clientData');
+      if (savedDataString) {
+        const savedData = JSON.parse(savedDataString);
+        if (savedData.name) {
+          setClientName(savedData.name);
+        }
+        if (savedData.phone) {
+          setClientPhone(savedData.phone);
+        }
+      }
+    } catch (e) {
+      console.warn("Não foi possível carregar os dados do cliente do localStorage:", e);
+    }
+  }, []); // O array vazio [] garante que ele rode apenas uma vez
+
+  // useEffect para buscar serviços específicos do profissional
+  useEffect(() => {
+    const fetchServicesForProfessional = async () => {
+      console.log('🔍 === BUSCANDO SERVIÇOS DO PROFISSIONAL ===');
+      console.log('  - selectedProfessional:', selectedProfessional);
+      
+      // Garante que só executa se um profissional foi selecionado
+      if (!selectedProfessional) {
+        console.log('❌ Nenhum profissional selecionado, limpando serviços');
+        setServicesForProfessional([]);
+        return;
+      }
+
+      setIsLoadingServices(true);
+      try {
+        console.log('📞 Chamando listServicesForProfessional...');
+        // Chama a nova função RPC do backend
+        const { data, error } = await supabaseService.linkAgendamento.listServicesForProfessional(selectedProfessional, salonData?.id || '');
+        
+        console.log('📥 Resposta da listServicesForProfessional:');
+        console.log('  - data:', data);
+        console.log('  - error:', error);
+        
+        if (error) {
+          console.error('❌ Erro ao buscar serviços do profissional:', error);
+          setServicesForProfessional([]);
+        } else {
+          console.log('✅ Serviços carregados com sucesso:');
+          if (data && Array.isArray(data)) {
+            data.forEach((service, index) => {
+              console.log(`  Serviço ${index + 1}:`, {
+                id: service.id,
+                name: service.name,
+                estimated_time: service.estimated_time,
+                price: service.price
+              });
+            });
+          }
+          setServicesForProfessional(data || []);
+        }
+      } catch (err) {
+        console.error('💥 Erro inesperado ao buscar serviços do profissional:', err);
+        setServicesForProfessional([]);
+      } finally {
+        setIsLoadingServices(false);
+        console.log('🏁 === FIM DA BUSCA DE SERVIÇOS ===');
+      }
+    };
+
+    fetchServicesForProfessional();
+  }, [selectedProfessional]); // Dependência: roda de novo se o profissional mudar
+
+  // Limpar serviços selecionados quando o profissional mudar
+  useEffect(() => {
+    setSelectedServices([]);
+  }, [selectedProfessional]);
+
   // Função para calcular data mínima (considerando antecedência)
   const getMinDate = () => {
     const now = new Date();
-    const minAdvanceMinutes = config?.tempo_minimo_antecedencia || 60;
+    const minAdvanceMinutes = agendaConfig?.tempo_minimo_antecedencia || 60;
     const minDate = new Date(now.getTime() + minAdvanceMinutes * 60000);
     return minDate.toISOString().split('T')[0];
   };
@@ -160,44 +266,103 @@ export default function AgendamentoPublico() {
   // Função para calcular data máxima (considerando período máximo)
   const getMaxDate = () => {
     const now = new Date();
-    const maxDays = config?.periodo_maximo_agendamento || 7;
+    const maxDays = agendaConfig?.periodo_maximo_agendamento || 7;
     const maxDate = new Date(now.getTime() + maxDays * 24 * 60 * 60 * 1000);
     return maxDate.toISOString().split('T')[0];
   };
 
+  // Função para calcular a data/hora mínima permitida
+  const getMinDateTime = () => {
+    const now = new Date();
+    const minAdvanceMinutes = agendaConfig?.tempo_minimo_antecedencia || 60;
+    return new Date(now.getTime() + minAdvanceMinutes * 60000);
+  };
+
   // Buscar disponibilidade quando data for selecionada
   useEffect(() => {
+    console.log('🔄 === useEffect PARA loadAvailability ===');
+    console.log('  - selectedDate:', selectedDate);
+    console.log('  - selectedProfessional:', selectedProfessional);
+    console.log('  - selectedServices.length:', selectedServices.length);
+    console.log('  - Condição atendida:', selectedDate && selectedProfessional && selectedServices.length > 0);
+    
     if (selectedDate && selectedProfessional && selectedServices.length > 0) {
+      console.log('✅ Todas as condições atendidas, chamando loadAvailability');
       loadAvailability();
+    } else {
+      console.log('❌ Condições não atendidas:');
+      if (!selectedDate) console.log('  - selectedDate está vazio');
+      if (!selectedProfessional) console.log('  - selectedProfessional está vazio');
+      if (selectedServices.length === 0) console.log('  - selectedServices está vazio');
     }
   }, [selectedDate, selectedProfessional, selectedServices]);
 
   const loadAvailability = async () => {
-    if (!selectedDate || !selectedProfessional || !salonData?.id) return;
+    console.log('🚀 === INÍCIO DA FUNÇÃO loadAvailability ===');
+    console.log('📋 Estado atual:');
+    console.log('  - selectedDate:', selectedDate);
+    console.log('  - selectedProfessional:', selectedProfessional);
+    console.log('  - salonData?.id:', salonData?.id);
+    console.log('  - selectedServices:', selectedServices);
+    console.log('  - servicesForProfessional.length:', servicesForProfessional.length);
+
+    if (!selectedDate || !selectedProfessional || !salonData?.id) {
+      console.log('❌ Condições não atendidas, saindo da função');
+      return;
+    }
 
     setLoadingTimes(true);
     
     try {
       // Calcular duração total
-      const totalDuration = selectedServices.reduce((total, serviceId) => {
-        const service = bookingData.services.find(s => s.id === serviceId);
-        return total + (service?.estimated_time || 0);
-      }, 0);
+      console.log('🔢 === CÁLCULO DA DURAÇÃO TOTAL ===');
+      let totalDuration = 0;
+      
+      selectedServices.forEach((serviceId, index) => {
+        const service = servicesForProfessional.find(s => s.id === serviceId);
+        console.log(`📊 Serviço ${index + 1}:`);
+        console.log(`  - ID: ${serviceId}`);
+        console.log(`  - Encontrado: ${service ? 'SIM' : 'NÃO'}`);
+        if (service) {
+          console.log(`  - Nome: ${service.name}`);
+          console.log(`  - estimated_time: ${service.estimated_time}`);
+          console.log(`  - Tipo do estimated_time: ${typeof service.estimated_time}`);
+        }
+        const estimatedTime = service?.estimated_time || 0;
+        totalDuration += estimatedTime;
+        console.log(`  - Duração acumulada: ${totalDuration}`);
+      });
+
+      console.log('🎯 === PARÂMETROS FINAIS ===');
+      console.log('  - selectedProfessional:', selectedProfessional);
+      console.log('  - selectedDate:', selectedDate.toISOString().split('T')[0]);
+      console.log('  - totalDuration:', totalDuration);
+      console.log('  - agendaConfig?.intervalo_tempo:', agendaConfig?.intervalo_tempo);
 
       const dateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
 
+      console.log('📞 === CHAMANDO get_availability ===');
       const { data, error } = await supabaseService.professionals.getAvailability(
         selectedProfessional,
         dateStr,
-        totalDuration
+        totalDuration,
+        agendaConfig?.intervalo_tempo // Novo parâmetro: intervalo de horários
       );
+
+      console.log('📅 === RESPOSTA DA get_availability ===');
+      console.log('  - data:', data);
+      console.log('  - error:', error);
+      console.log('  - tipo do data:', typeof data);
+      console.log('  - é array?', Array.isArray(data));
 
       if (error) {
         console.warn('⚠️ Erro ao buscar disponibilidade:', error);
         setAvailableTimes([]);
       } else if (Array.isArray(data)) {
+        console.log('✅ Horários disponíveis:', data);
         setAvailableTimes(data);
       } else {
+        console.log('⚠️ Resposta inesperada da API:', data);
         setAvailableTimes([]);
       }
     } catch (err) {
@@ -205,14 +370,29 @@ export default function AgendamentoPublico() {
       setAvailableTimes([]);
     } finally {
       setLoadingTimes(false);
+      console.log('🏁 === FIM DA FUNÇÃO loadAvailability ===');
     }
   };
 
   // Função para calcular totais
   const calculateTotals = () => {
-    const services = selectedServices.map(id => bookingData.services.find(s => s.id === id)).filter(Boolean) as Service[];
+    console.log('🧮 === CALCULANDO TOTAIS ===');
+    console.log('  - selectedServices:', selectedServices);
+    console.log('  - servicesForProfessional.length:', servicesForProfessional.length);
+    
+    const services = selectedServices.map(id => servicesForProfessional.find(s => s.id === id)).filter(Boolean) as Service[];
+    console.log('  - services encontrados:', services.length);
+    
     const totalPrice = services.reduce((total, service) => total + service.price, 0);
     const totalDuration = services.reduce((total, service) => total + service.estimated_time, 0);
+    
+    console.log('  - totalPrice:', totalPrice);
+    console.log('  - totalDuration:', totalDuration);
+    
+    services.forEach((service, index) => {
+      console.log(`    Serviço ${index + 1}: ${service.name} - ${service.estimated_time}min`);
+    });
+    
     return { totalPrice, totalDuration, services };
   };
 
@@ -243,8 +423,31 @@ export default function AgendamentoPublico() {
       }
 
       if (data?.success) {
-        setCompletionMessage(data.message || 'Agendamento confirmado com sucesso! Nos vemos em breve!');
-        setIsCompleted(true);
+        // ---> INÍCIO DA NOVA LÓGICA <---
+        try {
+          const clientData = {
+            name: clientName,
+            phone: clientPhone
+          };
+          // Salva os dados como um objeto JSON stringificado
+          localStorage.setItem('belaGestao_clientData', JSON.stringify(clientData));
+          
+          // Log de sucesso do agendamento
+          console.log('✅ Agendamento criado com sucesso');
+        } catch (e) {
+          console.warn("Não foi possível salvar os dados do cliente no localStorage:", e);
+        }
+        // ---> FIM DA NOVA LÓGICA <---
+
+        setShowSuccessModal(true);
+        
+        // Redirecionar após 800ms (menos de 1 segundo)
+        setTimeout(() => {
+          // Redirecionar para a página principal do agendamento público
+          // Limpar todos os parâmetros e voltar ao início
+          const baseUrl = window.location.origin + window.location.pathname;
+          window.location.href = baseUrl;
+        }, 800);
       } else {
         alert(data?.message || 'Erro desconhecido ao criar agendamento');
       }
@@ -259,10 +462,10 @@ export default function AgendamentoPublico() {
   // Navegação do wizard
   const canGoNext = () => {
     switch (currentStep) {
-      case 'services':
-        return selectedServices.length > 0;
       case 'professional':
         return selectedProfessional !== '';
+      case 'services':
+        return selectedServices.length > 0;
       case 'datetime':
         return selectedDate && selectedTime;
       case 'client':
@@ -276,10 +479,10 @@ export default function AgendamentoPublico() {
     if (!canGoNext()) return;
     
     switch (currentStep) {
-      case 'services':
-        setCurrentStep('professional');
-        break;
       case 'professional':
+        setCurrentStep('services');
+        break;
+      case 'services':
         setCurrentStep('datetime');
         break;
       case 'datetime':
@@ -293,11 +496,11 @@ export default function AgendamentoPublico() {
 
   const goBack = () => {
     switch (currentStep) {
-      case 'professional':
-        setCurrentStep('services');
+      case 'services':
+        setCurrentStep('professional');
         break;
       case 'datetime':
-        setCurrentStep('professional');
+        setCurrentStep('services');
         break;
       case 'client':
         setCurrentStep('datetime');
@@ -308,14 +511,24 @@ export default function AgendamentoPublico() {
     }
   };
 
-  // Função para formatizar telefone
+  // Função para formatizar telefone com máscara
   const formatPhone = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    const match = cleaned.match(/^(\d{2})(\d{4,5})(\d{4})$/);
-    if (match) {
-      return `(${match[1]}) ${match[2]}-${match[3]}`;
+    // Remove tudo que não é dígito
+    const numbers = value.replace(/\D/g, '');
+    
+    // Limita a 11 dígitos (DDD + 9 dígitos)
+    const limitedNumbers = numbers.slice(0, 11);
+    
+    // Aplica a máscara (XX) XXXXX-XXXX
+    if (limitedNumbers.length <= 2) {
+      return limitedNumbers;
+    } else if (limitedNumbers.length <= 7) {
+      return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2)}`;
+    } else if (limitedNumbers.length <= 10) {
+      return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 6)}-${limitedNumbers.slice(6)}`;
+    } else {
+      return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 7)}-${limitedNumbers.slice(7)}`;
     }
-    return value;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -348,6 +561,38 @@ export default function AgendamentoPublico() {
   console.log('🔍 Renderizando seção de botões sociais');
   
   // Função para determinar se uma cor é clara ou escura
+  // Função melhorada para calcular contraste e garantir legibilidade
+  const getContrastColor = (backgroundColor: string) => {
+    try {
+      // Remove o # se presente
+      const hex = backgroundColor.replace('#', '');
+      // Verifica se é um hex válido
+      if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
+        return '#000000'; // Fallback preto se inválido
+      }
+      
+      // Converte para RGB
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      
+      // Calcula a luminância relativa (fórmula WCAG)
+      const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      
+      // Retorna branco para fundos escuros, preto para fundos claros
+      // Usa um threshold mais conservador para garantir legibilidade
+      return luminance > 0.6 ? '#000000' : '#FFFFFF';
+    } catch (error) {
+      return '#000000'; // Fallback preto em caso de erro
+    }
+  };
+
+  // Função auxiliar para obter cor de contraste para botões
+  const getButtonTextColor = () => {
+    return getContrastColor(primaryColor);
+  };
+
+  // Função melhorada para calcular contraste e garantir legibilidade
   const isLightColor = (color: string) => {
     try {
       // Remove o # se presente
@@ -368,10 +613,10 @@ export default function AgendamentoPublico() {
     }
   };
 
-  // Determina a cor do título baseada na cor primária
+  // Determina a cor do título baseada na cor primária - agora usando a função melhorada
   const getTitleColor = () => {
     if (!primaryColor) return '#000000'; // Fallback preto
-    return isLightColor(primaryColor) ? '#000000' : '#FFFFFF';
+    return getContrastColor(primaryColor);
   };
 
   // Componente auxiliar para exibição de preços
@@ -379,10 +624,10 @@ export default function AgendamentoPublico() {
     // Primeiro, formata o preço para o padrão brasileiro.
     const formattedPrice = `R$ ${service.price.toFixed(2).replace('.', ',')}`;
 
-    // Determina a cor do texto baseada na cor primária
+    // Determina a cor do texto baseada na cor primária - agora usando a função melhorada
     const getTextColor = () => {
       if (!primaryColor) return '#374151'; // Fallback cinza escuro
-      return isLightColor(primaryColor) ? '#374151' : '#F9FAFB';
+      return getContrastColor(primaryColor);
     };
 
     // Agora, usa um switch para decidir o que renderizar
@@ -447,8 +692,86 @@ export default function AgendamentoPublico() {
     return grouped;
   };
 
+  // Função para gerar os dias do calendário
+  const getCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    
+    // Primeiro dia do mês
+    const firstDay = new Date(year, month, 1);
+    // Último dia do mês
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // Dia da semana do primeiro dia (0 = domingo, 1 = segunda, etc.)
+    const firstDayOfWeek = firstDay.getDay();
+    
+    const days: (Date | null)[] = [];
+    
+    // Adicionar dias vazios do mês anterior
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Adicionar todos os dias do mês
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const date = new Date(year, month, day);
+      
+      // Verificar se a data está dentro do período permitido
+      const minDate = new Date(getMinDate());
+      const maxDate = new Date(getMaxDate());
+      
+      // Se a data está fora do período permitido, adicionar como null
+      if (date < minDate || date > maxDate) {
+        days.push(null);
+      } else {
+        days.push(date);
+      }
+    }
+    
+    return days;
+  };
+
+  // Função para gerar os dias do calendário customizado
+  const getCustomCalendarDays = () => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    
+    // Primeiro dia do mês
+    const firstDay = new Date(year, month, 1);
+    // Último dia do mês
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // Dia da semana do primeiro dia (0 = domingo, 1 = segunda, etc.)
+    const firstDayOfWeek = firstDay.getDay();
+    
+    const days: (Date | null)[] = [];
+    
+    // Adicionar dias vazios do mês anterior
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Adicionar todos os dias do mês
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const date = new Date(year, month, day);
+      
+      // Verificar se a data está dentro do período permitido
+      const minDate = new Date(getMinDate());
+      const maxDate = new Date(getMaxDate());
+      
+      // Se a data está fora do período permitido, adicionar como null
+      if (date < minDate || date > maxDate) {
+        days.push(null);
+      } else {
+        days.push(date);
+      }
+    }
+    
+    return days;
+  };
+
   // Filtrar e agrupar serviços
-  const filteredServices = bookingData.services.filter(service => 
+  const filteredServices = servicesForProfessional.filter(service => 
     service.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   const groupedServices = groupServicesByCategory(filteredServices);
@@ -510,8 +833,8 @@ export default function AgendamentoPublico() {
     );
   }
 
-  // MOBILE-ONLY: Layout especial para a primeira etapa (serviços)
-  if ((currentStep as string) === 'services') {
+  // MOBILE-ONLY: Layout especial para a primeira etapa (profissionais)
+  if ((currentStep as string) === 'professional') {
     return (
       <div 
         className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6"
@@ -525,7 +848,26 @@ export default function AgendamentoPublico() {
       >
         {/* Cabeçalho Compacto */}
         <div className="w-full max-w-md mb-4">
-          {/* Foto do salão */}
+          {/* Menu Button */}
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => {
+                const currentParams = new URLSearchParams();
+                if (salonSlug) {
+                  navigate('/meus-agendamentos');
+                } else if (salonData?.id) {
+                  currentParams.set('salonId', salonData.id);
+                  navigate(`/meus-agendamentos?${currentParams.toString()}`);
+                }
+              }}
+              className="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors backdrop-blur-sm border border-white/20"
+              title="Meus Agendamentos"
+            >
+              <Menu className="w-6 h-6 text-white" />
+            </button>
+          </div>
+
+        {/* Foto do salão */}
           <div className="flex items-center justify-center mb-4">
             {config?.foto_perfil_url ? (
               <div className="w-20 h-20 rounded-full overflow-hidden border-3 border-white shadow-lg bg-white">
@@ -542,10 +884,10 @@ export default function AgendamentoPublico() {
               >
                 <User size={40} style={{ color: getTitleColor() }} />
               </div>
-            )}
-          </div>
+          )}
+        </div>
 
-                      {/* Nome do salão */}
+        {/* Nome do salão */}
             <h1
               className="text-2xl font-bold text-center mb-3"
               style={{ color: getTitleColor() }}
@@ -555,7 +897,7 @@ export default function AgendamentoPublico() {
 
           {/* Botões sociais compactos com funcionalidade completa */}
           <div className="flex items-center justify-center gap-3 mb-4">
-            {whatsappLink && (
+          {whatsappLink && (
               <a 
                 href={whatsappLink} 
                 target="_blank" 
@@ -563,8 +905,8 @@ export default function AgendamentoPublico() {
                 className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 hover:scale-110 border border-white/20"
               >
                 <FaWhatsapp className="w-5 h-5 text-green-500" />
-              </a>
-            )}
+            </a>
+          )}
             {/* Instagram - sempre mostrar, mesmo sem link */}
             <a 
               href={instagramLink || '#'} 
@@ -575,7 +917,7 @@ export default function AgendamentoPublico() {
             >
               <FaInstagram className="w-5 h-5 text-pink-500" />
             </a>
-            {mapsLink && (
+          {mapsLink && (
               <a 
                 href={mapsLink} 
                 target="_blank" 
@@ -583,13 +925,114 @@ export default function AgendamentoPublico() {
                 className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 hover:scale-110 border border-white/20"
               >
                 <FaMapMarkerAlt className="w-5 h-5 text-blue-500" />
-              </a>
-            )}
+            </a>
+          )}
             
+        </div>
+        </div>
+
+        {/* Card de profissionais */}
+        <div className="w-full max-w-md bg-transparent backdrop-blur-sm rounded-3xl shadow-xl border border-white/30 overflow-hidden">
+          <div className="p-4 pb-6">
+            
+            {bookingData.professionals.length === 0 ? (
+              <div className="text-center py-8">
+                <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Nenhum profissional disponível no momento.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {bookingData.professionals.map((professional) => (
+                  <button
+                    key={professional.id}
+                    className={`flex flex-col items-center p-2 rounded-xl border-2 transition-all duration-200 min-h-[80px] ${
+                      selectedProfessional === professional.id 
+                        ? 'border-purple-200 shadow-md' 
+                        : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    }`}
+                    style={selectedProfessional === professional.id ? {
+                      borderColor: 'var(--cor-primaria)',
+                      backgroundColor: `${primaryColor}10`
+                    } : {}}
+                    onClick={() => setSelectedProfessional(professional.id)}
+                  >
+                    <div className="mb-2">
+                      {professional.url_foto ? (
+                        <img
+                          src={professional.url_foto}
+                          alt={professional.name}
+                          className="w-14 h-14 rounded-full object-cover border-2"
+                          style={{ borderColor: 'var(--cor-primaria)' }}
+                        />
+                      ) : (
+                        <div
+                          className="w-14 h-14 rounded-full flex items-center justify-center text-white font-medium text-base"
+                          style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}
+                        >
+                          {professional.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <h4 className="font-medium text-xs" style={{ color: getTitleColor() }}>
+                        {professional.name}
+                      </h4>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Barra de Pesquisa com layout mais compacto */}
+        {/* Botão avançar */}
+        <button
+          onClick={goNext}
+          disabled={!canGoNext()}
+            className={`mt-6 w-full max-w-md py-4 rounded-2xl text-lg font-bold shadow-lg transition-all duration-300 ${
+              canGoNext()
+                ? 'hover:shadow-xl transform hover:scale-105'
+                : 'cursor-not-allowed opacity-50'
+            }`}
+            style={{
+              backgroundColor: canGoNext() ? 'var(--cor-primaria)' : '#E5E7EB',
+              color: canGoNext() ? getContrastColor(primaryColor) : '#9CA3AF',
+              boxShadow: canGoNext() ? `0 10px 25px ${primaryColor}40` : 'none'
+            }}
+        >
+          Avançar
+        </button>
+      </div>
+    );
+  }
+
+  // MOBILE-ONLY: Layout especial para a segunda etapa (serviços)
+  if ((currentStep as string) === 'services') {
+    return (
+      <div 
+        className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6"
+        style={{
+          maxWidth: 480,
+          margin: '0 auto',
+          '--cor-primaria': primaryColor || '#E9D8FD',
+          '--cor-secundaria': secondaryColor || '#FFFFFF',
+          backgroundImage: 'linear-gradient(to bottom, var(--cor-primaria), var(--cor-secundaria))',
+        } as React.CSSProperties}
+      >
+        {/* Cabeçalho com botão voltar */}
+        <div className="w-full max-w-md mb-4">
+          <div className="flex items-center justify-start mb-4">
+            <button
+              onClick={goBack}
+              className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-medium">Voltar</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Barra de Pesquisa */}
         <div className="w-full max-w-md mb-4">
           <div className="relative">
             <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
@@ -610,29 +1053,33 @@ export default function AgendamentoPublico() {
 
                   {/* Card de serviços */}
           <div className="w-full max-w-md bg-transparent backdrop-blur-sm rounded-3xl shadow-xl border border-white/30 overflow-hidden">
-            <div className="p-4">
+          <div className="p-4 pb-6">
             
-            {filteredServices.length === 0 ? (
+            {isLoadingServices ? (
               <div className="text-center py-8">
-                <Scissors className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">
-                  {searchTerm ? 'Nenhum serviço encontrado.' : 'Nenhum serviço disponível no momento.'}
-                </p>
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: primaryColor }} />
+                <p className="text-gray-500">Buscando serviços...</p>
               </div>
-            ) : (
-              <div className="space-y-4">
+            ) : filteredServices.length === 0 ? (
+            <div className="text-center py-8">
+              <Scissors className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">
+                  {searchTerm ? 'Nenhum serviço encontrado.' : 'Este profissional não tem serviços disponíveis para agendamento online.'}
+                </p>
+            </div>
+          ) : (
+              <div className="space-y-2 sm:space-y-3">
                                   {Object.entries(groupedServices).map(([category, services]) => (
                     <div key={category}>
                       {/* Lista de serviços da categoria */}
-                    <div className="space-y-0">
+                    <div className="space-y-2">
                       {services.map((service, index) => {
-                        const isSelected = selectedServices.includes(service.id);
-                        const isLast = index === services.length - 1;
+                const isSelected = selectedServices.includes(service.id);
                         
-                        return (
+                return (
                           <button
-                            key={service.id}
-                            className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 mb-2 ${
+                    key={service.id}
+                            className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 min-h-[60px] ${
                               isSelected 
                                 ? 'border-purple-200 shadow-md' 
                                 : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
@@ -641,14 +1088,14 @@ export default function AgendamentoPublico() {
                               borderColor: 'var(--cor-primaria)',
                               backgroundColor: `${primaryColor}10`
                             } : {}}
-                            onClick={() => {
-                              if (isSelected) {
-                                setSelectedServices(prev => prev.filter(id => id !== service.id));
-                              } else {
-                                setSelectedServices(prev => [...prev, service.id]);
-                              }
-                            }}
-                          >
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedServices(prev => prev.filter(id => id !== service.id));
+                      } else {
+                        setSelectedServices(prev => [...prev, service.id]);
+                      }
+                    }}
+                  >
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <h4 className="font-medium text-sm mb-1" style={{ color: getTitleColor() }}>{service.name}</h4>
@@ -656,7 +1103,7 @@ export default function AgendamentoPublico() {
                                   <span className="text-xs" style={{ color: getTitleColor() }}>
                                     {service.estimated_time} min
                                   </span>
-                                  {config.mostrar_precos && (
+                      {config.mostrar_precos && (
                                     <span className="text-xs" style={{ color: getTitleColor() }}>
                                       {service.price_display_mode === 'from' ? 'A partir de ' : ''}
                                       {service.price_display_mode !== 'hidden' ? `R$ ${service.price.toFixed(2).replace('.', ',')}` : ''}
@@ -671,26 +1118,26 @@ export default function AgendamentoPublico() {
                                 backgroundColor: 'var(--cor-primaria)',
                                 borderColor: 'var(--cor-primaria)'
                               } : {}}>
-                                {isSelected && (
-                                  <Check className="w-3 h-3" style={{ color: isLightColor(primaryColor) ? '#000000' : '#FFFFFF' }} />
-                                )}
-                              </div>
-                            </div>
+                        {isSelected && (
+                                  <Check className="w-3 h-3" style={{ color: getContrastColor(primaryColor) }} />
+                        )}
+                      </div>
+                    </div>
                           </button>
-                        );
-                      })}
+                );
+              })}
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
         </div>
 
-                  {/* Botão avançar */}
-          <button
-            onClick={goNext}
-            disabled={!canGoNext()}
+        {/* Botão avançar */}
+        <button
+          onClick={goNext}
+          disabled={!canGoNext()}
             className={`mt-6 w-full max-w-md py-4 rounded-2xl text-lg font-bold shadow-lg transition-all duration-300 ${
               canGoNext()
                 ? 'hover:shadow-xl transform hover:scale-105'
@@ -698,15 +1145,317 @@ export default function AgendamentoPublico() {
             }`}
             style={{
               backgroundColor: canGoNext() ? 'var(--cor-primaria)' : '#E5E7EB',
-              color: canGoNext() ? (isLightColor(primaryColor) ? '#000000' : '#FFFFFF') : '#9CA3AF',
+            color: canGoNext() ? getContrastColor(primaryColor) : '#9CA3AF',
               boxShadow: canGoNext() ? `0 10px 25px ${primaryColor}40` : 'none'
             }}
-          >
-            Avançar
-          </button>
+        >
+          Avançar
+        </button>
       </div>
     );
   }
+
+  // MOBILE-ONLY: Layout especial para a terceira etapa (data e horário)
+  if ((currentStep as string) === 'datetime') {
+    return (
+      <div 
+        className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6"
+        style={{
+          maxWidth: 480,
+          margin: '0 auto',
+          '--cor-primaria': primaryColor || '#E9D8FD',
+          '--cor-secundaria': secondaryColor || '#FFFFFF',
+          backgroundImage: 'linear-gradient(to bottom, var(--cor-primaria), var(--cor-secundaria))',
+        } as React.CSSProperties}
+      >
+        {/* Cabeçalho com botão voltar e calendário */}
+        <div className="w-full max-w-md mb-6">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={goBack}
+              className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-medium">Voltar</span>
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔍 Clique no botão calendário detectado');
+                setShowCustomCalendar(true);
+              }}
+              className={`flex items-center space-x-2 rounded-lg border-2 border-white/30 hover:border-white/50 transition-all duration-300 ${
+                selectedDate ? 'px-3 py-2' : 'p-2'
+              }`}
+              style={{ color: getTitleColor() }}
+              type="button"
+            >
+              <Calendar className="w-5 h-5 flex-shrink-0" />
+              {selectedDate && (
+                <span className="text-sm font-medium whitespace-nowrap">
+                  {selectedDate.toLocaleDateString('pt-BR', { 
+                    day: '2-digit', 
+                    month: '2-digit' 
+                  })}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+                  {/* Seletor de Data Sutil */}
+        <div className="w-full max-w-md mb-6">
+          {/* Datas horizontais */}
+          <div className="flex space-x-3 overflow-x-auto scrollbar-hide -webkit-overflow-scrolling-touch">
+            {(() => {
+              const days = [];
+              const minDate = new Date(getMinDate());
+              const maxDate = new Date(getMaxDate());
+              const today = new Date();
+              
+              // Gerar até 14 dias, mas respeitando as configurações
+              for (let i = 0; i < 14; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                
+                // Verificar se a data está dentro do período permitido
+                if (date >= minDate && date <= maxDate) {
+                  const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
+                  const isToday = i === 0;
+                  
+                  // Obter o dia da semana em português
+                  const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                  const dayOfWeek = dayNames[date.getDay()];
+                  
+                  days.push(
+                    <div key={i} className="flex-shrink-0 flex flex-col items-center">
+                      {/* Dia da semana */}
+                      <div className="text-xs font-medium mb-1" style={{ color: getTitleColor() }}>
+                        {dayOfWeek}
+                      </div>
+                      
+                      {/* Data */}
+                      <button
+                        onClick={() => {
+                          setSelectedDate(date);
+                          setSelectedTime('');
+                        }}
+                        className={`w-14 h-14 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center ${
+                          isSelected 
+                            ? 'border-white bg-white text-purple-600' 
+                            : 'border-white/30 hover:border-white/50'
+                        }`}
+                        style={isSelected ? {
+                          borderColor: '#FFFFFF',
+                          backgroundColor: '#FFFFFF',
+                          color: primaryColor
+                        } : {
+                          color: getTitleColor()
+                        }}
+                      >
+                        <span className="text-sm font-medium">
+                          {date.getDate().toString().padStart(2, '0')}
+                        </span>
+                        {isToday && (
+                          <span className="text-xs opacity-70">Hoje</span>
+                        )}
+                      </button>
+                    </div>
+                  );
+                }
+              }
+              
+              return days;
+            })()}
+          </div>
+        </div>
+
+        {/* Seletor de Horário */}
+        {selectedDate && (
+          <div className="w-full max-w-md mb-6">
+            <h3 className="text-sm font-medium mb-3" style={{ color: getTitleColor() }}>
+              Horário disponível
+            </h3>
+            
+            {loadingTimes ? (
+              <div className="text-center py-4">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" style={{ color: 'var(--cor-primaria)' }} />
+                <p className="text-sm text-gray-500">Carregando horários...</p>
+              </div>
+            ) : (() => {
+              const filteredTimes = availableTimes.filter(time => {
+                if (!selectedDate) return true;
+                
+                const timeDate = new Date(selectedDate);
+                const [hours, minutes] = time.split(':').map(Number);
+                timeDate.setHours(hours, minutes, 0, 0);
+                
+                const minDateTime = getMinDateTime();
+                return timeDate >= minDateTime;
+              });
+              
+              if (filteredTimes.length === 0) {
+                return (
+                  <div className="text-center py-4">
+                    <Clock className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">
+                      {availableTimes.length > 0 
+                        ? 'Nenhum horário disponível devido ao tempo mínimo de antecedência.' 
+                        : 'Nenhum horário disponível para esta data.'
+                      }
+                    </p>
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="grid grid-cols-4 gap-1">
+                  {filteredTimes.map((time) => (
+                    <button
+                      key={time}
+                      onClick={() => setSelectedTime(time)}
+                      className={`py-2 px-2 rounded-lg border-2 transition-all duration-200 text-xs font-medium ${
+                        selectedTime === time 
+                          ? 'border-white bg-white' 
+                          : 'border-white/30 hover:border-white/50'
+                      }`}
+                      style={selectedTime === time ? {
+                        borderColor: '#FFFFFF',
+                        backgroundColor: '#FFFFFF',
+                        color: primaryColor
+                      } : {
+                        color: getTitleColor()
+                      }}
+                    >
+                      {time}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Botão avançar */}
+        <button
+          onClick={goNext}
+          disabled={!canGoNext()}
+          className={`mt-6 w-full max-w-md py-4 rounded-2xl text-lg font-bold shadow-lg transition-all duration-300 ${
+            canGoNext()
+              ? 'hover:shadow-xl transform hover:scale-105'
+              : 'cursor-not-allowed opacity-50'
+          }`}
+          style={{
+            backgroundColor: canGoNext() ? 'var(--cor-primaria)' : '#E5E7EB',
+            color: canGoNext() ? getContrastColor(primaryColor) : '#9CA3AF',
+            boxShadow: canGoNext() ? `0 10px 25px ${primaryColor}40` : 'none'
+          }}
+        >
+          Avançar
+        </button>
+
+        {/* Modal do Calendário Customizado */}
+        {showCustomCalendar && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="bg-white rounded-2xl p-6 mx-4 max-w-sm w-full shadow-2xl">
+              {/* Cabeçalho do calendário */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Selecione uma data</h3>
+                <button
+                  onClick={() => setShowCustomCalendar(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Navegação do mês */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => {
+                    const newDate = new Date(calendarMonth);
+                    newDate.setMonth(newDate.getMonth() - 1);
+                    setCalendarMonth(newDate);
+                  }}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4 text-gray-500" />
+                </button>
+                <h4 className="text-base font-medium text-gray-900">
+                  {calendarMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                </h4>
+                <button
+                  onClick={() => {
+                    const newDate = new Date(calendarMonth);
+                    newDate.setMonth(newDate.getMonth() + 1);
+                    setCalendarMonth(newDate);
+                  }}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Dias da semana */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(day => (
+                  <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Grid do calendário */}
+              <div className="grid grid-cols-7 gap-1">
+                {getCustomCalendarDays().map((day, index) => {
+                  if (!day) {
+                    return <div key={index} className="h-10" />;
+                  }
+                  
+                  const isToday = day.toDateString() === new Date().toDateString();
+                  const isSelected = selectedDate && selectedDate.toDateString() === day.toDateString();
+                  const isAvailable = day >= new Date();
+                  const isCurrentMonth = day.getMonth() === calendarMonth.getMonth();
+                  
+                  return (
+                    <button
+                      key={index}
+                      disabled={!isAvailable}
+                      onClick={() => {
+                        if (isAvailable) {
+                          setSelectedDate(day);
+                          setSelectedTime('');
+                          setShowCustomCalendar(false);
+                        }
+                      }}
+                      className={`h-10 rounded-full text-sm font-medium transition-all ${
+                        isSelected 
+                          ? 'bg-purple-600 text-white' 
+                          : isToday 
+                            ? 'border-2 border-purple-600 text-purple-600' 
+                            : !isCurrentMonth 
+                              ? 'text-gray-300' 
+                              : isAvailable 
+                                ? 'hover:bg-gray-100 text-gray-900' 
+                                : 'text-gray-300 cursor-not-allowed'
+                      }`}
+                    >
+                      {day.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Debug para verificar o estado
+  console.log('🔍 Estado showCustomCalendar:', showCustomCalendar);
 
   return (
     <div 
@@ -728,20 +1477,20 @@ export default function AgendamentoPublico() {
                 Selecione os serviços desejados
               </h2>
               
-              {bookingData.services.length === 0 ? (
+              {isLoadingServices ? (
                 <div className="text-center py-8">
-                  <Scissors className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">Nenhum serviço disponível no momento.</p>
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: primaryColor }} />
+                  <p className="text-gray-500">Buscando serviços...</p>
                 </div>
-              ) : (
-                <div className="grid gap-4">
-                  {bookingData.services.map((service) => {
+              ) : servicesForProfessional.length > 0 ? (
+                <div className="space-y-2 sm:space-y-3">
+                  {servicesForProfessional.map((service) => {
                     const isSelected = selectedServices.includes(service.id);
                     
                     return (
                       <button
                         key={service.id}
-                        className={`w-full text-left border-2 rounded-lg p-3 transition-all duration-200 ${
+                        className={`w-full text-left border-2 rounded-lg p-3 transition-all duration-200 min-h-[60px] ${
                           isSelected 
                             ? 'border-purple-200 shadow-md' 
                             : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
@@ -758,23 +1507,23 @@ export default function AgendamentoPublico() {
                           }
                         }}
                       >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium mb-1" style={{ color: getTitleColor() }}>{service.name}</h3>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm" style={{ color: getTitleColor() }}>
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-sm" style={{ color: getTitleColor() }}>{service.name}</h3>
+                            <div className="flex items-center space-x-2 mt-0.5">
+                              <span className="text-xs" style={{ color: getTitleColor() }}>
                                 {service.estimated_time} min
                               </span>
                               {config.mostrar_precos && (
-                                <span className="text-sm" style={{ color: getTitleColor() }}>
+                                <span className="text-xs" style={{ color: getTitleColor() }}>
                                   {service.price_display_mode === 'from' ? 'A partir de ' : ''}
                                   {service.price_display_mode !== 'hidden' ? `R$ ${service.price.toFixed(2).replace('.', ',')}` : ''}
                                 </span>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          <div className="flex-shrink-0 ml-2">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                               isSelected ? 'border-purple-500 bg-purple-500' : 'border-gray-300'
                             }`}
                             style={isSelected ? {
@@ -782,7 +1531,7 @@ export default function AgendamentoPublico() {
                               borderColor: 'var(--cor-primaria)'
                             } : {}}>
                               {isSelected && (
-                                <Check className="w-3 h-3" style={{ color: isLightColor(primaryColor) ? '#000000' : '#FFFFFF' }} />
+                                <Check className="w-2.5 h-2.5" style={{ color: getContrastColor(primaryColor) }} />
                               )}
                             </div>
                           </div>
@@ -790,6 +1539,13 @@ export default function AgendamentoPublico() {
                       </button>
                     );
                   })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Scissors className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">
+                    Este profissional não tem serviços disponíveis para agendamento online.
+                  </p>
                 </div>
               )}
 
@@ -843,7 +1599,7 @@ export default function AgendamentoPublico() {
                         ) : (
                           <div
                             className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
-                            style={{ backgroundColor: professional.color || '#6366f1' }}
+                            style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}
                           >
                             {professional.name.charAt(0).toUpperCase()}
                           </div>
@@ -875,130 +1631,111 @@ export default function AgendamentoPublico() {
           {/* Etapa 3: Seleção de Data e Horário */}
           {(currentStep as string) === 'datetime' && (
             <div>
-              {/* Header com mês/ano */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-2">
-                  <h2 className="text-lg font-semibold" style={{ color: getTitleColor() }}>
-                    {selectedDate ? selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                  </h2>
-                  <button className="p-1 rounded-full hover:bg-gray-100">
-                    <ChevronDown className="w-4 h-4" style={{ color: getTitleColor() }} />
-                  </button>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button className="p-2 rounded-full hover:bg-gray-100">
-                    <ChevronLeft className="w-4 h-4" style={{ color: getTitleColor() }} />
-                  </button>
-                  <button className="p-2 rounded-full hover:bg-gray-100">
-                    <ChevronRight className="w-4 h-4" style={{ color: getTitleColor() }} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Calendário */}
-              <div className="mb-6">
-                {/* Dias da semana */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-                    <div key={day} className="text-center text-xs font-medium py-2" style={{ color: getTitleColor() }}>
-                      {day}
+                {/* Calendário Compacto */}
+                                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => {
+                          const newDate = new Date(currentMonth);
+                          newDate.setMonth(newDate.getMonth() - 1);
+                          setCurrentMonth(newDate);
+                        }}
+                        className="p-1 rounded-full hover:bg-white/20 transition-colors"
+                      >
+                        <ChevronLeft className="w-3 h-3" style={{ color: getTitleColor() }} />
+                      </button>
+                      <h3 className="text-sm font-semibold" style={{ color: getTitleColor() }}>
+                        {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                      </h3>
+                      <button
+                        onClick={() => {
+                          const newDate = new Date(currentMonth);
+                          newDate.setMonth(newDate.getMonth() + 1);
+                          setCurrentMonth(newDate);
+                        }}
+                        className="p-1 rounded-full hover:bg-white/20 transition-colors"
+                      >
+                        <ChevronRight className="w-3 h-3" style={{ color: getTitleColor() }} />
+                      </button>
                     </div>
-                  ))}
-                </div>
-
-                {/* Grid do calendário */}
-                <div className="grid grid-cols-7 gap-1">
-                  {(() => {
-                    const currentDate = selectedDate || new Date();
-                    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-                    const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-                    const startDate = new Date(firstDay);
-                    startDate.setDate(startDate.getDate() - firstDay.getDay());
-                    
-                    const days = [];
-                    for (let i = 0; i < 42; i++) {
-                      const date = new Date(startDate);
-                      date.setDate(startDate.getDate() + i);
+                  </div>
+                  
+                  {/* Dias da semana */}
+                  <div className="grid grid-cols-7 gap-0 mb-0.5">
+                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                      <div key={day} className="text-center text-xs font-medium py-0.5" style={{ color: getTitleColor() }}>
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Grid do calendário */}
+                  <div className="grid grid-cols-7 gap-0">
+                    {getCalendarDays().map((day, index) => {
+                      if (!day) {
+                        return <div key={index} className="h-6" />;
+                      }
                       
-                      const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                      const isSelected = selectedDate && 
-                        selectedDate.getDate() === date.getDate() &&
-                        selectedDate.getMonth() === date.getMonth() &&
-                        selectedDate.getFullYear() === date.getFullYear();
-                      const isDisabled = date < new Date();
-                      const isToday = date.toDateString() === new Date().toDateString();
+                      const isToday = day.toDateString() === new Date().toDateString();
+                      const isSelected = selectedDate && selectedDate.toDateString() === day.toDateString();
+                      const isAvailable = Array.from({ length: 30 }).some((_, i) => {
+                        const availableDate = new Date();
+                        availableDate.setDate(availableDate.getDate() + i);
+                        return availableDate.toDateString() === day.toDateString();
+                      });
+                      const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
                       
-                      days.push(
-                        <button
-                          key={i}
-                          disabled={isDisabled}
-                          onClick={() => {
-                            if (!isDisabled) {
-                              setSelectedDate(date);
-                              setSelectedTime('');
+                    return (
+                      <button
+                          key={index}
+                          disabled={!isAvailable}
+                        onClick={() => {
+                            if (isAvailable) {
+                              setSelectedDate(day);
+                          setSelectedTime('');
                             }
                           }}
-                          className={`aspect-square rounded-full border-2 transition-all focus:outline-none focus:ring-2 ${
+                          className={`h-6 rounded-full text-xs font-medium transition-all ${
                             isSelected 
                               ? 'text-white' 
-                              : isDisabled 
-                                ? 'text-gray-300 cursor-not-allowed' 
-                                : isToday
-                                  ? 'border-gray-400 text-gray-700'
-                                  : 'text-gray-700 hover:border-gray-300'
+                              : isToday 
+                                ? 'border border-gray-400' 
+                                : !isCurrentMonth 
+                                  ? 'text-gray-400' 
+                                  : isAvailable 
+                                    ? 'hover:bg-white/20' 
+                                    : 'text-gray-400 cursor-not-allowed'
                           }`}
-                          style={{
-                            ...(isSelected ? {
-                              backgroundColor: 'var(--cor-primaria)',
-                              borderColor: 'var(--cor-primaria)'
-                            } : {}),
-                            '--tw-ring-color': 'var(--cor-primaria)',
-                            opacity: isCurrentMonth ? 1 : 0.3
-                          } as React.CSSProperties}
+                          style={isSelected ? {
+                            backgroundColor: 'var(--cor-primaria)'
+                          } : {}}
                         >
-                          {date.getDate()}
-                        </button>
-                      );
-                    }
-                    return days;
-                  })()}
+                          {day.getDate()}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-
-              {/* Data selecionada */}
-              {selectedDate && (
-                <div className="mb-6">
-                  <div className="bg-gray-100 rounded-lg px-4 py-3">
-                    <span className="text-sm font-medium" style={{ color: getTitleColor() }}>
-                      Para: {selectedDate.toLocaleDateString('pt-BR', { 
-                        weekday: 'short', 
-                        day: '2-digit', 
-                        month: 'short', 
-                        year: 'numeric' 
-                      })}
-                    </span>
-                  </div>
-                </div>
-              )}
-
+              
               {/* Seletor de Horário */}
               {selectedDate && (
                 <div>
-                  <label className="block text-sm font-medium mb-3" style={{ color: getTitleColor() }}>
-                    Horários disponíveis
+                  <label className="block text-sm font-medium mb-2" style={{ color: getTitleColor() }}>
+                    Horário disponível
                   </label>
                   {loadingTimes ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--cor-primaria)' }} />
-                      <span className="ml-2" style={{ color: getTitleColor() }}>Carregando horários...</span>
+                      <span className="ml-2 text-gray-600">Carregando horários...</span>
                     </div>
                   ) : availableTimes.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
                       {availableTimes.map((time) => (
                         <button
                           key={time}
                           onClick={() => setSelectedTime(time)}
-                          className={`p-3 border rounded-lg text-center transition-colors ${
+                          className={`p-1.5 border rounded-md text-center transition-colors text-xs ${
                             selectedTime === time
                               ? 'text-white'
                               : 'border-gray-300 hover:border-gray-400'
@@ -1025,9 +1762,6 @@ export default function AgendamentoPublico() {
           {/* Etapa 4: Dados do Cliente */}
           {(currentStep as string) === 'client' && (
             <div>
-              <h2 className="text-xl font-semibold mb-6" style={{ color: getTitleColor() }}>
-                Seus dados para o agendamento
-              </h2>
               
               <div className="space-y-4">
                 <div>
@@ -1053,10 +1787,27 @@ export default function AgendamentoPublico() {
                     value={clientPhone}
                     onChange={handlePhoneChange}
                     placeholder="(11) 99999-9999"
+                    maxLength={15}
                     className="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:border-transparent"
                     style={{ '--tw-ring-color': 'var(--cor-primaria)' } as React.CSSProperties}
                   />
                 </div>
+
+                {/* Botão para limpar dados salvos */}
+                {(clientName || clientPhone) && (
+                  <div className="text-center pt-2">
+                    <button 
+                      onClick={() => {
+                        setClientName('');
+                        setClientPhone('');
+                        localStorage.removeItem('belaGestao_clientData');
+                      }} 
+                      className="text-sm text-gray-500 hover:text-indigo-600 transition-colors underline"
+                    >
+                      Não é você? Limpar dados
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1069,56 +1820,69 @@ export default function AgendamentoPublico() {
               </h2>
               
               <div className="space-y-4">
-                {/* Resumo dos serviços */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-3 flex items-center" style={{ color: getTitleColor() }}>
-                    <Scissors className="w-5 h-5 mr-2" style={{ color: 'var(--cor-primaria)' }} />
-                    Serviços
-                  </h3>
-                  {calculateTotals().services.map((service) => (
-                    <div key={service.id} className="flex justify-between text-sm mb-2">
-                      <span>{service.name} ({service.estimated_time} min)</span>
-                      {config.mostrar_precos && (
-                        <PriceDisplay service={service} className="text-right" />
-                      )}
+                {/* Resumo Compacto */}
+                <div className="border rounded-lg p-6">
+                  <div className="space-y-6">
+                    {/* Data e Horário */}
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 mr-4">
+                        <Calendar className="w-5 h-5" style={{ color: 'var(--cor-primaria)' }} />
                     </div>
-                  ))}
-                                      <div className="border-t pt-2 mt-2 flex justify-between font-medium">
-                      <span>Total: {calculateTotals().totalDuration} min</span>
-                      {config.mostrar_precos && (
-                        <span>R$ {calculateTotals().totalPrice.toFixed(2).replace('.', ',')}</span>
-                      )}
-                    </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-gray-500 mb-1" style={{ color: getContrastColor(primaryColor) }}>
+                          Data e Hora
+                        </div>
+                        <div className="text-base font-semibold" style={{ color: getTitleColor() }}>
+                          {selectedDate?.toLocaleDateString('pt-BR', { 
+                            weekday: 'short', 
+                            day: '2-digit', 
+                            month: 'short', 
+                            year: 'numeric' 
+                          })} às {selectedTime}
+                        </div>
+                  </div>
                 </div>
 
                 {/* Profissional */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-2 flex items-center" style={{ color: getTitleColor() }}>
-                    <User className="w-5 h-5 mr-2" style={{ color: 'var(--cor-primaria)' }} />
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 mr-4">
+                        <User className="w-5 h-5" style={{ color: 'var(--cor-primaria)' }} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-gray-500 mb-1" style={{ color: getContrastColor(primaryColor) }}>
                     Profissional
-                  </h3>
-                  <p>{bookingData.professionals.find(p => p.id === selectedProfessional)?.name}</p>
+                        </div>
+                        <div className="text-base font-semibold" style={{ color: getTitleColor() }}>
+                          {bookingData.professionals.find(p => p.id === selectedProfessional)?.name}
+                        </div>
+                      </div>
                 </div>
 
-                {/* Data e Horário */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-2 flex items-center" style={{ color: getTitleColor() }}>
-                    <Calendar className="w-5 h-5 mr-2" style={{ color: 'var(--cor-primaria)' }} />
-                    Data e Horário
-                  </h3>
-                  <p>
-                    {selectedDate?.toLocaleDateString('pt-BR')} às {selectedTime}
-                  </p>
+                    {/* Serviços */}
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 mr-4">
+                        <Scissors className="w-5 h-5" style={{ color: 'var(--cor-primaria)' }} />
                 </div>
-
-                {/* Dados do cliente */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-2 flex items-center" style={{ color: getTitleColor() }}>
-                    <Phone className="w-5 h-5 mr-2" style={{ color: 'var(--cor-primaria)' }} />
-                    Seus dados
-                  </h3>
-                  <p>{clientName}</p>
-                  <p>{clientPhone}</p>
+                      <div className="flex-1">
+                        <div className="text-xs text-gray-500 mb-1" style={{ color: getContrastColor(primaryColor) }}>
+                          Serviços
+                        </div>
+                        <div className="text-base font-semibold" style={{ color: getTitleColor() }}>
+                          {selectedServices.map((serviceId, index) => {
+                            const service = servicesForProfessional.find(s => s.id === serviceId);
+                            if (!service) return null;
+                            
+                            return (
+                              <span key={serviceId}>
+                                {service.name}
+                                {index < selectedServices.length - 1 && <span className="text-gray-400">, </span>}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1146,7 +1910,7 @@ export default function AgendamentoPublico() {
                 className="px-6 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 style={{
                   backgroundColor: 'var(--cor-primaria)',
-                  color: isLightColor(primaryColor) ? '#000000' : '#FFFFFF'
+                  color: getContrastColor(primaryColor)
                 }}
               >
                 {isCreating ? (
@@ -1155,7 +1919,7 @@ export default function AgendamentoPublico() {
                     Confirmando...
                   </>
                 ) : (
-                  'Confirmar Agendamento'
+                  'Confirmar'
                 )}
               </button>
             ) : (
@@ -1169,7 +1933,7 @@ export default function AgendamentoPublico() {
                 }`}
                 style={canGoNext() ? { 
                   backgroundColor: 'var(--cor-primaria)',
-                  color: isLightColor(primaryColor) ? '#000000' : '#FFFFFF'
+                  color: getContrastColor(primaryColor)
                 } : {}}
               >
                 Avançar
@@ -1179,6 +1943,36 @@ export default function AgendamentoPublico() {
           </div>
         </div>
       </main>
+
+      {/* Modal de Sucesso */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-sm mx-4 text-center shadow-2xl transform transition-all duration-300">
+            {/* Ícone de Sucesso */}
+            <div 
+              className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center"
+              style={{ backgroundColor: `${primaryColor}20` }}
+            >
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <Check className="w-5 h-5 text-white" />
+              </div>
+            </div>
+
+            {/* Título */}
+            <h3 className="text-xl font-bold mb-2 text-gray-800">
+              Agendamento Confirmado!
+            </h3>
+
+            {/* Mensagem */}
+            <p className="text-sm text-gray-600">
+              Seu agendamento foi realizado com sucesso. Nos vemos em breve!
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

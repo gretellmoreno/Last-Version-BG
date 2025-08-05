@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Receipt } from 'lucide-react';
+import Receipt from 'lucide-react/dist/esm/icons/receipt';
 import { useFinanceiro } from '../../contexts/FinanceiroContext';
 import { useProfessional } from '../../contexts/ProfessionalContext';
 

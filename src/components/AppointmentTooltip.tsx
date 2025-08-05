@@ -1,7 +1,10 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, User, Scissors, Calendar } from 'lucide-react';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import User from 'lucide-react/dist/esm/icons/user';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
 
 interface AppointmentTooltipProps {
   appointment: {

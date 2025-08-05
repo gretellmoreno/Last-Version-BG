@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
-import { Menu, ChevronDown, Plus, ChevronLeft, ChevronRight, CheckCircle, Globe, X, UserCircle, Calendar as CalendarIcon, Clock, Scissors } from 'lucide-react';
+import Menu from 'lucide-react/dist/esm/icons/menu';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import Globe from 'lucide-react/dist/esm/icons/globe';
+import X from 'lucide-react/dist/esm/icons/x';
+import UserCircle from 'lucide-react/dist/esm/icons/user-circle';
+import CalendarIcon from 'lucide-react/dist/esm/icons/calendar';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -23,8 +34,10 @@ import { ServiceProvider } from '../contexts/ServiceContext';
 import { ProductProvider } from '../contexts/ProductContext';
 import { ClientProvider } from '../contexts/ClientContext';
 import { supabaseService } from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 import { Appointment, CalendarEvent, AppointmentDetails } from '../types';
 import { formatDateToLocal } from '../utils/dateUtils';
+import { DEFAULT_PROFESSIONAL_COLOR } from '../utils/colorUtils';
 
 // Configuração do localizador em português
 const locales = { 'pt-BR': ptBR };
@@ -106,7 +119,7 @@ const ProfessionalsHeader = ({ professionals }: { professionals: any[] }) => {
               ) : (
                 <div 
                   className="professional-avatar w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: prof.color || '#6366f1' }}
+                                      style={{ backgroundColor: prof.color || DEFAULT_PROFESSIONAL_COLOR }}
                 >
                   {(() => {
                     const name = prof.name.replace('[Exemplo] ', '');
@@ -258,7 +271,8 @@ const MobileHeader = ({
   onProfessionalClick,
   onAddClick,
   onToggleSidebar,
-  onShowOnlineModal
+  onShowOnlineModal,
+  newOnlineAppointmentsCount = 0
 }: {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
@@ -267,6 +281,7 @@ const MobileHeader = ({
   onAddClick: () => void;
   onToggleSidebar?: () => void;
   onShowOnlineModal: () => void;
+  newOnlineAppointmentsCount?: number;
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -359,7 +374,7 @@ const MobileHeader = ({
             ) : (
               <div 
                 className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                style={{ backgroundColor: selectedProfessional?.color || '#6366f1' }}
+                style={{ backgroundColor: selectedProfessional?.color || DEFAULT_PROFESSIONAL_COLOR }}
               >
                 {(() => {
                   const name = selectedProfessional?.name?.replace('[Exemplo] ', '') || 'P';
@@ -375,10 +390,17 @@ const MobileHeader = ({
           </button>
           <button
             onClick={onShowOnlineModal}
-            className="p-2 rounded-full hover:bg-indigo-50 text-indigo-600 transition"
+            className="p-2 rounded-full hover:bg-indigo-50 text-indigo-600 transition relative"
             title="Agendamentos Online"
           >
             <Globe size={22} />
+            
+            {/* Notificação de novos agendamentos */}
+            {newOnlineAppointmentsCount > 0 && (
+              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                {newOnlineAppointmentsCount > 99 ? '99+' : newOnlineAppointmentsCount}
+              </div>
+            )}
           </button>
           <button
             onClick={onAddClick}
@@ -463,6 +485,13 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   const [showOnlineModal, setShowOnlineModal] = useState(false);
   const [onlineAppointments, setOnlineAppointments] = useState<any[]>([]);
   const [loadingOnline, setLoadingOnline] = useState(false);
+  
+  // Estados para notificação de novos agendamentos
+  const [newOnlineAppointmentsCount, setNewOnlineAppointmentsCount] = useState(0);
+  const [lastViewedOnlineModal, setLastViewedOnlineModal] = useState<Date | null>(null);
+  
+  // Estado para controlar notificações de realtime (evitar spam)
+  const lastNotificationRef = useRef<Date | null>(null);
 
   const { appointments, refreshAppointments } = useBooking();
   const { professionals } = useProfessional();
@@ -474,9 +503,25 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     if (!currentSalon?.id) return;
     setLoadingOnline(true);
     setShowOnlineModal(true);
+    
+    // Marcar que o modal foi aberto agora
+    const now = new Date();
+    setLastViewedOnlineModal(now);
+    // Salvar no localStorage para persistir entre sessões
+    if (currentSalon?.id) {
+      localStorage.setItem(`lastViewedOnlineModal_${currentSalon.id}`, now.toISOString());
+    }
+    setNewOnlineAppointmentsCount(0);
+    
     const { data, error } = await supabaseService.appointments.listOnlineAppointments({ salonId: currentSalon.id });
     if (!error && Array.isArray(data)) {
-      setOnlineAppointments(data);
+      // Ordenar por data de criação mais recente primeiro
+      const sortedData = data.sort((a: any, b: any) => {
+        const dateA = new Date(a.created_at || 0);
+        const dateB = new Date(b.created_at || 0);
+        return dateB.getTime() - dateA.getTime(); // Mais recente primeiro
+      });
+      setOnlineAppointments(sortedData);
     } else {
       setOnlineAppointments([]);
       if (error) toast.error('Erro ao buscar agendamentos online!');
@@ -502,6 +547,156 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
       setSelectedProfessionalId(professionals[0].id);
     }
   }, [professionals, selectedProfessionalId]);
+
+
+
+  // Função para verificar novos agendamentos online
+  const checkNewOnlineAppointments = useCallback(async () => {
+    if (!currentSalon?.id || showOnlineModal) return; // Não verificar se o modal está aberto
+    
+    try {
+      const { data, error } = await supabaseService.appointments.listOnlineAppointments({ salonId: currentSalon.id });
+      if (!error && Array.isArray(data)) {
+        // Carregar timestamp do localStorage
+        const savedTimestamp = localStorage.getItem(`lastViewedOnlineModal_${currentSalon.id}`);
+        const lastViewed = savedTimestamp ? new Date(savedTimestamp) : null;
+        
+        // Filtrar apenas agendamentos criados após a última visualização
+        const newAppointments = data.filter((appointment: any) => {
+          if (!lastViewed) return true; // Se nunca foi visualizado, mostrar todos
+          const appointmentDate = new Date(appointment.created_at || 0);
+          return appointmentDate > lastViewed;
+        });
+        
+        console.log('🔍 Verificando agendamentos online:', {
+          total: data.length,
+          novos: newAppointments.length,
+          lastViewed: lastViewed?.toISOString(),
+          currentSalon: currentSalon?.id
+        });
+        
+        setNewOnlineAppointmentsCount(newAppointments.length);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar novos agendamentos online:', error);
+    }
+  }, [currentSalon?.id, showOnlineModal]);
+
+  // Atualizar lastViewedOnlineModal quando o salão mudar
+  useEffect(() => {
+    if (currentSalon?.id) {
+      const saved = localStorage.getItem(`lastViewedOnlineModal_${currentSalon.id}`);
+      setLastViewedOnlineModal(saved ? new Date(saved) : null);
+    } else {
+      setLastViewedOnlineModal(null);
+    }
+  }, [currentSalon?.id]);
+
+  // Verificar novos agendamentos online periodicamente
+  useEffect(() => {
+    // Verificar imediatamente
+    checkNewOnlineAppointments();
+    
+    // Verificar a cada 30 segundos
+    const interval = setInterval(checkNewOnlineAppointments, 30000);
+    
+    return () => clearInterval(interval);
+  }, [checkNewOnlineAppointments]);
+
+  // 🚀 SUPABASE REALTIME - Atualização automática da agenda
+  useEffect(() => {
+    // Só conectar se tivermos um salão atual
+    if (!currentSalon?.id) {
+      console.log('⏸️ Aguardando salão atual para conectar Realtime...');
+      return;
+    }
+    
+    console.log('🔗 Configurando Supabase Realtime para agendamentos...', currentSalon.id);
+    
+    // Criar canal de escuta para mudanças na tabela appointments
+    const channel = supabase.channel('realtime-appointments-agenda')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Escuta todos os eventos: INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          console.log('📡 Mudança detectada na agenda via Realtime!', {
+            event: payload.eventType,
+            table: payload.table,
+            timestamp: new Date().toISOString(),
+            data: payload.new || payload.old
+          });
+          
+          // Verificar se a mudança é relevante para o salão atual
+          const recordData = payload.new || payload.old;
+          if (recordData && currentSalon?.id && (recordData as any).salon_id !== currentSalon.id) {
+            console.log('📋 Mudança ignorada - diferente salão atual');
+            return;
+          }
+          
+          // Atualizar a agenda automaticamente
+          refreshAppointments();
+          
+          // Verificar se devemos mostrar notificação (evitar spam)
+          const now = new Date();
+          const shouldShowNotification = !lastNotificationRef.current || 
+            (now.getTime() - lastNotificationRef.current.getTime()) > 2000; // 2 segundos entre notificações
+          
+          // Também atualizar a contagem de agendamentos online
+          if (payload.eventType === 'INSERT') {
+            checkNewOnlineAppointments();
+            
+            // Mostrar notificação para novos agendamentos apenas se for agendamento online
+            if (shouldShowNotification) {
+              const newRecord = payload.new as any;
+              if (newRecord?.created_via_link) {
+                toast.success('🆕 Novo agendamento online criado!', {
+                  duration: 4000,
+                  position: 'top-right',
+                });
+              } else {
+                toast.success('📅 Novo agendamento adicionado', {
+                  duration: 3000,
+                  position: 'top-right',
+                });
+              }
+              lastNotificationRef.current = now;
+            }
+          } else if (payload.eventType === 'UPDATE' && shouldShowNotification) {
+            toast('📝 Agendamento atualizado', {
+              duration: 2500,
+              position: 'top-right',
+              icon: 'ℹ️',
+            });
+            lastNotificationRef.current = now;
+          } else if (payload.eventType === 'DELETE' && shouldShowNotification) {
+            toast.error('🗑️ Agendamento cancelado', {
+              duration: 3000,
+              position: 'top-right',
+            });
+            lastNotificationRef.current = now;
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Supabase Realtime conectado com sucesso!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Erro na conexão Realtime');
+        } else {
+          console.log('📊 Status da conexão Realtime:', status);
+        }
+      });
+
+    // Função de limpeza: remove a inscrição quando o componente sair da tela
+    return () => {
+      console.log('🔌 Desconectando Supabase Realtime...');
+      supabase.removeChannel(channel);
+    };
+  }, [refreshAppointments, checkNewOnlineAppointments, currentSalon?.id]);
 
   // Obter profissional selecionado
   const selectedProfessional = professionals?.find(prof => prof.id === selectedProfessionalId);
@@ -1042,6 +1237,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
           onAddClick={handleAddClick}
           onToggleSidebar={onToggleMobileSidebar}
           onShowOnlineModal={handleShowOnlineModal}
+          newOnlineAppointmentsCount={newOnlineAppointmentsCount}
         />
       ) : (
         <>
@@ -1052,6 +1248,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
             onDateChange={setSelectedDate}
             onAddClick={handleAddClick}
             onOnlineClick={handleShowOnlineModal}
+            newOnlineAppointmentsCount={newOnlineAppointmentsCount}
           />
           {/* Cabeçalho fixo dos profissionais - apenas desktop */}
           {professionals && professionals.length > 0 && (
@@ -1209,7 +1406,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
                 <p className="text-gray-500">Nenhum agendamento online encontrado para esta data.</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto px-1">
+              <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto px-1 scrollbar-hide">
                 {onlineAppointments.map((ag: any) => {
                   let minutos: number | null = null;
                   if (ag.created_at) {
@@ -1281,7 +1478,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
                   ) : (
                     <div 
                       className="w-9 h-9 rounded-full flex items-center justify-center text-base font-bold text-white shadow-md"
-                      style={{ backgroundColor: professional.color || '#6366f1' }}
+                      style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}
                     >
                       {professional.name.charAt(0).toUpperCase()}
                     </div>

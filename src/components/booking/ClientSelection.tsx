@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Plus, UserPlus, ArrowLeft } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { useClients } from '../../hooks/useClients';
 import { useService } from '../../contexts/ServiceContext';
 

@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowLeft, User } from 'lucide-react';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import User from 'lucide-react/dist/esm/icons/user';
 import { formatPhone, isValidPhone } from '../../utils/phoneUtils';
 import DatePickerCalendar from '../DatePickerCalendar';
 

@@ -1,5 +1,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { X, Plus, User, UserCheck } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import User from 'lucide-react/dist/esm/icons/user';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
 import ServiceSelection from './booking/ServiceSelection';
 import ProductSelection from './booking/ProductSelection';
 import ServiceConfirmation from './booking/ServiceConfirmation';

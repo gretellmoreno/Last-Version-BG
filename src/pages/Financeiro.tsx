@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, TrendingUp, Users, ShoppingCart, BarChart3, BarChart2, List, ShoppingBag, Star } from 'lucide-react';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Users from 'lucide-react/dist/esm/icons/users';
+import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
+import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2';
+import List from 'lucide-react/dist/esm/icons/list';
+import ShoppingBag from 'lucide-react/dist/esm/icons/shopping-bag';
+import Star from 'lucide-react/dist/esm/icons/star';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Header from '../components/Header';

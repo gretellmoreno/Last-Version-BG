@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Scissors, Package, Edit3, Trash2 } from 'lucide-react';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
+import Package from 'lucide-react/dist/esm/icons/package';
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import Header from '../components/Header';
 import ServiceModal from '../components/ServiceModal';
 import ProductModal from '../components/ProductModal';
@@ -60,9 +63,14 @@ function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: ()
   };
 
   const handleSaveService = async (service: Omit<Service, 'id' | 'created_at' | 'updated_at' | 'salon_id'>) => {
+    console.log('🔥 Servicos - handleSaveService chamado!');
+    console.log('Service recebido:', service);
+    
     if (editingService) {
+      console.log('📝 Editando serviço existente');
       await updateService(editingService.id, service);
     } else {
+      console.log('➕ Criando novo serviço');
       await addService(service);
     }
     setIsServiceModalOpen(false);
@@ -122,6 +130,8 @@ function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: ()
     estimated_time: servico.duracao,
     commission_rate: servico.comissao,
     active: true,
+    available_online: true,
+    price_display_mode: 'normal',
     description: ''
   });
 

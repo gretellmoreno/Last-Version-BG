@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { useSalonSlug, useIsMainDomain } from '../hooks/useSubdomain';
 import { salonService } from '../lib/salonService';
@@ -40,6 +40,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const loadingRef = useRef(false);
   
   const { user, isAuthenticated } = useAuth();
   const salonSlug = useSalonSlug();
@@ -47,9 +48,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Função para buscar salão pelo subdomínio
   const loadSalonBySlug = async (slug: string) => {
+    if (loadingRef.current) {
+      console.log('⚠️ Carregamento de salão já em andamento, ignorando...');
+      return;
+    }
+
     console.log('🔄 Carregando salão pelo slug:', slug);
     setLoading(true);
     setError(null);
+    loadingRef.current = true;
 
     try {
       const response = await salonService.getSalonBySlug(slug);
@@ -71,11 +78,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setIsReady(false);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
   // Função para carregar salão do usuário (método antigo, para domínio principal)
   const loadUserSalons = async () => {
+    if (loadingRef.current) {
+      console.log('⚠️ Carregamento de salão já em andamento, ignorando...');
+      return;
+    }
+
     if (!user?.id) {
       console.log('❌ Usuário não encontrado');
       setLoading(false);
@@ -85,6 +98,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     console.log('🔄 Carregando salões do usuário...');
     setLoading(true);
     setError(null);
+    loadingRef.current = true;
 
     try {
       // Buscar salões do usuário (implementar conforme necessário)
@@ -108,6 +122,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setIsReady(false);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -117,7 +132,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       salonSlug, 
       isMainDomain, 
       isAuthenticated,
-      userId: user?.id 
+      userId: user?.id,
+      loading: loadingRef.current
     });
 
     // Se tem slug de salão (subdomínio), carregar pelo slug
@@ -130,11 +146,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     // Se não está autenticado no domínio principal, apenas marcar como pronto
     else if (isMainDomain && !isAuthenticated) {
+      console.log('🏠 Domínio principal sem autenticação, marcando como pronto');
       setLoading(false);
       setIsReady(false);
     }
     // Fallback
     else {
+      console.log('🔄 Fallback - marcando como pronto');
       setLoading(false);
       setIsReady(false);
     }

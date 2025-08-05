@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Smartphone, Banknote, DollarSign, ArrowLeft } from 'lucide-react';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import Smartphone from 'lucide-react/dist/esm/icons/smartphone';
+import Banknote from 'lucide-react/dist/esm/icons/banknote';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { useProduct } from '../../contexts/ProductContext';
 import { createDirectSale, paymentMethodService } from '../../lib/supabaseService';
 import { useApp } from '../../contexts/AppContext';

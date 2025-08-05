@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { Scissors, Sparkles, Users, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
+import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 
 interface CreateSalonPayload {
   ownerEmail: string;

@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, User, AlertCircle, Loader2, Edit3, Trash2 } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import User from 'lucide-react/dist/esm/icons/user';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import Header from '../components/Header';
 import ClientModal from '../components/ClientModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
@@ -155,7 +160,7 @@ function ClientesContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { on
         )}
 
         {/* Barra de busca */}
-        <div className="p-4 md:p-6 pb-2">
+        <div className="p-3 md:p-6 pb-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
             <input
@@ -171,7 +176,7 @@ function ClientesContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { on
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-4 md:p-6 pt-2 overflow-hidden">
+        <div className="flex-1 p-3 md:p-6 pt-2 overflow-hidden">
           {loading ? (
             <LoadingState />
           ) : clients.length === 0 ? (
@@ -180,12 +185,12 @@ function ClientesContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { on
             <>
               {isMobile ? (
                 // Cards para mobile - compactos como outras páginas
-                <div className="space-y-1.5 h-[calc(100vh-250px)] overflow-y-auto scrollbar-thin pr-1 pb-6">
+                <div className="space-y-1 h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin pr-1 pb-2">
                   {clients.map((client) => (
                     <div
                       key={client.id}
                       onClick={() => handleEditClient(client)}
-                      className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-1.5 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer active:scale-95"
+                      className="relative bg-white rounded-lg shadow-sm border border-gray-100 p-1 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer active:scale-95"
                     >
                       
                       <div className="flex items-center space-x-1.5">

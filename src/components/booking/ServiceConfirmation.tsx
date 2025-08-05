@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { User, Plus, Trash2, Package, Edit2, X as XIcon, UserCheck } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import User from 'lucide-react/dist/esm/icons/user';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Package from 'lucide-react/dist/esm/icons/package';
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
+import XIcon from 'lucide-react/dist/esm/icons/x';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
 import { useService } from '../../contexts/ServiceContext';
 import { useProfessional } from '../../contexts/ProfessionalContext';
 import { useProduct } from '../../contexts/ProductContext';

@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Edit3, Camera, Upload, Trash2 } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import User from 'lucide-react/dist/esm/icons/user';
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
+import Camera from 'lucide-react/dist/esm/icons/camera';
+import Upload from 'lucide-react/dist/esm/icons/upload';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { formatPhone, isValidPhone, formatCPF } from '../utils/phoneUtils';
 import { Professional } from '../types';
 import DatePickerCalendar from './DatePickerCalendar';
@@ -119,19 +124,38 @@ export default function ProfessionalModal({
     if (!isOpen || !currentSalon?.id) return;
     setLoadingServices(true);
     (async () => {
-      // Buscar todos os serviços do salão
-      const { data: services } = await supabaseService.services.list(currentSalon.id);
-      setAllServices(services || []);
-      // Buscar serviços do profissional
-      if (editingProfessional?.id) {
-        const { data: profServices } = await supabase.rpc('list_services_for_professional', {
-          p_professional_id: editingProfessional.id
-        });
-        setSelectedServiceIds((profServices || []).map((s: any) => s.service_id));
-      } else {
-        setSelectedServiceIds([]);
+      try {
+        // Buscar todos os serviços do salão
+        const { data: services, error: servicesError } = await supabaseService.services.list(currentSalon.id);
+        if (servicesError) {
+          console.error('Erro ao carregar serviços:', servicesError);
+        }
+        setAllServices(services || []);
+        
+        // Buscar serviços do profissional
+        if (editingProfessional?.id) {
+          console.log('Buscando serviços para profissional:', editingProfessional.id, 'salão:', currentSalon.id);
+          const { data: profServices, error: profServicesError } = await supabase.rpc('list_services_for_professional', {
+            p_salon_id: currentSalon.id,
+            p_professional_id: editingProfessional.id
+          });
+          
+          if (profServicesError) {
+            console.error('Erro ao buscar serviços do profissional:', profServicesError);
+          } else {
+            console.log('Serviços encontrados para o profissional:', profServices);
+            const serviceIds = (profServices || []).map((s: any) => s.id);
+            console.log('IDs dos serviços selecionados:', serviceIds);
+            setSelectedServiceIds(serviceIds);
+          }
+        } else {
+          setSelectedServiceIds([]);
+        }
+      } catch (error) {
+        console.error('Erro geral ao carregar serviços:', error);
+      } finally {
+        setLoadingServices(false);
       }
-      setLoadingServices(false);
     })();
   }, [isOpen, currentSalon?.id, editingProfessional?.id]);
 
@@ -301,8 +325,8 @@ export default function ProfessionalModal({
                   <User size={40} />
                 </div>
               )}
-              <label htmlFor="photo-upload" className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow cursor-pointer border border-gray-300">
-                <Camera size={18} />
+              <label htmlFor="photo-upload" className="absolute -bottom-1 -right-1 bg-white rounded-full p-1.5 shadow-lg cursor-pointer border border-gray-300 hover:bg-gray-50 transition-colors z-10">
+                <Camera size={16} className="text-gray-600" />
                 <input
                   id="photo-upload"
                   type="file"
@@ -315,7 +339,7 @@ export default function ProfessionalModal({
               {professionalForm.url_foto && (
                 <button
                   type="button"
-                  className="absolute top-0 right-0 bg-white rounded-full p-1 shadow border border-gray-300"
+                  className="absolute -top-1 -right-1 bg-white rounded-full p-1.5 shadow-lg border border-gray-300 hover:bg-gray-50 transition-colors z-10"
                   onClick={removePhoto}
                   disabled={loading}
                   title="Remover foto"
@@ -325,17 +349,7 @@ export default function ProfessionalModal({
               )}
             </div>
 
-            {/* Botão remover foto */}
-            {professionalForm.photo && (
-              <div className="flex justify-center">
-                <button
-                  onClick={removePhoto}
-                  className="text-xs text-red-600 hover:text-red-800 transition-colors"
-                >
-                  Remover foto
-                </button>
-              </div>
-            )}
+
 
             {/* Formulário em coluna única */}
             <div className="space-y-3">
@@ -425,6 +439,29 @@ export default function ProfessionalModal({
                   onChange={(e) => handleUpdateForm('cpf', e.target.value)}
                   className={`w-full px-3 ${isMobileView ? 'py-2.5' : 'py-2'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm`}
                 />
+              </div>
+
+              {/* Cor do Profissional */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-2">
+                  Cor do Profissional
+                </label>
+                <div className="grid grid-cols-6 gap-2">
+                  {CALENDAR_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => handleUpdateForm('color', color)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        professionalForm.color === color
+                          ? 'border-gray-800 scale-110'
+                          : 'border-gray-300 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title={`Cor ${color}`}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Remover Taxa de Comissão e Status */}

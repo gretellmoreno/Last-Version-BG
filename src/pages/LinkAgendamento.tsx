@@ -1,6 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Copy, Share, HelpCircle, ChevronRight, User, Settings, Briefcase, Users, Clock, Shield, QrCode, AlertCircle, X, Camera, MapPin, Plus, Edit3, Trash2, Menu, Globe, Link, Phone } from 'lucide-react';
-import { SketchPicker } from 'react-color';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import User from 'lucide-react/dist/esm/icons/user';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Building from 'lucide-react/dist/esm/icons/building';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import Lock from 'lucide-react/dist/esm/icons/lock';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import Menu from 'lucide-react/dist/esm/icons/menu';
+import Globe from 'lucide-react/dist/esm/icons/globe';
+import Link from 'lucide-react/dist/esm/icons/link';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import Copy from 'lucide-react/dist/esm/icons/copy';
+import Camera from 'lucide-react/dist/esm/icons/camera';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import Share from 'lucide-react/dist/esm/icons/share';
+import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Briefcase from 'lucide-react/dist/esm/icons/briefcase';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Shield from 'lucide-react/dist/esm/icons/shield';
+import QrCode from 'lucide-react/dist/esm/icons/qr-code';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import X from 'lucide-react/dist/esm/icons/x';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import { colorThemes } from '../lib/themes';
 import { useApp } from '../contexts/AppContext';
 import { useService, ServiceProvider } from '../contexts/ServiceContext';
 import { useProfessional, ProfessionalProvider } from '../contexts/ProfessionalContext';
@@ -9,6 +41,8 @@ import { supabaseService } from '../lib/supabaseService';
 import toast from 'react-hot-toast';
 import { formatPhone } from '../utils/phoneUtils';
 import Header from '../components/Header';
+import { DEFAULT_PROFESSIONAL_COLOR } from '../utils/colorUtils';
+import PhoneMockup from '../components/PhoneMockup';
 
 interface LinkAgendamentoProps {
   onToggleMobileSidebar?: () => void;
@@ -20,9 +54,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
   const { services, loading, error, addService, updateService, removeService, setServices } = useService();
   const { professionals: professionalsData, loading: professionalsLoading, error: professionalsError, setProfessionals } = useProfessional();
   const [isMobile, setIsMobile] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('link');
-  const [linkAgendamento, setLinkAgendamento] = useState('');
 
   const [profileData, setProfileData] = useState({
     name: '',
@@ -32,8 +64,6 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
   });
   const [primaryColor, setPrimaryColor] = useState('#6366f1');
   const [secondaryColor, setSecondaryColor] = useState('#4f46e5');
-  const [showPrimaryColorPicker, setShowPrimaryColorPicker] = useState(false);
-  const [showSecondaryColorPicker, setShowSecondaryColorPicker] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isPhotoLoading, setIsPhotoLoading] = useState(false);
@@ -56,6 +86,9 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
   const [timeInterval, setTimeInterval] = useState('30');
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [previewKey, setPreviewKey] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const priceDisplayOptions = [
     { value: 'normal', label: 'Normal' },
@@ -88,12 +121,44 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
     }
   }, [activeTab, currentSalon?.id]);
 
+  // Atualizar pré-visualização quando configurações mudarem
+  useEffect(() => {
+    if (activeTab === 'link' && isLinkActive && currentSalon?.id) {
+      setPreviewKey(prev => prev + 1);
+      
+      // Forçar atualização do iframe após um pequeno delay
+      setTimeout(() => {
+        const iframe = document.querySelector('iframe[title="Pré-visualização do Agendamento"]') as HTMLIFrameElement;
+        if (iframe) {
+          iframe.src = iframe.src;
+        }
+      }, 100);
+    }
+  }, [primaryColor, secondaryColor, profileData.name, profilePhotoUrl, isLinkActive, activeTab, currentSalon?.id]);
+
+  // Atualizar URL de preview quando configurações mudarem
+  useEffect(() => {
+    if (currentSalon?.id) {
+      setIsPreviewLoading(true);
+      
+      // Adicionar timestamp para forçar refresh do iframe
+      const timestamp = Date.now();
+      const baseUrl = `${window.location.origin}/agendamento?salonId=${currentSalon.id}&preview=true&t=${timestamp}`;
+      
+      // Delay pequeno para mostrar loading
+      setTimeout(() => {
+        setPreviewUrl(baseUrl);
+        setIsPreviewLoading(false);
+      }, 500);
+    }
+  }, [currentSalon?.id, profileData, primaryColor, secondaryColor, settings]);
+
   // Atualizar tabs
   const tabs = [
     { id: 'link', name: 'Link de Agendamento', icon: Link },
     { id: 'profile', name: 'Detalhes do Perfil', icon: User },
     { id: 'config', name: 'Configurações da Agenda', icon: Settings },
-    { id: 'disponibilidade', name: 'Disponibilidade', icon: Briefcase },
+    { id: 'disponibilidade', name: 'Disponibilidade', icon: Building },
   ];
 
   // Carregar configuração básica (link e status)
@@ -108,9 +173,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
         .eq('id', currentSalon.id)
         .single();
 
-      if (salonData) {
-        setLinkAgendamento(salonData.subdomain || '');
-      }
+
     } catch (error) {
       console.error('Erro ao carregar configuração básica:', error);
     }
@@ -144,15 +207,6 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
 
     try {
       const { data: agendamentoConfig, error: agendamentoError } = await supabaseService.linkAgendamento.getConfig(currentSalon.id);
-      const { data: salonData, error: salonError } = await supabase
-        .from('salons')
-        .select('subdomain')
-        .eq('id', currentSalon.id)
-        .single();
-
-      if (salonData) {
-        setLinkAgendamento(salonData.subdomain || '');
-      }
       
       if (agendamentoConfig) {
         setSettings(agendamentoConfig);
@@ -268,24 +322,9 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
 
       const { data: configResult, error: configError } = await supabaseService.linkAgendamento.saveConfig(currentSalon.id, agendamentoConfig);
 
-      const { error: salonError } = await supabase
-        .from('salons')
-        .update({ subdomain: linkAgendamento })
-        .eq('id', currentSalon.id);
-
       if (configError) {
         console.error('❌ Erro ao salvar configurações de agendamento:', configError);
         toast.error('Erro ao salvar configurações de agendamento.');
-        return;
-      }
-
-      if (salonError) {
-        console.error('❌ Erro ao salvar subdomínio:', salonError);
-        if (salonError.code === '23505') {
-          toast.error('Este link (subdomínio) já está em uso. Tente outro.');
-        } else {
-          toast.error('Erro ao salvar o subdomínio.');
-        }
         return;
       }
 
@@ -315,43 +354,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
     }
   };
 
-  const handleCopyLink = async () => {
-    if (!linkAgendamento.trim()) {
-      toast.error('Digite um link primeiro!');
-      return;
-    }
 
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(linkAgendamento.trim());
-        setIsCopied(true);
-        toast.success('Link copiado para a área de transferência!');
-        setTimeout(() => setIsCopied(false), 2000);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = linkAgendamento.trim();
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-          document.execCommand('copy');
-          setIsCopied(true);
-          toast.success('Link copiado para a área de transferência!');
-          setTimeout(() => setIsCopied(false), 2000);
-        } catch (err) {
-          toast.error('Erro ao copiar link. Tente novamente.');
-        } finally {
-          document.body.removeChild(textArea);
-        }
-      }
-    } catch (err) {
-      toast.error('Erro ao copiar link. Tente novamente.');
-    }
-  };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -694,30 +697,39 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
               <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
                 {/* Tab Link de Agendamento */}
                 {activeTab === 'link' && (
-                  <div className="flex flex-col gap-4 items-start w-full">
+                  <div className={`flex ${isMobile ? 'flex-col gap-4' : 'gap-8'} items-start w-full`}>
+                    {/* Lado esquerdo - Configurações */}
+                    <div className={`flex flex-col gap-4 ${isMobile ? 'w-full' : 'flex-1'}`}>
                     {/* Campo do link */}
-                    <div className="w-full max-w-md">
-                      <div className="relative flex-1 min-w-0">
+                      <div className="w-full">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Link de Agendamento
+                        </label>
+                        <div className="flex items-center space-x-2">
                         <input
                           type="text"
-                          value={`${linkAgendamento || 'seusalao'}.belagestao.com/agendamento`}
+                            value={`${window.location.origin}/agendamento?salonId=${currentSalon?.id}`}
                           readOnly
-                          className="w-full px-4 py-2 pr-9 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:ring-0 focus:border-gray-200 cursor-default text-sm min-w-0"
-                          style={{ minWidth: 0 }}
+                            className="flex-1 px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 cursor-not-allowed"
                         />
                         <button
-                          onClick={handleCopyLink}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-purple-600 transition-colors"
-                          title={isCopied ? 'Link copiado!' : 'Copiar link'}
-                          tabIndex={-1}
-                          type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/agendamento?salonId=${currentSalon?.id}`);
+                              toast.success('Link copiado para a área de transferência!');
+                            }}
+                            className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-1"
                         >
                           <Copy size={16} />
+                            <span className="text-sm">Copiar</span>
                         </button>
                       </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Compartilhe este link para que seus clientes possam agendar online
+                        </p>
                     </div>
-                    {/* Switch + badge em linha separada no mobile, lado a lado no desktop */}
-                    <div className={`flex ${isMobile ? 'flex-row w-full max-w-md justify-between' : 'items-center gap-3'} mt-1`}>
+
+                      {/* Switch + badge */}
+                      <div className="flex items-center gap-3">
                       <button
                         onClick={toggleLinkStatus}
                         className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors border ${isLinkActive ? 'bg-green-500 border-green-400 justify-end' : 'bg-gray-300 border-gray-200 justify-start'}`}
@@ -728,8 +740,22 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                       </button>
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${isLinkActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{isLinkActive ? 'Ativo' : 'Inativo'}</span>
                     </div>
+                    </div>
+
+                    {/* Lado direito - Pré-visualização (apenas desktop) */}
+                    {!isMobile && (
+                      <div className="flex-shrink-0">
+                        <PhoneMockup 
+                          previewUrl={isLinkActive ? `${window.location.origin}/agendamento?salonId=${currentSalon?.id}&preview=true&mobile=true&fullscreen=true` : ''}
+                          isLoading={isPreviewLoading}
+                          previewKey={previewKey}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
+
+
 
                 {/* Tab Detalhes do Perfil */}
                 {activeTab === 'profile' && (
@@ -862,75 +888,34 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                       </div>
                     </div>
 
-                    {/* Seletor de Cores */}
+                    {/* Galeria de Temas */}
                     <div className="mt-6">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Cores do Tema</h4>
-                      <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-2 gap-6'}`}>
-                        {/* Cor Primária */}
-                        <div className="relative">
-                          <label className="block text-xs font-medium text-gray-600 mb-2">Cor Primária</label>
-                          <div className="flex items-center space-x-3">
-                            <div
-                              className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer shadow-sm hover:shadow-md transition-all duration-200"
-                              style={{ backgroundColor: primaryColor }}
-                              onClick={() => setShowPrimaryColorPicker(!showPrimaryColorPicker)}
-                            />
-                            <div className="flex-1">
-                              <input
-                                type="text"
-                                value={primaryColor}
-                                onChange={(e) => setPrimaryColor(e.target.value)}
-                                className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-                                placeholder="#6366f1"
-                              />
-                            </div>
-                          </div>
-                          {showPrimaryColorPicker && (
-                            <div className="absolute z-10 mt-2">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Temas de Cores</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {colorThemes.map((theme) => {
+                          const isSelected = primaryColor === theme.primary && secondaryColor === theme.secondary;
+                          return (
+                            <button
+                              key={theme.name}
+                              onClick={() => {
+                                setPrimaryColor(theme.primary);
+                                setSecondaryColor(theme.secondary);
+                              }}
+                              className={`p-3 border-2 rounded-lg text-center transition-all relative hover:shadow-md ${
+                                isSelected ? 'border-purple-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              {isSelected && (
+                                <CheckCircle className="w-5 h-5 text-white bg-purple-500 rounded-full absolute -top-2 -right-2 shadow-sm" />
+                              )}
                               <div
-                                className="fixed inset-0"
-                                onClick={() => setShowPrimaryColorPicker(false)}
+                                className="w-full h-16 rounded mb-3"
+                                style={{ backgroundImage: `linear-gradient(to bottom, ${theme.primary}, ${theme.secondary})` }}
                               />
-                              <SketchPicker
-                                color={primaryColor}
-                                onChange={(color) => setPrimaryColor(color.hex)}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Cor Secundária */}
-                        <div className="relative">
-                          <label className="block text-xs font-medium text-gray-600 mb-2">Cor Secundária</label>
-                          <div className="flex items-center space-x-3">
-                            <div
-                              className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer shadow-sm hover:shadow-md transition-all duration-200"
-                              style={{ backgroundColor: secondaryColor }}
-                              onClick={() => setShowSecondaryColorPicker(!showSecondaryColorPicker)}
-                            />
-                            <div className="flex-1">
-                              <input
-                                type="text"
-                                value={secondaryColor}
-                                onChange={(e) => setSecondaryColor(e.target.value)}
-                                className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-                                placeholder="#4f46e5"
-                              />
-                            </div>
-                          </div>
-                          {showSecondaryColorPicker && (
-                            <div className="absolute z-10 mt-2">
-                              <div
-                                className="fixed inset-0"
-                                onClick={() => setShowSecondaryColorPicker(false)}
-                              />
-                              <SketchPicker
-                                color={secondaryColor}
-                                onChange={(color) => setSecondaryColor(color.hex)}
-                              />
-                            </div>
-                          )}
-                        </div>
+                              <span className="text-sm font-medium text-gray-700">{theme.name}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -966,30 +951,6 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                     </div>
 
                     <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-2 gap-6'}`}>
-                      {/* Link de Agendamento */}
-                      <div className="group">
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-sm font-medium text-gray-700">Link de Agendamento</label>
-                          <button 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              openHelpModal('Link de Agendamento', 'Este é o link que seus clientes usarão para acessar a página de agendamento online. Você pode personalizar este link conforme sua preferência.');
-                            }}
-                            className="text-gray-400 hover:text-purple-500 transition-colors p-1 rounded-full hover:bg-purple-50"
-                          >
-                            <HelpCircle size={16} />
-                          </button>
-                        </div>
-                        <input
-                          type="text"
-                          value={linkAgendamento}
-                          onChange={(e) => setLinkAgendamento(e.target.value)}
-                          placeholder="Cole ou digite seu link de agendamento aqui"
-                          className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400 hover:border-purple-300"
-                        />
-                      </div>
-              
                       {/* Intervalo de Horários */}
                       <div className="group">
                         <div className="flex items-center justify-between mb-2">
@@ -1156,7 +1117,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                     {/* Serviços */}
                     <div>
                       <div className="flex items-center mb-4 sm:mb-6">
-                        <Briefcase className="mr-3 text-purple-600" size={22} />
+                        <Building className="mr-3 text-purple-600" size={22} />
                         <h3 className="text-xl font-bold text-gray-900">Serviços Disponíveis</h3>
                       </div>
                       {loading ? (
@@ -1178,7 +1139,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                         </div>
                       ) : services.length === 0 ? (
                         <div className="text-center py-12">
-                          <Briefcase size={48} className="mx-auto text-gray-400 mb-4" />
+                          <Building size={48} className="mx-auto text-gray-400 mb-4" />
                           <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum serviço configurado</h3>
                           <p className="text-gray-500 mb-6">Configure os serviços que estarão disponíveis para agendamento online</p>
                         </div>
@@ -1277,7 +1238,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                                 <div className="flex items-center space-x-3">
                                   <div 
                                     className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm"
-                                    style={{ backgroundColor: professional.color || '#8B5CF6' }}
+                                    style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}
                                   >
                                     {professional.name.charAt(0).toUpperCase()}
                                   </div>

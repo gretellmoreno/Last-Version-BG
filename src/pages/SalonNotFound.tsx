@@ -1,5 +1,6 @@
 import React from 'react';
-import { AlertCircle, Home } from 'lucide-react';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import Home from 'lucide-react/dist/esm/icons/home';
 import { useSalonSlug } from '../hooks/useSubdomain';
 
 export default function SalonNotFound() {

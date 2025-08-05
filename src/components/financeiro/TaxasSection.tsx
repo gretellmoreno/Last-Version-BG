@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Plus, Edit, Trash2, Edit3 } from 'lucide-react';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
 import TaxaModal from '../TaxaModal';
 import DeleteConfirmationModal from '../DeleteConfirmationModal';
 import { useTaxas } from '../../contexts/TaxasContext';

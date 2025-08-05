@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Calendar, ShoppingBag } from 'lucide-react';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import ShoppingBag from 'lucide-react/dist/esm/icons/shopping-bag';
 
 interface AddActionModalProps {
   isOpen: boolean;

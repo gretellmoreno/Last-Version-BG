@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
+import Lock from 'lucide-react/dist/esm/icons/lock';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { useAuth } from '../contexts/AuthContext';
 import { useSalonSlug, useIsMainDomain } from '../hooks/useSubdomain';
 import { salonService } from '../lib/salonService';

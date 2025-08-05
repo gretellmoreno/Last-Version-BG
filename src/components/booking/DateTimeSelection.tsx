@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, User, Plus } from 'lucide-react';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import User from 'lucide-react/dist/esm/icons/user';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { useBooking } from '../../hooks/useBooking';
 import { useProfessional } from '../../contexts/ProfessionalContext';
 import { useService } from '../../contexts/ServiceContext';

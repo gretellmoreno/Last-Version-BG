@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Percent, Trash2 } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import Percent from 'lucide-react/dist/esm/icons/percent';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 
 interface Taxa {
   id: string;

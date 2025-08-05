@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Edit3, Trash2, User, UserPlus, Loader2, Users, Receipt, DollarSign } from 'lucide-react';
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import User from 'lucide-react/dist/esm/icons/user';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Receipt from 'lucide-react/dist/esm/icons/receipt';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
 import { toast } from 'react-hot-toast';
 import { Professional } from '../types';
 import { useProfessional, ProfessionalProvider } from '../contexts/ProfessionalContext';
@@ -14,6 +21,7 @@ import HistoricoFechamentoModal from '../components/HistoricoFechamentoModal';
 import PeriodFilterModal from '../components/PeriodFilterModal';
 import { supabaseService } from '../lib/supabaseService';
 import { getTodayLocal, formatDateForDisplay } from '../utils/dateUtils';
+import { DEFAULT_PROFESSIONAL_COLOR } from '../utils/colorUtils';
 
 const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMobile?: boolean }> = ({ onToggleMobileSidebar, isMobile: isMobileProp }) => {
   const { professionals, loading, error, addProfessional, updateProfessional, removeProfessional } = useProfessional();
@@ -353,8 +361,8 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
                               className="w-10 h-10 rounded-full object-cover border-2 border-pink-200"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                              style={{ backgroundColor: professional.color || '#6366f1' }}>
+                                                                                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                              style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}>
                               {professional.name.charAt(0).toUpperCase()}
                             </div>
                           )}
@@ -399,7 +407,7 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
                                   />
                                 ) : (
                                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
-                                    style={{ backgroundColor: professional.color || '#6366f1' }}>
+                                    style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}>
                                     {professional.name.charAt(0).toUpperCase()}
                                   </div>
                                 )}

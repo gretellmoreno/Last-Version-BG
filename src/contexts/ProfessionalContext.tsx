@@ -194,22 +194,31 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
     setError(null);
     
     try {
+      console.log('🗑️ ProfessionalContext - Iniciando remoção do profissional:', professionalId);
+      
       const { data, error } = await supabaseService.professionals.delete(professionalId, currentSalon.id);
       
       if (error) {
+        console.error('❌ ProfessionalContext - Erro ao deletar:', error);
         setError(error);
         return false;
       }
       
+      console.log('📦 ProfessionalContext - Resposta da deleção:', data);
+      
       if (data?.success) {
+        console.log('✅ ProfessionalContext - Profissional removido com sucesso');
         await loadProfessionals(); // Recarregar lista
         return true;
+      } else {
+        console.error('❌ ProfessionalContext - Deleção falhou:', data);
+        const errorMessage = data?.message || 'Falha ao remover profissional';
+        setError(errorMessage);
+        return false;
       }
-      
-      return false;
     } catch (err) {
+      console.error('💥 ProfessionalContext - Erro inesperado:', err);
       setError('Erro inesperado ao remover profissional');
-      console.error('Erro ao remover profissional:', err);
       return false;
     } finally {
       setLoading(false);

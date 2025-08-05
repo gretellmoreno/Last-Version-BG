@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, User, Plus, ArrowLeft } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import User from 'lucide-react/dist/esm/icons/user';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { useProduct } from '../../contexts/ProductContext';
 
 interface ProductSelectionProps {

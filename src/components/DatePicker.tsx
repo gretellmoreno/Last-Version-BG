@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
 
 interface DatePickerProps {
   selectedDate: Date;

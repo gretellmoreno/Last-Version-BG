@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
 import { Service, Product } from '../types';
 
 interface ActionModalProps {

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, CalendarDays, CalendarRange } from 'lucide-react';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days';
+import CalendarRange from 'lucide-react/dist/esm/icons/calendar-range';
 import { getTodayLocal, getStartOfMonth, getEndOfMonth } from '../utils/dateUtils';
 
 interface PeriodFilterModalProps {

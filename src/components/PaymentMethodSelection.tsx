@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
-import { CreditCard, DollarSign, Smartphone, Building } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Smartphone from 'lucide-react/dist/esm/icons/smartphone';
+import Building from 'lucide-react/dist/esm/icons/building';
 import { useAuth } from '../contexts/AuthContext';
 import { supabaseService } from '../lib/supabaseService';
 import { PaymentMethod } from '../types';

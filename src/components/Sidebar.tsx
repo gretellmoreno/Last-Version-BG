@@ -1,6 +1,14 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, Users, UserCircle, Scissors, DollarSign, BarChart2, Settings, Link2, X } from 'lucide-react';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Users from 'lucide-react/dist/esm/icons/users';
+import UserCircle from 'lucide-react/dist/esm/icons/user-circle';
+import Scissors from 'lucide-react/dist/esm/icons/scissors';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Link2 from 'lucide-react/dist/esm/icons/link-2';
+import X from 'lucide-react/dist/esm/icons/x';
 
 interface SidebarProps {
   isMobile?: boolean;

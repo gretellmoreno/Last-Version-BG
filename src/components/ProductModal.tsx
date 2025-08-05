@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Package, DollarSign, TrendingUp, Hash, Trash2 } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
+import Package from 'lucide-react/dist/esm/icons/package';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Hash from 'lucide-react/dist/esm/icons/hash';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { Produto } from '../types';
 
 interface ProductModalProps {

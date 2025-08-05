@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { formatDateForDisplay } from '../../utils/dateUtils';
-import { Calculator, DollarSign, User, Receipt } from 'lucide-react';
+import Calculator from 'lucide-react/dist/esm/icons/calculator';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import User from 'lucide-react/dist/esm/icons/user';
+import Receipt from 'lucide-react/dist/esm/icons/receipt';
 import { supabaseService } from '../../lib/supabaseService';
 import { useApp } from '../../contexts/AppContext';
 import { toast } from 'react-hot-toast';
@@ -98,10 +101,10 @@ export default function FechamentoCaixaSection({
 
   // Monitorar quando dados chegam para mostrar modal no mobile
   useEffect(() => {
-    if (isMobile && hasSearched && servicosParaFechamento.length > 0 && !showResultModal && !userClosedModal) {
+    if (isMobile && hasSearched && !showResultModal && !userClosedModal) {
       setShowResultModal(true);
     }
-  }, [isMobile, hasSearched, servicosParaFechamento.length, showResultModal, userClosedModal]);
+  }, [isMobile, hasSearched, showResultModal, userClosedModal]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -553,19 +556,11 @@ export default function FechamentoCaixaSection({
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-medium text-gray-900">Total a Receber</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Valor líquido menos vales selecionados
-                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-green-600">
                         R$ {calculatedTotalLiquido.toFixed(2).replace('.', ',')}
                       </p>
-                      {totalValesDescontados > 0 && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          (R$ {totalLiquidoFechamento.toFixed(2).replace('.', ',')} - R$ {totalValesDescontados.toFixed(2).replace('.', ',')})
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -595,7 +590,7 @@ export default function FechamentoCaixaSection({
                       ? 'Processando...' 
                       : isFechamentoRealizado 
                       ? '✅ Fechado' 
-                      : 'Confirmar Fechamento'
+                      : 'Confirmar'
                     }
                   </button>
                 </div>

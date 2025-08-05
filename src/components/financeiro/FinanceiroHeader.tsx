@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu } from 'lucide-react';
+import Menu from 'lucide-react/dist/esm/icons/menu';
 
 interface FinanceiroHeaderProps {
   currentDate: string;
