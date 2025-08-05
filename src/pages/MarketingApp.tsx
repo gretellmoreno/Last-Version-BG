@@ -18,11 +18,6 @@ interface CreateSalonResponse {
   success: boolean;
   message: string;
   salonUrl?: string;
-  session?: {
-    access_token: string;
-    refresh_token: string;
-    user: any;
-  };
 }
 
 const MarketingApp: React.FC = () => {
@@ -142,8 +137,6 @@ const MarketingApp: React.FC = () => {
     
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      console.log('🚀 Enviando dados para Edge Function:', formData);
-      
       const response = await fetch(`${supabaseUrl}/functions/v1/criar-salao`, {
         method: 'POST',
         headers: {
@@ -154,166 +147,49 @@ const MarketingApp: React.FC = () => {
       });
       
       const data: CreateSalonResponse = await response.json();
-      console.log('📡 Resposta da Edge Function:', data);
       
       if (response.ok && data.success) {
         setSuccess(true);
         
-        // Login automático usando a sessão retornada pela Edge Function
-        if (data.session) {
-          try {
-            console.log('🔐 Fazendo login automático com sessão...');
-            console.log('👤 Usuário da sessão:', data.session.user);
-            
-            // Se a sessão não tem tokens, usar login tradicional
-            if (!data.session.access_token || !data.session.refresh_token) {
-              console.log('⚠️ Sessão não tem tokens, usando login tradicional...');
-              const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email: formData.ownerEmail,
-                password: formData.ownerPassword
-              });
-              
-              console.log('🔐 Resultado do login tradicional:', { authData, authError });
-              
-              if (authError) {
-                console.error('❌ Erro no login tradicional:', authError);
-                // Redirecionar sem login
-                setTimeout(() => {
-                  if (data.salonUrl) {
-                    console.log('🌐 Redirecionando para:', data.salonUrl);
-                    window.location.href = data.salonUrl;
-                  }
-                }, 2000);
-              } else {
-                console.log('✅ Login tradicional realizado com sucesso!');
-                console.log('👤 Usuário logado:', authData.user);
-                
-                // Verificar se o usuário foi realmente logado
-                const { data: { user } } = await supabase.auth.getUser();
-                console.log('👤 Verificação do usuário logado:', user);
-                
-                setTimeout(() => {
-                  if (data.salonUrl) {
-                    console.log('🌐 Redirecionando para:', data.salonUrl);
-                    window.location.href = data.salonUrl;
-                  }
-                }, 1000);
-              }
-            } else {
-              // Usar setSession para injetar a sessão no navegador
-              const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-                access_token: data.session.access_token,
-                refresh_token: data.session.refresh_token,
-              });
-              
-              console.log('🔐 Resultado do setSession:', { sessionData, sessionError });
-              
-              if (sessionError) {
-                console.error('❌ Erro ao definir sessão:', sessionError);
-                // Fallback: tentar login tradicional
-                console.log('🔄 Tentando login tradicional como fallback...');
-                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                  email: formData.ownerEmail,
-                  password: formData.ownerPassword
-                });
-                
-                if (authError) {
-                  console.error('❌ Erro no login tradicional:', authError);
-                  // Redirecionar sem login
-                  setTimeout(() => {
-                    if (data.salonUrl) {
-                      console.log('🌐 Redirecionando para:', data.salonUrl);
-                      window.location.href = data.salonUrl;
-                    }
-                  }, 2000);
-                } else {
-                  console.log('✅ Login tradicional realizado com sucesso!');
-                  setTimeout(() => {
-                    if (data.salonUrl) {
-                      console.log('🌐 Redirecionando para:', data.salonUrl);
-                      window.location.href = data.salonUrl;
-                    }
-                  }, 1000);
-                }
-              } else {
-                console.log('✅ Login automático com sessão realizado com sucesso!');
-                console.log('👤 Usuário logado:', sessionData.user);
-                
-                // Verificar se o usuário foi realmente logado
-                const { data: { user } } = await supabase.auth.getUser();
-                console.log('👤 Verificação do usuário logado:', user);
-                
-                // Redirecionar imediatamente após login bem-sucedido
-                setTimeout(() => {
-                  if (data.salonUrl) {
-                    console.log('🌐 Redirecionando para:', data.salonUrl);
-                    window.location.href = data.salonUrl;
-                  }
-                }, 1000);
-              }
-            }
-          } catch (loginErr) {
-            console.error('💥 Erro inesperado no login automático:', loginErr);
-            console.log('🔄 Tentando redirecionamento de emergência...');
-            // Fallback: redirecionar normalmente
+        // Fazer login automático após criação do salão
+        try {
+          console.log('🔐 Fazendo login automático...');
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: formData.ownerEmail,
+            password: formData.ownerPassword
+          });
+          
+          if (authError) {
+            console.error('❌ Erro no login automático:', authError);
+            // Se falhar o login automático, redirecionar normalmente
             setTimeout(() => {
               if (data.salonUrl) {
-                console.log('🌐 Redirecionando para:', data.salonUrl);
                 window.location.href = data.salonUrl;
               }
             }, 2000);
-          }
-        } else {
-          console.log('⚠️ Sessão não retornada pela Edge Function, tentando login tradicional...');
-          // Fallback para Edge Functions antigas que não retornam sessão
-          try {
-            console.log('🔐 Iniciando login tradicional...');
-            console.log('📧 Email:', formData.ownerEmail);
-            console.log('🔑 Senha:', formData.ownerPassword);
-            
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-              email: formData.ownerEmail,
-              password: formData.ownerPassword
-            });
-            
-            console.log('🔐 Resultado do login tradicional:', { authData, authError });
-            
-            if (authError) {
-              console.error('❌ Erro no login tradicional:', authError);
-              console.log('🔄 Tentando redirecionamento sem login...');
-              setTimeout(() => {
-                if (data.salonUrl) {
-                  console.log('🌐 Redirecionando para:', data.salonUrl);
-                  window.location.href = data.salonUrl;
-                }
-              }, 2000);
-            } else {
-              console.log('✅ Login tradicional realizado com sucesso!');
-              console.log('👤 Usuário logado:', authData.user);
-              
-              setTimeout(() => {
-                if (data.salonUrl) {
-                  console.log('🌐 Redirecionando para:', data.salonUrl);
-                  window.location.href = data.salonUrl;
-                }
-              }, 1000);
-            }
-          } catch (loginErr) {
-            console.error('💥 Erro inesperado no login tradicional:', loginErr);
+          } else {
+            console.log('✅ Login automático realizado com sucesso!');
+            // Redirecionar imediatamente após login bem-sucedido
             setTimeout(() => {
               if (data.salonUrl) {
-                console.log('🌐 Redirecionando para:', data.salonUrl);
                 window.location.href = data.salonUrl;
               }
-            }, 2000);
+            }, 1000);
           }
+        } catch (loginErr) {
+          console.error('💥 Erro inesperado no login automático:', loginErr);
+          // Fallback: redirecionar normalmente
+          setTimeout(() => {
+            if (data.salonUrl) {
+              window.location.href = data.salonUrl;
+            }
+          }, 2000);
         }
       } else {
-        console.error('❌ Erro na criação do salão:', data.message);
         setError(data.message || 'Erro desconhecido ao criar salão');
       }
     } catch (err) {
-      console.error('💥 Erro de conexão:', err);
+      console.error('Erro ao criar salão:', err);
       setError('Erro de conexão. Tente novamente.');
     } finally {
       setLoading(false);
@@ -371,11 +247,12 @@ const MarketingApp: React.FC = () => {
       {/* Header */}
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-md mx-auto px-4 py-4">
-          <div className="flex items-center justify-center space-x-3">
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-              <Scissors className="w-4 h-4 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">BelaGestão</h1>
+          <div className="flex items-center justify-center">
+            <img 
+              src="/logos/logo-bela-gestao.png" 
+              alt="BelaGestão" 
+              className="w-15 h-12"
+            />
           </div>
         </div>
       </header>
