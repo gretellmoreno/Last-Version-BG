@@ -1489,7 +1489,7 @@
   }
   
   /* Melhorar área de toque para botões de foto */
-  .relative .absolute[class*="rounded-full"] {
+  .relative .absolute[class*="rounded-full"]:not(.bg-red-500) {
     min-width: 32px !important;
     min-height: 32px !important;
     touch-action: manipulation;
@@ -1543,4 +1543,22 @@ input[type="checkbox"]:focus {
 
 input[type="checkbox"]:hover {
   border-color: #9333ea;
+}
+
+/* Notificação de agendamentos online responsiva */
+@media (max-width: 768px) {
+  .bg-red-500.rounded-full {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
+  }
+  .bg-red-500.rounded-full span {
+    font-size: 11px !important;
+    font-weight: normal !important;
+    line-height: 1 !important;
+    text-align: center !important;
+  }
 }

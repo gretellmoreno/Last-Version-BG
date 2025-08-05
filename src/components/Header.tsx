@@ -138,8 +138,10 @@ export default function Header({
               
               {/* Notificação de novos agendamentos */}
               {newOnlineAppointmentsCount > 0 && (
-                <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                  {newOnlineAppointmentsCount > 99 ? '99+' : newOnlineAppointmentsCount}
+                <div className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 lg:w-5 lg:h-5 flex items-center justify-center animate-pulse">
+                  <span className="text-[11px] lg:text-xs font-normal leading-none">
+                    {newOnlineAppointmentsCount > 99 ? '99+' : newOnlineAppointmentsCount}
+                  </span>
                 </div>
               )}
             </button>
