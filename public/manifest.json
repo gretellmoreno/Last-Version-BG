@@ -1,6 +1,6 @@
 {
   "name": "Sistema de Gerenciamento de Salão de Beleza",
-  "short_name": "Salão App",
+  "short_name": "BelaGestão",
   "description": "Sistema completo para gerenciamento de salões de beleza, incluindo agendamentos, clientes, profissionais e financeiro",
   "start_url": "/",
   "display": "standalone",

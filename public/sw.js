@@ -95,8 +95,8 @@ function doBackgroundSync() {
 
 // Notificações push
 self.addEventListener('push', (event) => {
-  const options = {
-    body: event.data ? event.data.text() : 'Nova notificação do Salão App',
+  let options = {
+    body: 'Nova notificação do BelaGestão',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
     vibrate: [100, 50, 100],
@@ -106,20 +106,38 @@ self.addEventListener('push', (event) => {
     },
     actions: [
       {
-        action: 'explore',
-        title: 'Ver Agendamentos',
+        action: 'view',
+        title: 'Ver Detalhes',
         icon: '/icons/icon-72x72.png'
       },
       {
-        action: 'close',
+        action: 'dismiss',
         title: 'Fechar',
         icon: '/icons/icon-72x72.png'
       }
     ]
   };
 
+  // Se há dados na notificação push, usar eles
+  if (event.data) {
+    try {
+      const pushData = event.data.json();
+      options = {
+        ...options,
+        body: pushData.body || options.body,
+        title: pushData.title || 'BelaGestão',
+        data: {
+          ...options.data,
+          ...pushData.data
+        }
+      };
+    } catch (error) {
+      console.error('Erro ao processar dados da notificação:', error);
+    }
+  }
+
   event.waitUntil(
-    self.registration.showNotification('Salão App', options)
+    self.registration.showNotification(options.title || 'BelaGestão', options)
   );
 });
 
@@ -127,13 +145,31 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/agenda')
-    );
+  const data = event.notification.data;
+  
+  if (event.action === 'view') {
+    // Abrir página específica baseada no tipo de notificação
+    if (data && data.type === 'appointment') {
+      event.waitUntil(
+        clients.openWindow(`/agenda?appointment=${data.appointment_id}`)
+      );
+    } else {
+      event.waitUntil(
+        clients.openWindow('/agenda')
+      );
+    }
+  } else if (event.action === 'dismiss') {
+    // Apenas fechar a notificação
+    console.log('Notificação descartada');
   } else {
+    // Clique na notificação principal
     event.waitUntil(
       clients.openWindow('/')
     );
   }
+});
+
+// Foco na janela quando clicado
+self.addEventListener('notificationclose', (event) => {
+  console.log('Notificação fechada:', event.notification.tag);
 }); 

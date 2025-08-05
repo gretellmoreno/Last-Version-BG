@@ -8,6 +8,7 @@ import LoginForm from './components/LoginForm';
 import LoadingScreen from './components/LoadingScreen';
 import InviteRedirect from './components/InviteRedirect';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { NotificationPermission } from './components/NotificationPermission';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { useIsAppDomain } from './hooks/useSubdomain';
@@ -25,6 +26,8 @@ const MeusAgendamentos = lazy(() => import('./pages/MeusAgendamentos'));
 const DefinirSenha = lazy(() => import('./pages/DefinirSenha'));
 const SalonNotFound = lazy(() => import('./pages/SalonNotFound'));
 const MarketingApp = lazy(() => import('./pages/MarketingApp'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 
 // Componente de loading para páginas
 const PageLoader = () => (
@@ -193,6 +196,7 @@ function AppLayout() {
       
       {/* PWA Install Banner */}
       <PWAInstallBanner />
+      <NotificationPermission />
     </div>
   );
 }
@@ -212,6 +216,13 @@ function DomainRouter() {
   // Caso contrário, usar as rotas normais
   return (
     <Routes>
+      <Route path="/" element={
+        <Suspense fallback={<PageLoader />}>
+          <LandingPage />
+        </Suspense>
+      } />
+      <Route path="/login" element={<LoginForm />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/agendamento" element={
         <Suspense fallback={<PageLoader />}>
           <AgendamentoPublico />
