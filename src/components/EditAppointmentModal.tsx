@@ -40,11 +40,7 @@ interface EditAppointmentModalProps {
 
 interface ClientFormData {
   nome: string;
-  sobrenome: string;
-  email: string;
   telefone: string;
-  dataNascimento: string;
-  ano: string;
 }
 
 interface ServiceProfessional {
@@ -101,11 +97,7 @@ export default function EditAppointmentModal({
   const [bookingTime, setBookingTime] = useState<string>('');
   const [clientForm, setClientForm] = useState<ClientFormData>({
     nome: '',
-    sobrenome: '',
-    email: '',
     telefone: '',
-    dataNascimento: '',
-    ano: ''
   });
 
   // Nome do profissional para exibição
@@ -158,7 +150,7 @@ export default function EditAppointmentModal({
           setSelectedClient({
             id: details.client.id,
             nome: details.client.name || 'Cliente',
-            sobrenome: '', email: '', telefone: '', dataNascimento: '', ano: ''
+            telefone: details.client.phone || ''
           });
           
           setBookingDate(createLocalDate(details.date));
@@ -194,8 +186,7 @@ export default function EditAppointmentModal({
           setSelectedClient({
             id: client.id,
             nome: client.name,
-            sobrenome: '', email: client.email || '', telefone: client.phone || '',
-            dataNascimento: '', ano: ''
+            telefone: client.phone || ''
           });
         }
       }
@@ -262,7 +253,7 @@ export default function EditAppointmentModal({
     setSelectedClient(null);
     setServiceProfessionals([]);
     setClientForm({
-      nome: '', sobrenome: '', email: '', telefone: '', dataNascimento: '', ano: ''
+      nome: '', telefone: '',
     });
     setAppointmentDetails(null);
     setDetailsError(null);
@@ -398,9 +389,9 @@ export default function EditAppointmentModal({
       salonId: currentSalon?.id || '',
       name: clientForm.nome.trim(),
       phone: phoneSanitized,
-      email: clientForm.email || '',
+      email: '', // Não existe no form
       cpf: '', // Não existe no form
-      birthDate: clientForm.dataNascimento || ''
+      birthDate: '' // Não existe no form
     });
     if (error || !data?.client?.id) {
       alert('Erro ao criar cliente!');
@@ -410,7 +401,7 @@ export default function EditAppointmentModal({
       id: data.client.id, // UUID real
       nome: clientForm.nome,
       telefone: clientForm.telefone,
-      email: clientForm.email
+      email: ''
     };
     setSelectedClient(newClient);
     setShowClientForm(false);

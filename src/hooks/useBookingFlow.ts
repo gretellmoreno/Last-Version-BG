@@ -8,11 +8,7 @@ interface ServiceProfessional {
 
 interface ClientFormData {
   nome: string;
-  sobrenome: string;
-  email: string;
   telefone: string;
-  dataNascimento: string;
-  ano: string;
 }
 
 type BookingStep = 'service' | 'product' | 'confirmation' | 'datetime';
@@ -151,11 +147,7 @@ function bookingFlowReducer(state: BookingFlowState, action: BookingFlowAction):
         serviceProfessionals: [],
         clientForm: {
           nome: '',
-          sobrenome: '',
-          email: '',
-          telefone: '',
-          dataNascimento: '',
-          ano: ''
+          telefone: ''
         },
         bookingDate: action.payload.initialDate,
         bookingTime: action.payload.initialTime || '',
@@ -180,11 +172,7 @@ export const useBookingFlow = (initialDate: Date, initialTime?: string) => {
     serviceProfessionals: [],
     clientForm: {
       nome: '',
-      sobrenome: '',
-      email: '',
-      telefone: '',
-      dataNascimento: '',
-      ano: ''
+      telefone: ''
     },
     bookingDate: initialDate,
     bookingTime: initialTime || '',

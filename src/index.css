@@ -767,6 +767,38 @@
     background: white;
     position: relative;
   }
+
+  /* Formulário de cliente mobile */
+  @media (max-width: 768px) {
+    .mobile-calendar-container .flex-1.overflow-y-auto {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    
+    .mobile-calendar-container .max-w-sm {
+      max-width: 100%;
+      padding: 0 16px;
+    }
+    
+    .mobile-calendar-container .space-y-4 > div:first-child {
+      margin-top: 0;
+    }
+
+    /* Modal de agendamento - formulário de cliente */
+    .fixed.inset-0 .flex-1.overflow-y-auto {
+      padding-top: 0;
+    }
+    
+    .fixed.inset-0 .max-w-sm {
+      max-width: 100%;
+      padding: 0 16px;
+      margin-top: 0;
+    }
+    
+    .fixed.inset-0 .space-y-4 > div:first-child {
+      margin-top: 0;
+    }
+  }
   
   .mobile-calendar-container .barber-calendar {
     height: 100% !important;

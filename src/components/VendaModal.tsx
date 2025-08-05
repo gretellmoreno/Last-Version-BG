@@ -22,11 +22,7 @@ interface SelectedProduct {
 
 interface ClientFormData {
   nome: string;
-  sobrenome: string;
-  email: string;
   telefone: string;
-  dataNascimento: string;
-  ano: string;
 }
 
 export default function VendaModal({ 
@@ -43,11 +39,7 @@ export default function VendaModal({
   const [showClientForm, setShowClientForm] = useState(false);
   const [clientForm, setClientForm] = useState<ClientFormData>({
     nome: '',
-    sobrenome: '',
-    email: '',
-    telefone: '',
-    dataNascimento: '',
-    ano: ''
+    telefone: ''
   });
   const [customPrices, setCustomPrices] = useState<{ [productId: string]: number }>({});
 
@@ -122,14 +114,16 @@ export default function VendaModal({
 
   const handleSaveClient = useCallback(async () => {
     if (clientForm.nome.trim() === '' || clientForm.telefone.trim() === '') return;
+    if (!currentSalon) return;
+    
     const phoneSanitized = clientForm.telefone.replace(/\D/g, '');
     const { data, error } = await supabaseService.clients.create({
       salonId: currentSalon.id,
       name: clientForm.nome.trim(),
       phone: phoneSanitized,
-      email: clientForm.email || '',
-      cpf: clientForm.cpf || '',
-      birthDate: clientForm.dataNascimento || ''
+      email: '', // Não existe no form, mas é obrigatório na tipagem
+      cpf: '', // Não existe no form, mas é obrigatório na tipagem
+      birthDate: '' // Não existe no form, mas é obrigatório na tipagem
     });
     if (error || !data?.client?.id) {
       alert('Erro ao criar cliente!');
@@ -139,7 +133,7 @@ export default function VendaModal({
       id: data.client.id, // UUID real
       nome: clientForm.nome,
       telefone: clientForm.telefone,
-      email: clientForm.email
+      email: ''
     };
     setSelectedClient(newClient);
     setShowClientForm(false);
@@ -177,11 +171,7 @@ export default function VendaModal({
     setShowClientForm(false);
     setClientForm({
       nome: '',
-      sobrenome: '',
-      email: '',
-      telefone: '',
-      dataNascimento: '',
-      ano: ''
+      telefone: ''
     });
     setCurrentStep('products');
     onClose();
@@ -200,11 +190,7 @@ export default function VendaModal({
     setShowClientForm(false);
     setClientForm({
       nome: '',
-      sobrenome: '',
-      email: '',
-      telefone: '',
-      dataNascimento: '',
-      ano: ''
+      telefone: ''
     });
     setCurrentStep('products');
     onClose();

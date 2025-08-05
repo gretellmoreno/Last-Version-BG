@@ -3,11 +3,7 @@ import { useClients } from './useClients';
 
 interface ClientFormData {
   nome: string;
-  sobrenome: string;
-  email: string;
   telefone: string;
-  dataNascimento: string;
-  ano: string;
 }
 
 interface UseClientSelectionResult {
@@ -33,11 +29,7 @@ interface UseClientSelectionResult {
 
 const initialClientForm: ClientFormData = {
   nome: '',
-  sobrenome: '',
-  email: '',
-  telefone: '',
-  dataNascimento: '',
-  ano: ''
+  telefone: ''
 };
 
 export const useClientSelection = (): UseClientSelectionResult => {
@@ -102,11 +94,11 @@ export const useClientSelection = (): UseClientSelectionResult => {
     
     try {
       const success = await addClient({
-        name: `${clientForm.nome} ${clientForm.sobrenome}`.trim(),
+        name: clientForm.nome.trim(),
         phone: clientForm.telefone,
-        email: clientForm.email,
+        email: '',
         cpf: '',
-        birth_date: clientForm.dataNascimento,
+        birth_date: '',
         salon_id: '', // Será preenchido pelo hook
         updated_at: new Date().toISOString()
       });
@@ -115,11 +107,11 @@ export const useClientSelection = (): UseClientSelectionResult => {
         // Selecionar o cliente recém-criado
         const newClient = {
           id: 'temp_' + Date.now(), // ID temporário
-          nome: `${clientForm.nome} ${clientForm.sobrenome}`.trim(),
-          name: `${clientForm.nome} ${clientForm.sobrenome}`.trim(),
+          nome: clientForm.nome.trim(),
+          name: clientForm.nome.trim(),
           telefone: clientForm.telefone,
           phone: clientForm.telefone,
-          email: clientForm.email
+          email: ''
         };
         
         setSelectedClient(newClient);

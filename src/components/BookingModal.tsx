@@ -33,11 +33,7 @@ interface BookingModalProps {
 
 interface ClientFormData {
   nome: string;
-  sobrenome: string;
-  email: string;
   telefone: string;
-  dataNascimento: string;
-  ano: string;
 }
 
 interface ServiceProfessional {
@@ -71,11 +67,7 @@ export default function BookingModal({
   // Estado do formulário de cliente
   const [clientForm, setClientForm] = useState<ClientFormData>({
     nome: '',
-    sobrenome: '',
-    email: '',
     telefone: '',
-    dataNascimento: '',
-    ano: ''
   });
 
   // Estados para loading
@@ -122,11 +114,7 @@ export default function BookingModal({
       setIsCreatingAppointment(false);
       setClientForm({
         nome: '',
-        sobrenome: '',
-        email: '',
         telefone: '',
-        dataNascimento: '',
-        ano: ''
       });
     }
   }, [isOpen, selectedDate, selectedTime]);
@@ -283,9 +271,9 @@ export default function BookingModal({
       salonId: currentSalon?.id || '',
       name: clientForm.nome.trim(),
       phone: phoneSanitized,
-      email: clientForm.email || '',
+      email: '', // Não existe no form, mas é obrigatório na tipagem
       cpf: '', // Não existe no form, mas é obrigatório na tipagem
-      birthDate: clientForm.dataNascimento || ''
+      birthDate: '' // Não existe no form, mas é obrigatório na tipagem
     });
     if (error || !data?.client?.id) {
       alert('Erro ao criar cliente!');
@@ -297,7 +285,7 @@ export default function BookingModal({
       name: clientForm.nome,
       telefone: clientForm.telefone,
       phone: clientForm.telefone,
-      email: clientForm.email
+      email: ''
     };
     setSelectedClient(newClient);
     setShowClientForm(false);
