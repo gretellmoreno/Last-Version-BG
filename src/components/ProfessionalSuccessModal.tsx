@@ -19,7 +19,7 @@ export default function ProfessionalSuccessModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         {/* Overlay */}
         <div 
@@ -28,7 +28,7 @@ export default function ProfessionalSuccessModal({
         />
 
         {/* Modal */}
-        <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6">
+        <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6 relative z-[10000]">
           <div>
             {/* Ícone de sucesso */}
             <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full">
