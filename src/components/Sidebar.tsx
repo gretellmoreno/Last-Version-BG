@@ -36,18 +36,15 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const menuItems = allMenuItems.filter(item => {
     // Se for funcionário, mostrar apenas agenda
     if (isEmployee) {
-      console.log('👤 Funcionário detectado, mostrando apenas agenda');
       return item.id === 'agenda';
     }
     
     // Se for admin, mostrar todos os itens
     if (isAdmin) {
-      console.log('👑 Admin detectado, mostrando todos os itens');
       return true;
     }
     
     // Por padrão, mostrar todos (fallback)
-    console.log('⚠️ Role não detectado, mostrando todos os itens (fallback)');
     return true;
   });
 

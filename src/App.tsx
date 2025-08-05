@@ -10,7 +10,6 @@ import InviteRedirect from './components/InviteRedirect';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { useIsAppDomain } from './hooks/useSubdomain';
-import UserRoleDebug from './components/UserRoleDebug';
 
 // Lazy loading das páginas
 const Agenda = lazy(() => import('./pages/Agenda'));
@@ -190,9 +189,6 @@ function AppLayout() {
           </Suspense>
         </div>
       </div>
-      
-      {/* Debug component (apenas em desenvolvimento) */}
-      <UserRoleDebug />
     </div>
   );
 }

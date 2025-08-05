@@ -184,8 +184,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const currentUserRole = userContext?.salons?.[0]?.role || null;
   const isAdmin = currentUserRole === 'admin';
   const isEmployee = currentUserRole === 'funcionario';
-  
-  console.log('🔍 Auth Context - Role:', currentUserRole, 'isAdmin:', isAdmin, 'isEmployee:', isEmployee);
 
   return (
     <AuthContext.Provider value={{
