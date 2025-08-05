@@ -5,6 +5,7 @@ import Users from 'lucide-react/dist/esm/icons/users';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import { supabase } from '../lib/supabase';
 
 interface CreateSalonPayload {
   ownerEmail: string;
@@ -96,12 +97,41 @@ const MarketingApp: React.FC = () => {
       
       if (response.ok && data.success) {
         setSuccess(true);
-        // Redirecionar após 2 segundos
-        setTimeout(() => {
-          if (data.salonUrl) {
-            window.location.href = data.salonUrl;
+        
+        // Fazer login automático após criação do salão
+        try {
+          console.log('🔐 Fazendo login automático...');
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: formData.ownerEmail,
+            password: formData.ownerPassword
+          });
+          
+          if (authError) {
+            console.error('❌ Erro no login automático:', authError);
+            // Se falhar o login automático, redirecionar normalmente
+            setTimeout(() => {
+              if (data.salonUrl) {
+                window.location.href = data.salonUrl;
+              }
+            }, 2000);
+          } else {
+            console.log('✅ Login automático realizado com sucesso!');
+            // Redirecionar imediatamente após login bem-sucedido
+            setTimeout(() => {
+              if (data.salonUrl) {
+                window.location.href = data.salonUrl;
+              }
+            }, 1000);
           }
-        }, 2000);
+        } catch (loginErr) {
+          console.error('💥 Erro inesperado no login automático:', loginErr);
+          // Fallback: redirecionar normalmente
+          setTimeout(() => {
+            if (data.salonUrl) {
+              window.location.href = data.salonUrl;
+            }
+          }, 2000);
+        }
       } else {
         setError(data.message || 'Erro desconhecido ao criar salão');
       }
@@ -122,11 +152,11 @@ const MarketingApp: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Salão Criado com Sucesso! 🎉</h2>
           <p className="text-gray-600 mb-6">
-            Seu salão foi configurado e você será redirecionado em instantes...
+            Seu salão foi configurado e você será logado automaticamente...
           </p>
           <div className="flex items-center justify-center space-x-2 text-indigo-600">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
-            <span className="text-sm">Redirecionando...</span>
+            <span className="text-sm">Fazendo login automático...</span>
           </div>
         </div>
       </div>

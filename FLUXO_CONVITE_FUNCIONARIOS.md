@@ -2,6 +2,12 @@
 
 ## 📋 **Resumo do Fluxo Completo**
 
+### **Fluxo de Criação de Salão:**
+1. **Usuário cria salão** → Edge Function `criar-salao`
+2. **Salão criado com sucesso** → Login automático
+3. **Redirecionamento automático** → Subdomínio do salão
+
+### **Fluxo de Convite de Funcionários:**
 1. **Admin cria funcionário** → Edge Function `criar-funcionario`
 2. **Edge Function envia convite** → `inviteUserByEmail` 
 3. **Funcionário clica no email** → Redireciona para `/definir-senha`
@@ -24,7 +30,31 @@
 - 🟡 **Convite pendente**: `active = false` (amarelo)
 - 🟢 **Ativo**: `active = true` (verde)
 
-### **3. Criação via Edge Function**
+### **3. Criação de Salão com Login Automático**
+```typescript
+// Frontend chama Edge Function
+const response = await fetch(`${supabaseUrl}/functions/v1/criar-salao`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${supabaseAnonKey}`,
+  },
+  body: JSON.stringify({
+    ownerEmail: "admin@salao.com",
+    ownerPassword: "senha123",
+    salonName: "Salão da Maria",
+    subdomain: "salao-da-maria"
+  })
+});
+
+// Após sucesso, login automático
+const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+  email: formData.ownerEmail,
+  password: formData.ownerPassword
+});
+```
+
+### **4. Criação de Funcionário via Edge Function**
 ```typescript
 // Frontend chama Edge Function
 const response = await fetch(`${supabaseUrl}/functions/v1/criar-funcionario`, {
