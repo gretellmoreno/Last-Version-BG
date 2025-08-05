@@ -42,7 +42,6 @@ import toast from 'react-hot-toast';
 import { formatPhone } from '../utils/phoneUtils';
 import Header from '../components/Header';
 import { DEFAULT_PROFESSIONAL_COLOR } from '../utils/colorUtils';
-import PhoneMockup from '../components/PhoneMockup';
 
 interface LinkAgendamentoProps {
   onToggleMobileSidebar?: () => void;
@@ -86,9 +85,6 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
   const [timeInterval, setTimeInterval] = useState('30');
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [previewKey, setPreviewKey] = useState(0);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const priceDisplayOptions = [
     { value: 'normal', label: 'Normal' },
@@ -120,38 +116,6 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
       loadAgendaSettings();
     }
   }, [activeTab, currentSalon?.id]);
-
-  // Atualizar pré-visualização quando configurações mudarem
-  useEffect(() => {
-    if (activeTab === 'link' && isLinkActive && currentSalon?.id) {
-      setPreviewKey(prev => prev + 1);
-      
-      // Forçar atualização do iframe após um pequeno delay
-      setTimeout(() => {
-        const iframe = document.querySelector('iframe[title="Pré-visualização do Agendamento"]') as HTMLIFrameElement;
-        if (iframe) {
-          iframe.src = iframe.src;
-        }
-      }, 100);
-    }
-  }, [primaryColor, secondaryColor, profileData.name, profilePhotoUrl, isLinkActive, activeTab, currentSalon?.id]);
-
-  // Atualizar URL de preview quando configurações mudarem
-  useEffect(() => {
-    if (currentSalon?.id) {
-      setIsPreviewLoading(true);
-      
-      // Adicionar timestamp para forçar refresh do iframe
-      const timestamp = Date.now();
-      const baseUrl = `${window.location.origin}/agendamento?salonId=${currentSalon.id}&preview=true&t=${timestamp}`;
-      
-      // Delay pequeno para mostrar loading
-      setTimeout(() => {
-        setPreviewUrl(baseUrl);
-        setIsPreviewLoading(false);
-      }, 500);
-    }
-  }, [currentSalon?.id, profileData, primaryColor, secondaryColor, settings]);
 
   // Atualizar tabs
   const tabs = [
@@ -697,9 +661,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
               <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
                 {/* Tab Link de Agendamento */}
                 {activeTab === 'link' && (
-                  <div className={`flex ${isMobile ? 'flex-col gap-4' : 'gap-8'} items-start w-full`}>
-                    {/* Lado esquerdo - Configurações */}
-                    <div className={`flex flex-col gap-4 ${isMobile ? 'w-full' : 'flex-1'}`}>
+                  <div className="w-full">
                     {/* Campo do link */}
                       <div className="w-full">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -708,13 +670,13 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                         <div className="flex items-center space-x-2">
                         <input
                           type="text"
-                            value={`${window.location.origin}/agendamento?salonId=${currentSalon?.id}`}
+                            value={`${window.location.origin}/agendamento`}
                           readOnly
                             className="flex-1 px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 cursor-not-allowed"
                         />
                         <button
                             onClick={() => {
-                              navigator.clipboard.writeText(`${window.location.origin}/agendamento?salonId=${currentSalon?.id}`);
+                              navigator.clipboard.writeText(`${window.location.origin}/agendamento`);
                               toast.success('Link copiado para a área de transferência!');
                             }}
                             className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-1"
@@ -729,7 +691,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                     </div>
 
                       {/* Switch + badge */}
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 mt-4">
                       <button
                         onClick={toggleLinkStatus}
                         className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors border ${isLinkActive ? 'bg-green-500 border-green-400 justify-end' : 'bg-gray-300 border-gray-200 justify-start'}`}
@@ -740,18 +702,6 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                       </button>
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${isLinkActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{isLinkActive ? 'Ativo' : 'Inativo'}</span>
                     </div>
-                    </div>
-
-                    {/* Lado direito - Pré-visualização (apenas desktop) */}
-                    {!isMobile && (
-                      <div className="flex-shrink-0">
-                        <PhoneMockup 
-                          previewUrl={isLinkActive ? `${window.location.origin}/agendamento?salonId=${currentSalon?.id}&preview=true&mobile=true&fullscreen=true` : ''}
-                          isLoading={isPreviewLoading}
-                          previewKey={previewKey}
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
 
