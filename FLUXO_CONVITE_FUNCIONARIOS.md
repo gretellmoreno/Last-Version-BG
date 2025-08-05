@@ -35,6 +35,7 @@ const response = await fetch(`${supabaseUrl}/functions/v1/criar-funcionario`, {
   },
   body: JSON.stringify({
     salon_id: "uuid",
+    subdomain: "salaodozed",
     email: "funcionario@email.com",
     name: "Nome do Funcionário", 
     role: "Cargo",

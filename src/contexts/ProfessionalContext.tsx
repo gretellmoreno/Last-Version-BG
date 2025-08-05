@@ -79,6 +79,7 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
       console.log('🚀 Iniciando criação de funcionário via Edge Function...');
       console.log('📋 Dados enviados:', {
         salon_id: currentSalon.id,
+        subdomain: currentSalon.subdomain,
         email: professionalData.email,
         name: professionalData.name,
         role: professionalData.role,
@@ -105,6 +106,7 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
         },
         body: JSON.stringify({
           salon_id: currentSalon.id,
+          subdomain: currentSalon.subdomain,
           email: professionalData.email,
           name: professionalData.name,
           role: professionalData.role,
