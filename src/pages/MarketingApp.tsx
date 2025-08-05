@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 interface CreateSalonPayload {
   ownerEmail: string;
   ownerPassword: string;
+  ownerName: string;
   salonName: string;
   subdomain: string;
   phone: string;
@@ -22,6 +23,7 @@ const MarketingApp: React.FC = () => {
   const [formData, setFormData] = useState<CreateSalonPayload>({
     ownerEmail: '',
     ownerPassword: '',
+    ownerName: '',
     salonName: '',
     subdomain: '',
     phone: ''
@@ -78,6 +80,7 @@ const MarketingApp: React.FC = () => {
   };
 
   const validateForm = (): string | null => {
+    if (!formData.ownerName) return 'Nome do proprietário é obrigatório';
     if (!formData.ownerEmail) return 'E-mail é obrigatório';
     if (!formData.ownerEmail.includes('@')) return 'E-mail inválido';
     if (!formData.ownerPassword) return 'Senha é obrigatória';
@@ -85,8 +88,8 @@ const MarketingApp: React.FC = () => {
     if (!formData.salonName) return 'Nome do salão é obrigatório';
     if (!formData.subdomain) return 'Link do sistema é obrigatório';
     if (formData.subdomain.length < 3) return 'Link do sistema deve ter pelo menos 3 caracteres';
-    if (!formData.phone) return 'Telefone é obrigatório';
-    if (formData.phone.replace(/\D/g, '').length < 10) return 'Telefone deve ter pelo menos 10 dígitos';
+    if (!formData.phone) return 'WhatsApp é obrigatório';
+    if (formData.phone.replace(/\D/g, '').length < 10) return 'WhatsApp deve ter pelo menos 10 dígitos';
     
     return null;
   };
@@ -204,12 +207,28 @@ const MarketingApp: React.FC = () => {
             Olá, vamos começar?
           </h2>
           <p className="text-gray-600">
-            Configure seu salão em poucos minutos
+            Configure seu salão em poucos segundos
           </p>
         </div>
 
         <div className="bg-white rounded-xl p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 mb-1">
+                Nome do Proprietário(a) *
+              </label>
+              <input
+                type="text"
+                id="ownerName"
+                name="ownerName"
+                value={formData.ownerName}
+                onChange={handleInputChange}
+                placeholder="Ex: João da Silva"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                required
+              />
+            </div>
+
             <div>
               <label htmlFor="salonName" className="block text-sm font-medium text-gray-700 mb-1">
                 Nome do Salão *
