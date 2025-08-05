@@ -120,7 +120,7 @@ export default function HistoricoSection({ data = [], onPeriodChange, currentPer
     return <CreditCard className="h-5 w-5" />;
   };
 
-  return (
+        return (
     <div className="space-y-6">
       {/* Botão de Período */}
       <div className="bg-white rounded-lg shadow-sm p-4">
@@ -131,14 +131,14 @@ export default function HistoricoSection({ data = [], onPeriodChange, currentPer
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
               <Calendar className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
+                        </div>
+                        <div>
               <h2 className="text-base font-semibold text-gray-900">Período</h2>
               <p className="text-sm text-gray-500">
                 {formatDateForDisplay(currentPeriod.start)} - {formatDateForDisplay(currentPeriod.end)}
               </p>
-            </div>
-          </div>
+                        </div>
+                      </div>
         </button>
       </div>
 
@@ -159,14 +159,14 @@ export default function HistoricoSection({ data = [], onPeriodChange, currentPer
               <DollarSign className="h-5 w-5 text-green-600" />
             </div>
             <h4 className="text-sm text-gray-600">Receita</h4>
-          </div>
+                      </div>
           <p className="text-2xl font-bold text-gray-900">
             R$ {totais.valorBruto.toFixed(2).replace('.', ',')}
           </p>
           <p className="text-sm text-gray-500 mt-1">
             Desde o mês passado
           </p>
-        </div>
+                    </div>
                     
         {/* Card de Comissões */}
         <div className="bg-white rounded-lg shadow-sm p-4">
@@ -182,24 +182,24 @@ export default function HistoricoSection({ data = [], onPeriodChange, currentPer
           <p className="text-sm text-gray-500 mt-1">
             Desde o mês passado
           </p>
-        </div>
+                      </div>
 
         {/* Card de Lucro */}
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
               <DollarSign className="h-5 w-5 text-purple-600" />
-            </div>
+                      </div>
             <h4 className="text-sm text-gray-600">Lucro</h4>
-          </div>
+                      </div>
           <p className="text-2xl font-bold text-purple-600">
             R$ {lucro.toFixed(2).replace('.', ',')}
           </p>
           <p className="text-sm text-gray-500 mt-1">
             Desde o mês passado
           </p>
-        </div>
-      </div>
+                      </div>
+                    </div>
 
       {/* Métodos de Pagamento */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
@@ -215,8 +215,8 @@ export default function HistoricoSection({ data = [], onPeriodChange, currentPer
             <p className="text-xs text-gray-500">
               {method.percentage.toFixed(1)}%
             </p>
-          </div>
-        ))}
+                  </div>
+                ))}
       </div>
 
       {/* Lista de Transações */}
@@ -227,48 +227,48 @@ export default function HistoricoSection({ data = [], onPeriodChange, currentPer
         {data.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500">Nenhuma transação encontrada para o período selecionado.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
+                  <thead className="bg-gray-50">
+                    <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Data
-                  </th>
+                      </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Profissional
-                  </th>
+                        Profissional
+                      </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                     Valor Bruto
-                  </th>
+                      </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Valor Líquido
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                        Valor Líquido
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
                 {data.map((item, index) => (
                   <tr key={index} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDateForDisplay(item.data)}
-                    </td>
+                        </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.profissional}
-                    </td>
+                        </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                       R$ {item.valorBruto.toFixed(2).replace('.', ',')}
-                    </td>
+                        </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-green-600">
                       R$ {item.valorLiquido.toFixed(2).replace('.', ',')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
     </div>
   );
 }

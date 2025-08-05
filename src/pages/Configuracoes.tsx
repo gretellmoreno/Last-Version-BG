@@ -268,22 +268,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   };
 
   // Remover horário de um dia
-  const handleRemoverDia = async (diaIndex: number) => {
-    if (!currentSalon?.id || !selectedProfissional) return;
-    const dia = horariosAtendimento[diaIndex];
-    try {
-      await supabase.rpc('delete_professional_schedule', {
-        salon_id: currentSalon.id,
-        professional_id: selectedProfissional,
-        wday: dia.wday
-      });
-      // Atualize o estado local para refletir remoção
-      setHorariosAtendimento((prev) => prev.map((d, idx) => idx === diaIndex ? { ...d, ativo: false, turnos: [{ inicio: '', fim: '' }] } : d));
-      toast.success('Horário removido!');
-    } catch (error) {
-      toast.error('Erro ao remover horário.');
-    }
-  };
+
 
   const handleMenuClick = () => {
     if (onToggleMobileSidebar) {
@@ -734,16 +719,11 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                 {activeTab === 'horarios' && (
                   <div className="space-y-6">
                     <div className="flex items-center mb-6">
-                      <Clock className="mr-3 text-purple-600" size={20} />
                       <h3 className="text-lg font-semibold text-gray-900">Horários de Atendimento</h3>
                     </div>
 
                     {/* Filtro de Profissional - sem título */}
                     <div className="mb-6 relative">
-                      {/* <label className="block text-sm font-medium text-gray-700 mb-2"> */}
-                      {/*   <UserCheck size={16} className="inline mr-2" /> */}
-                      {/*   Selecione o Profissional */}
-                      {/* </label> */}
                       <select
                         value={selectedProfissional}
                         onChange={e => setSelectedProfissional(e.target.value)}
@@ -758,7 +738,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                         ))}
                       </select>
                       {/* Ícone customizado de seta */}
-                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center pr-3">
                         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                           <path d="M19 9l-7 7-7-7" />
                         </svg>
@@ -767,96 +747,75 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
 
                     {/* Conteúdo dos horários */}
                     {selectedProfissional && (
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                         {horariosAtendimento.map((dia, diaIndex) => (
-                          <div key={dia.diaSemana} className="mb-4 bg-white rounded-xl p-4 border border-gray-100">
-                            <div className="flex items-center mb-2">
-                              <input
-                                type="checkbox"
-                                checked={dia.ativo}
-                                onChange={(e) => handleDiaAtivoChange(diaIndex, e.target.checked)}
-                                className="mr-2"
-                              />
-                              <span className="font-semibold text-gray-900">{dia.diaSemana}</span>
+                          <div key={dia.diaSemana} className="bg-white rounded-lg p-3 border border-gray-100">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={dia.ativo}
+                                  onChange={(e) => handleDiaAtivoChange(diaIndex, e.target.checked)}
+                                  className="mr-2"
+                                />
+                                <span className="font-medium text-gray-900 text-sm">{dia.diaSemana}</span>
+                              </div>
                             </div>
                             {dia.ativo && (
-                              <div className={isMobile ? 'flex flex-col gap-2' : 'flex items-center gap-4'}>
+                              <div className="space-y-2">
                                 {/* Turno 1 */}
-                                <div className={isMobile ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
-                                  <span>Início 1</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-600 w-12">Turno 1</span>
                                   <input
                                     type="time"
                                     value={dia.turnos[0].inicio}
                                     onChange={(e) => handleTurnoChange(diaIndex, 0, 'inicio', e.target.value)}
-                                    className="border rounded px-2 py-1"
+                                    className="border rounded px-2 py-1 text-sm w-20 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
                                   />
-                                  <span>Fim 1</span>
+                                  <span className="text-xs text-gray-400">-</span>
                                   <input
                                     type="time"
                                     value={dia.turnos[0].fim}
                                     onChange={(e) => handleTurnoChange(diaIndex, 0, 'fim', e.target.value)}
-                                    className="border rounded px-2 py-1"
+                                    className="border rounded px-2 py-1 text-sm w-20 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
                                   />
+                                  {dia.turnos.length === 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddTurno(diaIndex)}
+                                      className="text-purple-600 hover:text-purple-800 p-1 ml-2"
+                                    >
+                                      <Plus size={16} />
+                                    </button>
+                                  )}
                                 </div>
                                 {/* Turno 2 (se existir) */}
                                 {dia.turnos.length === 2 && (
-                                  <div className={isMobile ? 'flex flex-col gap-1 items-start' : 'flex gap-2 items-center'}>
-                                    <div className={isMobile ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
-                                      <span>Início 2</span>
-                                      <input
-                                        type="time"
-                                        value={dia.turnos[1].inicio}
-                                        onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
-                                        className="border rounded px-2 py-1"
-                                      />
-                                      <span>Fim 2</span>
-                                      <input
-                                        type="time"
-                                        value={dia.turnos[1].fim}
-                                        onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
-                                        className="border rounded px-2 py-1"
-                                      />
-                                      {!isMobile && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRemoveTurno(diaIndex, 1)}
-                                          className="text-purple-600 hover:underline ml-2"
-                                        >
-                                          Remover Turno 2
-                                        </button>
-                                      )}
-                                    </div>
-                                    {isMobile && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveTurno(diaIndex, 1)}
-                                        className="text-purple-600 hover:underline ml-2 text-sm"
-                                      >
-                                        Remover Turno 2
-                                      </button>
-                                    )}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-600 w-12">Turno 2</span>
+                                    <input
+                                      type="time"
+                                      value={dia.turnos[1].inicio}
+                                      onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
+                                      className="border rounded px-2 py-1 text-sm w-20 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
+                                    />
+                                    <span className="text-xs text-gray-400">-</span>
+                                    <input
+                                      type="time"
+                                      value={dia.turnos[1].fim}
+                                      onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
+                                      className="border rounded px-2 py-1 text-sm w-20 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveTurno(diaIndex, 1)}
+                                      className="text-red-500 hover:text-red-700 p-1 ml-2"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
                                   </div>
                                 )}
-                                {/* Botão de adicionar turno (só se houver 1 turno) */}
-                                {dia.turnos.length === 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAddTurno(diaIndex)}
-                                    className="text-purple-600 ml-2"
-                                  >
-                                    +
-                                  </button>
-                                )}
                               </div>
-                            )}
-                            {dia.ativo && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoverDia(diaIndex)}
-                                className="ml-2 text-red-600 hover:underline text-xs"
-                              >
-                                Remover Dia
-                              </button>
                             )}
                           </div>
                         ))}
@@ -864,7 +823,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                     )}
 
                         {/* Botão Salvar Horários */}
-                        <div className="flex justify-end pt-6 border-t border-gray-200">
+                        <div className="flex justify-end pt-4 border-t border-gray-200">
                           <button
                             onClick={handleSaveHorarios}
                             className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"

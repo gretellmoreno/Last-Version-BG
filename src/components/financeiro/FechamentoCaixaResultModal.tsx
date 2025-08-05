@@ -170,68 +170,68 @@ export default function FechamentoCaixaResultModal({
             ) : (
               // Conteúdo normal quando há serviços
               <>
-                {/* Detalhamento dos Serviços */}
-                <div>
-                  <div className="space-y-2">
-                    {servicosParaFechamento.map((servico, index) => (
-                      <div key={index} className="bg-white rounded-lg border border-gray-200 p-3">
-                        {/* Header do serviço */}
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                              <User className="h-4 w-4 text-gray-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm">
-                                {servico.cliente || 'Cliente não informado'}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {formatDateForDisplay(servico.data)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-green-600 text-sm">
-                              {formatCurrency(servico.valorLiquido)}
-                            </p>
-                            <p className="text-xs text-gray-500">Líquido</p>
-                          </div>
-                        </div>
-
-                        {/* Detalhes do serviço */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <p className="text-gray-600">Serviço</p>
-                            <p className="font-medium text-gray-900">{servico.servico}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Valor Bruto</p>
-                            <p className="font-medium text-gray-900">{formatCurrency(servico.valorBruto)}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Taxa</p>
-                            <p className="font-medium text-red-600">-{formatCurrency(Math.abs(servico.taxa))}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Comissão</p>
-                            <p className="font-medium text-gray-900">{formatCurrency(servico.comissao)}</p>
-                          </div>
-                        </div>
+            {/* Detalhamento dos Serviços */}
+            <div>
+              <div className="space-y-2">
+              {servicosParaFechamento.map((servico, index) => (
+                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-3">
+                    {/* Header do serviço */}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                          <User className="h-4 w-4 text-gray-600" />
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Total a Receber */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-900">Total a Receber</h3>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {servico.cliente || 'Cliente não informado'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatDateForDisplay(servico.data)}
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xl font-bold text-green-600">
-                        {formatCurrency(calculatedTotalLiquido)}
+                        <p className="font-bold text-green-600 text-sm">
+                          {formatCurrency(servico.valorLiquido)}
                       </p>
+                      <p className="text-xs text-gray-500">Líquido</p>
+                    </div>
+                  </div>
+
+                    {/* Detalhes do serviço */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <p className="text-gray-600">Serviço</p>
+                        <p className="font-medium text-gray-900">{servico.servico}</p>
+                    </div>
+                      <div>
+                        <p className="text-gray-600">Valor Bruto</p>
+                        <p className="font-medium text-gray-900">{formatCurrency(servico.valorBruto)}</p>
+          </div>
+            <div>
+                        <p className="text-gray-600">Taxa</p>
+                        <p className="font-medium text-red-600">-{formatCurrency(Math.abs(servico.taxa))}</p>
+              </div>
+                      <div>
+                        <p className="text-gray-600">Comissão</p>
+                        <p className="font-medium text-gray-900">{formatCurrency(servico.comissao)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          {/* Total a Receber */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                  <h3 className="text-base font-semibold text-gray-900">Total a Receber</h3>
+              </div>
+              <div className="text-right">
+                  <p className="text-xl font-bold text-green-600">
+                    {formatCurrency(calculatedTotalLiquido)}
+                </p>
                     </div>
                   </div>
                 </div>
@@ -274,8 +274,8 @@ export default function FechamentoCaixaResultModal({
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
+              </div>
+            </div>
                 )}
               </>
             )}
@@ -296,25 +296,25 @@ export default function FechamentoCaixaResultModal({
               Ver Histórico
             </button>
             {servicosParaFechamento.length > 0 && (
-              <button
-                type="button"
-                onClick={onConfirmarFechamento}
-                disabled={!canConfirmClosure || isProcessing || isFechamentoRealizado}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
-                  isFechamentoRealizado
-                    ? 'bg-green-700 cursor-default'
-                    : canConfirmClosure && !isProcessing
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {isProcessing 
-                  ? 'Processando...' 
-                  : isFechamentoRealizado 
-                  ? '✅ Fechado' 
+            <button
+              type="button"
+              onClick={onConfirmarFechamento}
+              disabled={!canConfirmClosure || isProcessing || isFechamentoRealizado}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
+                isFechamentoRealizado
+                  ? 'bg-green-700 cursor-default'
+                  : canConfirmClosure && !isProcessing
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {isProcessing 
+                ? 'Processando...' 
+                : isFechamentoRealizado 
+                ? '✅ Fechado' 
                   : 'Confirmar'
-                }
-              </button>
+              }
+            </button>
             )}
           </div>
         </div>
