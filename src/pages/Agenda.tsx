@@ -1083,6 +1083,9 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
     const touchMoveRef = useRef<{ x: number; y: number } | null>(null);
     const isDraggingRef = useRef(false);
+    const [isSelected, setIsSelected] = useState(false);
+    const [isLongPressing, setIsLongPressing] = useState(false);
+    const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Handler para detectar diferença entre tap e drag
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -1096,6 +1099,16 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
       };
       touchMoveRef.current = null;
       isDraggingRef.current = false;
+      
+      // Iniciar timer para long press
+      longPressTimeoutRef.current = setTimeout(() => {
+        if (!isDraggingRef.current) {
+          setIsLongPressing(true);
+          // Mostrar horário selecionado durante long press
+          const timeString = format(value, 'HH:mm');
+          console.log('⏰ Long press detectado - Horário:', timeString);
+        }
+      }, 500); // 500ms para long press
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
@@ -1109,11 +1122,25 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
       if (deltaX > 10 || deltaY > 10) {
         isDraggingRef.current = true;
         touchMoveRef.current = { x: touch.clientX, y: touch.clientY };
+        
+        // Cancelar long press se estiver arrastando
+        if (longPressTimeoutRef.current) {
+          clearTimeout(longPressTimeoutRef.current);
+          longPressTimeoutRef.current = null;
+        }
+        setIsLongPressing(false);
+        setIsSelected(false);
       }
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
       if (!isMobile || !touchStartRef.current) return;
+      
+      // Limpar timer de long press
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = null;
+      }
       
       const touchEndTime = Date.now();
       const touchDuration = touchEndTime - touchStartRef.current.time;
@@ -1123,6 +1150,9 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
         e.preventDefault();
         e.stopPropagation();
         
+        // Mostrar animação de seleção
+        setIsSelected(true);
+        
         const slotInfo = {
           start: value,
           end: new Date(value.getTime() + 15 * 60000),
@@ -1130,8 +1160,37 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
           action: 'click' as const,
           resourceId: resource,
         };
+        
         console.log('👆 Tap detectado, abrindo modal:', slotInfo);
-        handleSelectSlot(slotInfo);
+        
+        // Aguardar animação antes de abrir modal
+        setTimeout(() => {
+          handleSelectSlot(slotInfo);
+          setIsSelected(false);
+        }, 300); // 300ms para a animação
+      } else if (isLongPressing) {
+        // Se estava fazendo long press, processar como clique normal
+        e.preventDefault();
+        e.stopPropagation();
+        
+        setIsLongPressing(false);
+        setIsSelected(true);
+        
+        const slotInfo = {
+          start: value,
+          end: new Date(value.getTime() + 15 * 60000),
+          slots: [value],
+          action: 'click' as const,
+          resourceId: resource,
+        };
+        
+        console.log('⏰ Long press finalizado, abrindo modal:', slotInfo);
+        
+        // Aguardar animação antes de abrir modal
+        setTimeout(() => {
+          handleSelectSlot(slotInfo);
+          setIsSelected(false);
+        }, 300);
       }
       
       // Reset refs
@@ -1144,6 +1203,10 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     const handleClick = (e: React.MouseEvent) => {
       if (!isMobile) {
         e.stopPropagation();
+        
+        // Mostrar animação de seleção
+        setIsSelected(true);
+        
         const slotInfo = {
           start: value,
           end: new Date(value.getTime() + 15 * 60000),
@@ -1151,13 +1214,27 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
           action: 'click' as const,
           resourceId: resource,
         };
-        handleSelectSlot(slotInfo);
+        
+        // Aguardar animação antes de abrir modal
+        setTimeout(() => {
+          handleSelectSlot(slotInfo);
+          setIsSelected(false);
+        }, 300);
       }
     };
 
+    // Limpar timeout quando componente for desmontado
+    useEffect(() => {
+      return () => {
+        if (longPressTimeoutRef.current) {
+          clearTimeout(longPressTimeoutRef.current);
+        }
+      };
+    }, []);
+
     return (
       <div 
-        className="rbc-time-slot" 
+        className={`rbc-time-slot ${isSelected || isLongPressing ? 'slot-selected' : ''}`}
         data-time={format(value, 'HH:mm')}
         // Eventos touch para mobile
         onTouchStart={handleTouchStart}
@@ -1183,9 +1260,19 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
           WebkitTapHighlightColor: 'transparent',
           // MELHORAR PERFORMANCE
           willChange: 'scroll-position',
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          // ANIMAÇÕES
+          transition: 'all 0.2s ease-in-out',
         }}
       >
+        {/* Indicador visual de horário selecionado - DENTRO DO SLOT */}
+        {(isSelected || isLongPressing) && (
+          <div className="time-selection-indicator-inside">
+            <div className="time-display-inside">
+              {format(value, 'HH:mm')}
+            </div>
+          </div>
+        )}
         {children}
       </div>
     );
@@ -1446,6 +1533,16 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
                 // OTIMIZAÇÕES PARA SCROLL
                 onScroll: () => {}, // Handler vazio para scroll
                 scrollToTime: new Date(), // Scroll para horário atual
+                // DESABILITAR ANIMAÇÕES PADRÃO DO BIG REACT CALENDAR
+                onSelecting: () => false, // Desabilita seleção múltipla
+                onSelectSlot: undefined, // Remove handler padrão
+                // DESABILITAR TRANSITIONS PADRÃO
+                components: {
+                  toolbar: () => null,
+                  resourceHeader: () => null,
+                  timeSlotWrapper: TimeSlotWrapper,
+                  event: CustomEvent
+                }
               })}
             
             // Personalização Visual

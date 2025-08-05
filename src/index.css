@@ -1355,6 +1355,141 @@
     cursor: pointer;
   }
   
+  /* ANIMAÇÕES E INDICADORES VISUAIS PARA SELEÇÃO DE HORÁRIO */
+  
+  /* DESABILITAR ANIMAÇÕES PADRÃO DO BIG REACT CALENDAR */
+  .mobile-calendar-container .rbc-time-slot {
+    transition: none !important; /* Desabilitar transições padrão */
+  }
+  
+  .mobile-calendar-container .rbc-time-slot.rbc-slot-selecting,
+  .mobile-calendar-container .rbc-time-slot.rbc-slot-selected {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    transition: none !important;
+  }
+  
+  /* Estado de seleção - VISUAL MAIS SUTIL */
+  .mobile-calendar-container .rbc-time-slot.slot-selected {
+    background: rgba(102, 126, 234, 0.15) !important; /* Cor mais sutil */
+    transform: scale(0.98) !important; /* Escala mais sutil */
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2) !important; /* Sombra mais sutil */
+    border-radius: 6px !important;
+    z-index: 10 !important;
+    position: relative !important;
+    border: 1px solid rgba(102, 126, 234, 0.3) !important; /* Borda sutil */
+  }
+  
+  /* Indicador de horário selecionado - DENTRO DO SLOT, LADO ESQUERDO */
+  .mobile-calendar-container .time-selection-indicator-inside {
+    position: absolute !important;
+    top: 50% !important;
+    left: 8px !important; /* Posicionado no lado esquerdo */
+    transform: translateY(-50%) !important;
+    z-index: 20 !important;
+    pointer-events: none !important;
+    animation: fade-in-left 0.2s ease-out !important;
+  }
+  
+  /* Display do horário - SEM BORDA PRETA, MAIS SUTIL */
+  .mobile-calendar-container .time-display-inside {
+    background: rgba(0, 0, 0, 0.7) !important; /* Fundo mais transparente */
+    color: white !important;
+    padding: 3px 6px !important; /* Padding menor */
+    border-radius: 8px !important; /* Border radius menor */
+    font-size: 10px !important; /* Fonte menor */
+    font-weight: 500 !important; /* Peso menor */
+    text-align: center !important;
+    white-space: nowrap !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important; /* Sombra mais sutil */
+    backdrop-filter: blur(4px) !important; /* Blur menor */
+    -webkit-backdrop-filter: blur(4px) !important;
+    border: none !important; /* SEM BORDA PRETA */
+    min-width: 40px !important; /* Largura menor */
+    max-width: 50px !important;
+  }
+  
+  /* Animação de entrada do indicador - da esquerda */
+  @keyframes fade-in-left {
+    0% {
+      opacity: 0;
+      transform: translateY(-50%) translateX(-5px); /* Movimento menor */
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
+    }
+  }
+  
+  /* Desktop - versão ainda mais sutil */
+  .barber-calendar:not(.mobile-calendar) .rbc-time-slot.slot-selected {
+    background: rgba(102, 126, 234, 0.1) !important; /* Ainda mais sutil no desktop */
+    transform: scale(0.99) !important;
+    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.15) !important;
+    border-radius: 4px !important;
+    border: 1px solid rgba(102, 126, 234, 0.2) !important;
+  }
+  
+  .barber-calendar:not(.mobile-calendar) .time-display-inside {
+    background: rgba(0, 0, 0, 0.6) !important;
+    padding: 2px 5px !important;
+    font-size: 9px !important;
+    border-radius: 6px !important;
+    min-width: 35px !important;
+    max-width: 45px !important;
+  }
+  
+  /* Transições suaves apenas para nossos efeitos */
+  .mobile-calendar-container .rbc-time-slot {
+    transition: all 0.15s ease-out !important; /* Transição mais rápida */
+  }
+  
+  /* Hover state para desktop - mais sutil */
+  .barber-calendar:not(.mobile-calendar) .rbc-time-slot:hover:not(.slot-selected) {
+    background: rgba(102, 126, 234, 0.05) !important; /* Hover muito sutil */
+    transform: scale(1.01) !important; /* Escala mínima */
+    transition: all 0.1s ease !important;
+  }
+  
+  /* Garantir que o indicador não interfira com scroll */
+  .mobile-calendar-container .time-selection-indicator-inside {
+    pointer-events: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+  
+  /* Otimização para performance das animações */
+  .mobile-calendar-container .rbc-time-slot {
+    will-change: transform, background-color, box-shadow !important;
+  }
+  
+  .mobile-calendar-container .time-selection-indicator-inside {
+    will-change: transform, opacity !important;
+  }
+  
+  /* DESABILITAR COMPLETAMENTE ANIMAÇÕES PADRÃO DO BIG REACT CALENDAR */
+  .mobile-calendar-container .rbc-time-view,
+  .mobile-calendar-container .rbc-day-slot,
+  .mobile-calendar-container .rbc-time-slot {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  /* Desabilitar seleção visual padrão */
+  .mobile-calendar-container .rbc-slot-selecting,
+  .mobile-calendar-container .rbc-slot-selected,
+  .mobile-calendar-container .rbc-slot-selecting-start,
+  .mobile-calendar-container .rbc-slot-selecting-end {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+  
   /* Safe area para dispositivos com notch */
   .mobile-agenda-container {
     padding-top: env(safe-area-inset-top);
