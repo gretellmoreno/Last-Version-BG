@@ -11,12 +11,12 @@ export const generateManifest = (salonSubdomain?: string) => {
       : "Sistema de Gerenciamento de Salão de Beleza",
     short_name: "BelaGestão",
     description: "Sistema completo para gerenciamento de salões de beleza, incluindo agendamentos, clientes, profissionais e financeiro",
-    start_url: "/",
+    start_url: salonSubdomain ? `https://${salonSubdomain}.belagestao.com/` : "/",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#6366f1",
     orientation: "portrait-primary",
-    scope: "/",
+    scope: salonSubdomain ? `https://${salonSubdomain}.belagestao.com/` : "/",
     lang: "pt-BR",
     categories: ["business", "productivity"],
     icons: [
@@ -91,17 +91,26 @@ export const generateManifest = (salonSubdomain?: string) => {
 export const updateManifest = (salonSubdomain?: string) => {
   const manifest = generateManifest(salonSubdomain);
   
+  // Criar um novo manifest dinâmico
+  const manifestBlob = new Blob([JSON.stringify(manifest, null, 2)], {
+    type: 'application/json'
+  });
+  
+  const manifestUrl = URL.createObjectURL(manifestBlob);
+  
   // Atualizar o link do manifest no head
-  const manifestLink = document.querySelector('link[rel="manifest"]');
-  if (manifestLink) {
-    manifestLink.setAttribute('href', '/manifest.json');
+  let manifestLink = document.querySelector('link[rel="manifest"]');
+  if (!manifestLink) {
+    manifestLink = document.createElement('link');
+    manifestLink.setAttribute('rel', 'manifest');
+    document.head.appendChild(manifestLink);
   }
-
-  // Atualizar o manifest via API
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then((registration) => {
-      // O service worker pode atualizar o manifest se necessário
-      console.log('Manifest atualizado para:', salonSubdomain || 'domínio principal');
-    });
-  }
+  
+  manifestLink.setAttribute('href', manifestUrl);
+  
+  console.log('Manifest atualizado para:', salonSubdomain || 'domínio principal');
+  console.log('Start URL:', manifest.start_url);
+  console.log('Scope:', manifest.scope);
+  
+  return manifestUrl;
 }; 
