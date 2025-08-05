@@ -314,9 +314,9 @@ const MobileHeader = ({
   };
 
   return (
-    <div className="mobile-agenda-header bg-white border-b border-gray-200 p-4">
+    <div className="mobile-agenda-header bg-white border-b border-gray-200 flex items-center">
       {/* Linha única - Menu, Navegação de Data, Profissional e Adicionar */}
-      <div className="flex flex-wrap items-center justify-between gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-1 w-full">
         <button 
           onClick={onToggleSidebar}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"

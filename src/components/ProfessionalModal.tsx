@@ -29,7 +29,6 @@ interface ProfessionalFormData {
   email: string;
   cpf: string;
   color: string;
-  active: boolean;
   photo?: string; // base64 legacy, ignorar
   url_foto?: string | null;
   commission_rate: number;
@@ -59,7 +58,6 @@ export default function ProfessionalModal({
     email: '',
     cpf: '',
     color: CALENDAR_COLORS[0],
-    active: true,
     photo: '',
     url_foto: null,
     commission_rate: 50
@@ -95,7 +93,6 @@ export default function ProfessionalModal({
         email: editingProfessional.email || '',
         cpf: (editingProfessional as any).cpf || '',
         color: editingProfessional.color || CALENDAR_COLORS[0],
-        active: editingProfessional.active !== undefined ? editingProfessional.active : true,
         photo: editingProfessional.photo || '',
         url_foto: editingProfessional.url_foto || editingProfessional.photo || '',
         commission_rate: editingProfessional.commission_rate || 50
@@ -108,7 +105,6 @@ export default function ProfessionalModal({
         email: '',
         cpf: '',
         color: CALENDAR_COLORS[0],
-        active: true,
         photo: '',
         url_foto: null,
         commission_rate: 50
@@ -256,7 +252,7 @@ export default function ProfessionalModal({
         email: professionalForm.email.trim(),
         color: professionalForm.color,
         commission_rate: professionalForm.commission_rate,
-        active: professionalForm.active,
+        active: true, // Valor padrão, não mais editável
         available_online: true,
         photo: undefined, // legacy, não usar
         url_foto: professionalForm.url_foto || null

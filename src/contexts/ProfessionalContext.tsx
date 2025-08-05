@@ -165,7 +165,6 @@ export const ProfessionalProvider: React.FC<ProfessionalProviderProps> = ({ chil
         email: updates.email || '',
         color: updates.color || '',
         commissionRate: updates.commission_rate || 0,
-        active: updates.active !== undefined ? updates.active : true,
         url_foto: updates.url_foto || undefined
       });
       

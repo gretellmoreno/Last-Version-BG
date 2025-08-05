@@ -208,7 +208,6 @@ export const professionalService = {
     commissionRate?: number
     role?: string
     color?: string
-    active?: boolean
     availableOnline?: boolean
     url_foto?: string
   }): Promise<RPCResponse<CreateProfessionalResponse>> {
@@ -223,7 +222,6 @@ export const professionalService = {
         p_commission_rate: params.commissionRate || null,
         p_role: params.role || null,
         p_color: params.color || null,
-        p_active: params.active || null,
         p_url_foto: params.url_foto || null
       };
       if (params.availableOnline !== undefined && params.availableOnline !== null) {
