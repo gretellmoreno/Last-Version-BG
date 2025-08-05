@@ -631,7 +631,7 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
         onClose={() => setIsModalOpen(false)}
         onSave={editingProfessional ? handleEditProfessional : handleAddProfessional}
         editingProfessional={editingProfessional}
-        onDelete={professionalToDelete ? () => handleDeleteClick(professionalToDelete) : undefined}
+        onDelete={editingProfessional ? () => handleDeleteClick(editingProfessional) : undefined}
         isMobile={isMobile}
       />
 
