@@ -1,5 +1,42 @@
 # Deploy em Produção - Belagestão
 
+## ✅ Correção do Erro de Deploy
+
+### **Problema Resolvido:**
+- ❌ **Erro anterior**: "Conflicting functions and builds configuration"
+- ✅ **Solução**: Removido conflito no `vercel.json`
+
+### **Configuração Corrigida:**
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## Configurações Implementadas
 
 ### 1. Domínio Principal
@@ -14,7 +51,7 @@
 - ✅ `src/pages/SalonNotFound.tsx` - Redirecionamento correto
 - ✅ `src/pages/MarketingApp.tsx` - URLs atualizadas
 - ✅ `src/components/LoginForm.tsx` - URLs atualizadas
-- ✅ `vercel.json` - Configuração do Vercel
+- ✅ `vercel.json` - Configuração corrigida (sem conflitos)
 
 ### 3. Estrutura de URLs
 
@@ -108,6 +145,10 @@ Verificar se as políticas de segurança estão configuradas para produção.
    - Configurar automaticamente no Vercel
    - Verificar certificados
 
+4. **Deploy Error - Conflicting Configuration:**
+   - ✅ **Resolvido**: Removido conflito entre `builds` e `functions`
+   - ✅ **Configuração correta**: Usando apenas `rewrites` para SPA
+
 ### 10. Backup e Rollback
 
 #### Backup:
@@ -123,6 +164,7 @@ Verificar se as políticas de segurança estão configuradas para produção.
 
 - ✅ Configurações de ambiente
 - ✅ Suporte a subdomínios
-- ✅ Configuração do Vercel
+- ✅ Configuração do Vercel corrigida
 - ✅ URLs atualizadas
-- ⏳ Aguardando deploy e testes 
+- ✅ Erro de deploy resolvido
+- 🚀 Pronto para deploy! 
