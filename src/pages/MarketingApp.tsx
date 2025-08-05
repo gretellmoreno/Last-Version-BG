@@ -29,6 +29,7 @@ const MarketingApp: React.FC = () => {
     phone: ''
   });
   
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -71,6 +72,8 @@ const MarketingApp: React.FC = () => {
     } else if (name === 'phone') {
       const formatted = formatPhone(value);
       setFormData(prev => ({ ...prev, [name]: formatted }));
+    } else if (name === 'confirmPassword') {
+      setConfirmPassword(value);
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -85,6 +88,8 @@ const MarketingApp: React.FC = () => {
     if (!formData.ownerEmail.includes('@')) return 'E-mail inválido';
     if (!formData.ownerPassword) return 'Senha é obrigatória';
     if (formData.ownerPassword.length < 6) return 'Senha deve ter pelo menos 6 caracteres';
+    if (!confirmPassword) return 'Confirme sua senha';
+    if (formData.ownerPassword !== confirmPassword) return 'As senhas não coincidem';
     if (!formData.salonName) return 'Nome do salão é obrigatório';
     if (!formData.subdomain) return 'Link do sistema é obrigatório';
     if (formData.subdomain.length < 3) return 'Link do sistema deve ter pelo menos 3 caracteres';
@@ -315,6 +320,22 @@ const MarketingApp: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                 required
                 minLength={6}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                Confirmar Senha *
+              </label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={confirmPassword}
+                onChange={handleInputChange}
+                placeholder="Digite a senha novamente"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                required
               />
             </div>
 
