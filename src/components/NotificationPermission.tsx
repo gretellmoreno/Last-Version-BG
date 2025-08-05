@@ -13,10 +13,20 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const { user } = useAuth();
   const { currentSalon } = useApp();
 
   useEffect(() => {
+    // Verificar se está em um subdomínio (não no domínio principal)
+    const hostname = window.location.hostname;
+    const isSubdomain = hostname.includes('.') && hostname.split('.').length > 2;
+    
+    // Só mostrar se estiver em subdomínio
+    if (!isSubdomain) {
+      return;
+    }
+
     checkPermission();
     initializeService();
   }, []);
@@ -24,6 +34,10 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
   const initializeService = async () => {
     const success = await notificationService.initialize();
     setIsInitialized(success);
+    
+    if (success && permission === 'default') {
+      setIsVisible(true);
+    }
   };
 
   const checkPermission = () => {
@@ -54,6 +68,7 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
         if (endpoint) {
           toast.success('Notificações ativadas com sucesso!');
           setPermission('granted');
+          setIsVisible(false);
           onClose?.();
         } else {
           toast.error('Erro ao ativar notificações');
@@ -61,6 +76,7 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
       } else {
         toast.error('Permissão de notificação negada');
         setPermission('denied');
+        setIsVisible(false);
       }
     } catch (error) {
       console.error('Erro ao ativar notificações:', error);
@@ -77,11 +93,16 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
       await notificationService.unsubscribeFromPush(user.id);
       toast.success('Notificações desativadas');
       setPermission('denied');
+      setIsVisible(false);
     } catch (error) {
       console.error('Erro ao desativar notificações:', error);
       toast.error('Erro ao desativar notificações');
     }
   };
+
+  if (!isVisible) {
+    return null;
+  }
 
   if (permission === 'granted') {
     return (
@@ -97,7 +118,7 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
             </p>
           </div>
           <button
-            onClick={unsubscribe}
+            onClick={() => setIsVisible(false)}
             className="text-green-600 hover:text-green-800"
           >
             <X size={16} />
@@ -121,7 +142,7 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => setIsVisible(false)}
             className="text-red-600 hover:text-red-800"
           >
             <X size={16} />
@@ -151,7 +172,7 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
               {isSubscribing ? 'Ativando...' : 'Ativar'}
             </button>
             <button
-              onClick={onClose}
+              onClick={() => setIsVisible(false)}
               className="text-blue-600 hover:text-blue-800 text-xs"
             >
               Depois
@@ -159,7 +180,7 @@ export const NotificationPermission: React.FC<NotificationPermissionProps> = ({ 
           </div>
         </div>
         <button
-          onClick={onClose}
+          onClick={() => setIsVisible(false)}
           className="text-blue-600 hover:text-blue-800"
         >
           <X size={16} />
