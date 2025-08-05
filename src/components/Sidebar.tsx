@@ -9,6 +9,7 @@ import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2';
 import Settings from 'lucide-react/dist/esm/icons/settings';
 import Link2 from 'lucide-react/dist/esm/icons/link-2';
 import X from 'lucide-react/dist/esm/icons/x';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -18,8 +19,10 @@ interface SidebarProps {
 export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAdmin, isEmployee } = useAuth();
 
-  const menuItems = [
+  // Definir todos os itens do menu
+  const allMenuItems = [
     { id: 'agenda', name: 'Agenda', icon: Calendar, path: '/agenda' },
     { id: 'clientes', name: 'Clientes', icon: Users, path: '/clientes' },
     { id: 'profissionais', name: 'Profissionais', icon: UserCircle, path: '/profissionais' },
@@ -28,6 +31,25 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
     { id: 'link-agendamento', name: 'Link de Agendamento', icon: Link2, path: '/link-agendamento' },
     { id: 'configuracoes', name: 'Configurações', icon: Settings, path: '/configuracoes' },
   ];
+
+  // Filtrar itens baseado no role do usuário
+  const menuItems = allMenuItems.filter(item => {
+    // Se for funcionário, mostrar apenas agenda
+    if (isEmployee) {
+      console.log('👤 Funcionário detectado, mostrando apenas agenda');
+      return item.id === 'agenda';
+    }
+    
+    // Se for admin, mostrar todos os itens
+    if (isAdmin) {
+      console.log('👑 Admin detectado, mostrando todos os itens');
+      return true;
+    }
+    
+    // Por padrão, mostrar todos (fallback)
+    console.log('⚠️ Role não detectado, mostrando todos os itens (fallback)');
+    return true;
+  });
 
   const handleMenuClick = (path: string) => {
     navigate(path);

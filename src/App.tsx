@@ -10,6 +10,7 @@ import InviteRedirect from './components/InviteRedirect';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { useIsAppDomain } from './hooks/useSubdomain';
+import UserRoleDebug from './components/UserRoleDebug';
 
 // Lazy loading das páginas
 const Agenda = lazy(() => import('./pages/Agenda'));
@@ -39,7 +40,7 @@ function AppLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [forceReady, setForceReady] = useState(false);
-  const { isAuthenticated, loading: authLoading, userContext } = useAuth();
+  const { isAuthenticated, loading: authLoading, userContext, isEmployee } = useAuth();
   const { currentSalon, isReady, loading: salonLoading, error: salonError, isMainDomain } = useApp();
 
   // Hook para detectar mobile
@@ -166,18 +167,32 @@ function AppLayout() {
         <div className="h-full w-full page-container">
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<InviteRedirect />} />
+              <Route path="/" element={
+                isEmployee ? <Navigate to="/agenda" replace /> : <InviteRedirect />
+              } />
               <Route path="/agenda" element={<Agenda {...commonProps} />} />
-              <Route path="/clientes" element={<Clientes {...commonProps} />} />
-              <Route path="/profissionais" element={<Profissionais {...commonProps} />} />
-              <Route path="/servicos" element={<Servicos {...commonProps} />} />
-              <Route path="/financeiro" element={<Relatorio {...commonProps} />} />
-              <Route path="/configuracoes" element={<Configuracoes {...commonProps} />} />
-              <Route path="/link-agendamento" element={<LinkAgendamento {...commonProps} />} />
+              {/* Rotas restritas apenas para admins */}
+              {!isEmployee && (
+                <>
+                  <Route path="/clientes" element={<Clientes {...commonProps} />} />
+                  <Route path="/profissionais" element={<Profissionais {...commonProps} />} />
+                  <Route path="/servicos" element={<Servicos {...commonProps} />} />
+                  <Route path="/financeiro" element={<Relatorio {...commonProps} />} />
+                  <Route path="/configuracoes" element={<Configuracoes {...commonProps} />} />
+                  <Route path="/link-agendamento" element={<LinkAgendamento {...commonProps} />} />
+                </>
+              )}
+              {/* Redirecionar funcionários para agenda se tentarem acessar outras rotas */}
+              {isEmployee && (
+                <Route path="/*" element={<Navigate to="/agenda" replace />} />
+              )}
             </Routes>
           </Suspense>
         </div>
       </div>
+      
+      {/* Debug component (apenas em desenvolvimento) */}
+      <UserRoleDebug />
     </div>
   );
 }

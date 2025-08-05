@@ -22,6 +22,7 @@ interface UserContextData {
     timezone: string;
     subdomain: string | null;
     created_at: string;
+    role: string;
   }>;
 }
 
@@ -33,6 +34,9 @@ interface AuthContextData {
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; }>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
+  isAdmin: boolean;
+  isEmployee: boolean;
+  currentUserRole: string | null;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -175,6 +179,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isAuthenticated = !!user;
+  
+  // Calcular role e tipo de usuário
+  const currentUserRole = userContext?.salons?.[0]?.role || null;
+  const isAdmin = currentUserRole === 'admin';
+  const isEmployee = currentUserRole === 'funcionario';
+  
+  console.log('🔍 Auth Context - Role:', currentUserRole, 'isAdmin:', isAdmin, 'isEmployee:', isEmployee);
 
   return (
     <AuthContext.Provider value={{
@@ -185,6 +196,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       isAuthenticated,
+      isAdmin,
+      isEmployee,
+      currentUserRole,
     }}>
       {children}
     </AuthContext.Provider>
