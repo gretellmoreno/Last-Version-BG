@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import Scissors from 'lucide-react/dist/esm/icons/scissors';
-import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
-import Users from 'lucide-react/dist/esm/icons/users';
-import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { supabase } from '../lib/supabase';
@@ -12,6 +9,7 @@ interface CreateSalonPayload {
   ownerPassword: string;
   salonName: string;
   subdomain: string;
+  phone: string;
 }
 
 interface CreateSalonResponse {
@@ -25,7 +23,8 @@ const MarketingApp: React.FC = () => {
     ownerEmail: '',
     ownerPassword: '',
     salonName: '',
-    subdomain: ''
+    subdomain: '',
+    phone: ''
   });
   
   const [loading, setLoading] = useState(false);
@@ -44,12 +43,32 @@ const MarketingApp: React.FC = () => {
       .replace(/^-|-$/g, ''); // Remove hífens no início e fim
   };
 
+  // Função para formatar telefone
+  const formatPhone = (value: string): string => {
+    // Remove tudo que não é número
+    const numbers = value.replace(/\D/g, '');
+    
+    // Aplica máscara (XX) XXXXX-XXXX
+    if (numbers.length <= 2) {
+      return `(${numbers}`;
+    } else if (numbers.length <= 7) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    } else if (numbers.length <= 11) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+    } else {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
     if (name === 'subdomain') {
       const normalized = normalizeSubdomain(value);
       setFormData(prev => ({ ...prev, [name]: normalized }));
+    } else if (name === 'phone') {
+      const formatted = formatPhone(value);
+      setFormData(prev => ({ ...prev, [name]: formatted }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -64,8 +83,10 @@ const MarketingApp: React.FC = () => {
     if (!formData.ownerPassword) return 'Senha é obrigatória';
     if (formData.ownerPassword.length < 6) return 'Senha deve ter pelo menos 6 caracteres';
     if (!formData.salonName) return 'Nome do salão é obrigatório';
-    if (!formData.subdomain) return 'Subdomínio é obrigatório';
-    if (formData.subdomain.length < 3) return 'Subdomínio deve ter pelo menos 3 caracteres';
+    if (!formData.subdomain) return 'Link do sistema é obrigatório';
+    if (formData.subdomain.length < 3) return 'Link do sistema deve ter pelo menos 3 caracteres';
+    if (!formData.phone) return 'Telefone é obrigatório';
+    if (formData.phone.replace(/\D/g, '').length < 10) return 'Telefone deve ter pelo menos 10 dígitos';
     
     return null;
   };
@@ -145,18 +166,18 @@ const MarketingApp: React.FC = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-sm w-full bg-white rounded-xl p-6 text-center">
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-6 h-6 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Salão Criado com Sucesso! 🎉</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-3">Salão Criado com Sucesso! 🎉</h2>
+          <p className="text-sm text-gray-600 mb-4">
             Seu salão foi configurado e você será logado automaticamente...
           </p>
-          <div className="flex items-center justify-center space-x-2 text-indigo-600">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
-            <span className="text-sm">Fazendo login automático...</span>
+          <div className="flex items-center justify-center space-x-2 text-purple-600">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+            <span className="text-xs">Fazendo login automático...</span>
           </div>
         </div>
       </div>
@@ -164,190 +185,146 @@ const MarketingApp: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="relative bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                <Scissors className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                BelaGestão
-              </h1>
+      <header className="bg-white border-b border-gray-100">
+        <div className="max-w-md mx-auto px-4 py-4">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+              <Scissors className="w-4 h-4 text-white" />
             </div>
+            <h1 className="text-xl font-bold text-gray-900">BelaGestão</h1>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Side - Marketing Content */}
-          <div className="space-y-8">
+      <div className="max-w-md mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Olá, vamos começar?
+          </h2>
+          <p className="text-gray-600">
+            Configure seu salão em poucos minutos
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
-                Gerencie seu salão de beleza com{' '}
-                <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  facilidade
-                </span>
-              </h2>
-              <p className="mt-6 text-xl text-gray-600 leading-relaxed">
-                Sistema completo de gestão para salões de beleza. Agendamentos, clientes, profissionais e muito mais em uma plataforma moderna e intuitiva.
+              <label htmlFor="salonName" className="block text-sm font-medium text-gray-700 mb-1">
+                Nome do Salão *
+              </label>
+              <input
+                type="text"
+                id="salonName"
+                name="salonName"
+                value={formData.salonName}
+                onChange={handleInputChange}
+                placeholder="Ex: Salão da Maria"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="subdomain" className="block text-sm font-medium text-gray-700 mb-1">
+                Link do Sistema *
+              </label>
+              <div className="flex">
+                <input
+                  type="text"
+                  id="subdomain"
+                  name="subdomain"
+                  value={formData.subdomain}
+                  onChange={handleInputChange}
+                  placeholder="salao-da-maria"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-l-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  required
+                />
+                <div className="px-3 py-2 bg-gray-50 border border-l-0 border-gray-200 rounded-r-lg text-gray-500 text-xs flex items-center">
+                  .belagestao.com
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Este será o endereço do seu salão online
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-6">
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Agendamentos Online</h3>
-                  <p className="text-gray-600 text-sm">Permita que seus clientes agendem serviços 24/7</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Gestão de Clientes</h3>
-                  <p className="text-gray-600 text-sm">Mantenha histórico completo de cada cliente</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-6 h-6 text-pink-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Interface Moderna</h3>
-                  <p className="text-gray-600 text-sm">Design intuitivo e responsivo para todos dispositivos</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Fácil de Usar</h3>
-                  <p className="text-gray-600 text-sm">Configure seu salão em poucos minutos</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Side - Registration Form */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-gray-900">Crie seu salão agora</h3>
-              <p className="text-gray-600 mt-2">Configure sua conta em menos de 2 minutos</p>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                WhatsApp*
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="(41) 99999-8888"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                required
+              />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="salonName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome do Salão *
-                </label>
-                <input
-                  type="text"
-                  id="salonName"
-                  name="salonName"
-                  value={formData.salonName}
-                  onChange={handleInputChange}
-                  placeholder="Ex: Salão da Maria"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  required
-                />
-              </div>
+            <div>
+              <label htmlFor="ownerEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                Seu E-mail *
+              </label>
+              <input
+                type="email"
+                id="ownerEmail"
+                name="ownerEmail"
+                value={formData.ownerEmail}
+                onChange={handleInputChange}
+                placeholder="seu@email.com"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                required
+              />
+            </div>
 
-              <div>
-                <label htmlFor="subdomain" className="block text-sm font-medium text-gray-700 mb-2">
-                  Subdomínio *
-                </label>
-                <div className="flex">
-                  <input
-                    type="text"
-                    id="subdomain"
-                    name="subdomain"
-                    value={formData.subdomain}
-                    onChange={handleInputChange}
-                    placeholder="salao-da-maria"
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  />
-                  <div className="px-4 py-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-gray-600 text-sm flex items-center">
-                    .belagestao.com
-                  </div>
+            <div>
+              <label htmlFor="ownerPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                Senha *
+              </label>
+              <input
+                type="password"
+                id="ownerPassword"
+                name="ownerPassword"
+                value={formData.ownerPassword}
+                onChange={handleInputChange}
+                placeholder="Mínimo 6 caracteres"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                required
+                minLength={6}
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <p className="text-red-700 text-xs">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Criando salão...</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Este será o endereço do seu salão online
-                </p>
-              </div>
-
-              <div>
-                <label htmlFor="ownerEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                  Seu E-mail *
-                </label>
-                <input
-                  type="email"
-                  id="ownerEmail"
-                  name="ownerEmail"
-                  value={formData.ownerEmail}
-                  onChange={handleInputChange}
-                  placeholder="seu@email.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="ownerPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Senha *
-                </label>
-                <input
-                  type="password"
-                  id="ownerPassword"
-                  name="ownerPassword"
-                  value={formData.ownerPassword}
-                  onChange={handleInputChange}
-                  placeholder="Mínimo 6 caracteres"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  required
-                  minLength={6}
-                />
-              </div>
-
-              {error && (
-                <div className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                  <p className="text-red-700 text-sm">{error}</p>
-                </div>
+              ) : (
+                'Criar Meu Salão'
               )}
+            </button>
+          </form>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Criando salão...</span>
-                  </div>
-                ) : (
-                  'Criar Meu Salão'
-                )}
-              </button>
-            </form>
-
-            <p className="text-center text-xs text-gray-500 mt-6">
-              Ao criar sua conta, você aceita nossos termos de serviço e política de privacidade
-            </p>
-          </div>
+          <p className="text-center text-xs text-gray-500 mt-4">
+            Ao criar sua conta, você aceita nossos termos de serviço e política de privacidade
+          </p>
         </div>
       </div>
     </div>
