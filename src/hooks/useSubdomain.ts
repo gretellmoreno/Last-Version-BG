@@ -241,6 +241,21 @@ export const useIsMainDomain = (): boolean => {
 export const useIsAppDomain = (): boolean => {
   return useMemo(() => {
     const hostname = window.location.hostname;
-    return hostname === 'app.localhost';
+    
+    // Para desenvolvimento
+    if (hostname === 'app.localhost') {
+      return true;
+    }
+    
+    // Para produção - verificar se é app.belagestao.com ou app.vercel.app
+    if (isProduction()) {
+      const parts = hostname.split('.');
+      if (parts.length >= 2) {
+        const subdomain = parts[0];
+        return subdomain === 'app';
+      }
+    }
+    
+    return false;
   }, []);
 }; 

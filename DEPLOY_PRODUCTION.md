@@ -57,10 +57,12 @@
 
 #### Desenvolvimento:
 - `localhost:5173` - Domínio principal
+- `app.localhost:5173` - Página de criação de salão (MarketingApp)
 - `salao-a.localhost:5173` - Subdomínio do salão
 
 #### Produção:
 - `https://belagestao.com` - Domínio principal
+- `https://app.belagestao.com` - Página de criação de salão (MarketingApp)
 - `https://salao-a.belagestao.com` - Subdomínio do salão
 
 ### 4. Configurações do Vercel
@@ -74,6 +76,12 @@
 1. Configurar wildcard DNS: `*.belagestao.com`
 2. O Vercel automaticamente roteará subdomínios
 3. Cada subdomínio será uma instância separada da aplicação
+
+#### Subdomínio Especial `app`:
+1. **URL:** `https://app.belagestao.com`
+2. **Função:** Página de criação de salão (MarketingApp)
+3. **Configuração:** Detectado automaticamente pelo hook `useIsAppDomain`
+4. **DNS:** Configurar registro A para `app.belagestao.com` apontando para Vercel
 
 ### 5. Variáveis de Ambiente
 
