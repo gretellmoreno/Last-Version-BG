@@ -25,8 +25,6 @@ const MeusAgendamentos = lazy(() => import('./pages/MeusAgendamentos'));
 const DefinirSenha = lazy(() => import('./pages/DefinirSenha'));
 const SalonNotFound = lazy(() => import('./pages/SalonNotFound'));
 const MarketingApp = lazy(() => import('./pages/MarketingApp'));
-const LandingPage = lazy(() => import('./pages/LandingPage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 
 // Componente de loading para páginas
 const PageLoader = () => (
@@ -214,13 +212,6 @@ function DomainRouter() {
   // Caso contrário, usar as rotas normais
   return (
     <Routes>
-      <Route path="/" element={
-        <Suspense fallback={<PageLoader />}>
-          <LandingPage />
-        </Suspense>
-      } />
-      <Route path="/login" element={<LoginForm />} />
-      <Route path="/register" element={<RegisterPage />} />
       <Route path="/agendamento" element={
         <Suspense fallback={<PageLoader />}>
           <AgendamentoPublico />
