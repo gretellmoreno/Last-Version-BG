@@ -704,12 +704,56 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   const selectedProfessional = professionals?.find(prof => prof.id === selectedProfessionalId);
 
   // Funções para drag-and-drop
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+    setTooltip(prev => ({ ...prev, isVisible: false }));
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleSelectSlot = useCallback((slotInfo: any) => {
+    const { start, resourceId } = slotInfo;
+    const professional = professionals?.find(p => p.id === resourceId);
+    
+    if (professional) {
+      const timeString = format(start, 'HH:mm');
+      setSelectedBookingSlot({ 
+        time: timeString, 
+        professional: professional.name.replace('[Exemplo] ', '') 
+      });
+      setIsBookingModalOpen(true);
+    }
+  }, [professionals]);
+
+  const handleSelectEvent = useCallback((event: CalendarEvent) => {
+    // Verificar se o agendamento está finalizado (múltiplos status possíveis)
+    const isFinalized = ['finalizado', 'concluido', 'fechado', 'pago'].includes(event.status.toLowerCase());
+    
+    if (isFinalized) {
+      // Para agendamentos finalizados, abrir apenas o modal de detalhes (somente leitura)
+      setSelectedAppointmentId(event.id);
+      setIsDetailsModalOpen(true);
+    } else {
+      // Para agendamentos em andamento, abrir o modal editável
+      setSelectedAppointmentId(event.id);
+      setIsEditModalOpen(true);
+    }
+  }, []);
+
+  const handleNavigate = useCallback((date: Date) => {
+    setSelectedDate(date);
+  }, []);
+
   const handleEventResize = useCallback(async ({ event, start, end }: any) => {
-    handleDragStart(); // Iniciar estado de drag
+    // handleDragStart(); // Iniciar estado de drag - REMOVIDO
     
     // Não permitir mudança no horário de início
     if (start.getTime() !== event.start.getTime()) {
-      handleDragEnd(); // Finalizar estado de drag
+      // handleDragEnd(); // Finalizar estado de drag - REMOVIDO
       return;
     }
 
@@ -718,7 +762,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     
     // Verificar se realmente houve mudança na duração
     if (newEnd === originalEnd) {
-      handleDragEnd(); // Finalizar estado de drag
+      // handleDragEnd(); // Finalizar estado de drag - REMOVIDO
       return;
     }
 
@@ -746,12 +790,12 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
       console.error('Erro ao atualizar horário:', error);
       toast.error('Falha ao atualizar.', { id: toastId });
     } finally {
-      handleDragEnd(); // Finalizar estado de drag
+      // handleDragEnd(); // Finalizar estado de drag - REMOVIDO
     }
-  }, [refreshAppointments]);
+  }, [refreshAppointments, handleDragStart, handleDragEnd]);
 
   const handleEventMove = useCallback(async ({ event, start, end, resourceId }: any) => {
-    handleDragStart(); // Iniciar estado de drag
+    // handleDragStart(); // Iniciar estado de drag - REMOVIDO
 
     const toastId = toast.loading('Atualizando agendamento...');
 
@@ -777,9 +821,9 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
       console.error('Erro ao atualizar agendamento:', error);
       toast.error('Falha ao atualizar.', { id: toastId });
     } finally {
-      handleDragEnd(); // Finalizar estado de drag
+      // handleDragEnd(); // Finalizar estado de drag - REMOVIDO
     }
-  }, [refreshAppointments]);
+  }, [refreshAppointments, handleDragStart, handleDragEnd]);
 
   // Função para controlar o tooltip (consolidada no CustomEvent)
 
@@ -963,40 +1007,40 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   };
 
   // Manipulador de seleção de slot vazio
-  const handleSelectSlot = useCallback((slotInfo: any) => {
-    const { start, resourceId } = slotInfo;
-    const professional = professionals?.find(p => p.id === resourceId);
+  // const handleSelectSlot = useCallback((slotInfo: any) => {
+  //   const { start, resourceId } = slotInfo;
+  //   const professional = professionals?.find(p => p.id === resourceId);
     
-    if (professional) {
-      const timeString = format(start, 'HH:mm');
-      setSelectedBookingSlot({ 
-        time: timeString, 
-        professional: professional.name.replace('[Exemplo] ', '') 
-      });
-      setIsBookingModalOpen(true);
-    }
-  }, [professionals]);
+  //   if (professional) {
+  //     const timeString = format(start, 'HH:mm');
+  //     setSelectedBookingSlot({ 
+  //       time: timeString, 
+  //       professional: professional.name.replace('[Exemplo] ', '') 
+  //     });
+  //     setIsBookingModalOpen(true);
+  //   }
+  // }, [professionals]);
 
   // Manipulador de seleção de evento
-  const handleSelectEvent = useCallback((event: CalendarEvent) => {
-    // Verificar se o agendamento está finalizado (múltiplos status possíveis)
-    const isFinalized = ['finalizado', 'concluido', 'fechado', 'pago'].includes(event.status.toLowerCase());
+  // const handleSelectEvent = useCallback((event: CalendarEvent) => {
+  //   // Verificar se o agendamento está finalizado (múltiplos status possíveis)
+  //   const isFinalized = ['finalizado', 'concluido', 'fechado', 'pago'].includes(event.status.toLowerCase());
     
-    if (isFinalized) {
-      // Para agendamentos finalizados, abrir apenas o modal de detalhes (somente leitura)
-      setSelectedAppointmentId(event.id);
-      setIsDetailsModalOpen(true);
-    } else {
-      // Para agendamentos em andamento, abrir o modal editável
-      setSelectedAppointmentId(event.id);
-      setIsEditModalOpen(true);
-    }
-  }, []);
+  //   if (isFinalized) {
+  //     // Para agendamentos finalizados, abrir apenas o modal de detalhes (somente leitura)
+  //     setSelectedAppointmentId(event.id);
+  //     setIsDetailsModalOpen(true);
+  //   } else {
+  //     // Para agendamentos em andamento, abrir o modal editável
+  //     setSelectedAppointmentId(event.id);
+  //     setIsEditModalOpen(true);
+  //   }
+  // }, []);
 
   // Manipulador de navegação de datas
-  const handleNavigate = useCallback((date: Date) => {
-    setSelectedDate(date);
-  }, []);
+  // const handleNavigate = useCallback((date: Date) => {
+  //   setSelectedDate(date);
+  // }, []);
 
   // Manipuladores dos modais
   const handleAddClick = () => {
@@ -1034,19 +1078,49 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   
 
 
-  // Componente customizado para slots de tempo com atributo data-time
+  // Componente customizado para slots de tempo com clique otimizado para mobile
   const TimeSlotWrapper = ({ children, value, resource }: any) => {
+    // Handler para forçar o clique em mobile
+    const handleSlotClick = (e: React.MouseEvent) => {
+      if (isMobile) {
+        // Prevenir que o evento de clique se propague para o calendário,
+        // evitando que onSelectSlot seja chamado duas vezes.
+        e.stopPropagation();
+
+        const slotInfo = {
+          start: value,
+          end: new Date(value.getTime() + 15 * 60000), // Adiciona 15 min, baseado na config do calendário
+          slots: [value],
+          action: 'click' as const,
+          resourceId: resource,
+        };
+        console.log('👆 Toque mobile detectado, forçando handleSelectSlot:', slotInfo);
+        handleSelectSlot(slotInfo);
+      }
+    };
+
     return (
       <div 
         className="rbc-time-slot" 
         data-time={format(value, 'HH:mm')}
+        // Adiciona o handler de clique otimizado
+        onClick={handleSlotClick}
         style={{ 
           minHeight: '20px',
           width: '100%',
           height: '100%',
           position: 'relative',
           display: 'block',
-          pointerEvents: 'auto' // Garantir cliques
+          pointerEvents: 'auto', // Garantir cliques
+          // DESABILITAR SELEÇÃO MÚLTIPLA
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
+          // PERMITIR SCROLL
+          touchAction: 'pan-y',
+          WebkitTouchCallout: 'none',
+          WebkitTapHighlightColor: 'transparent'
         }}
       >
         {children}
@@ -1186,22 +1260,22 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     );
   };
 
-  const handleDragStart = useCallback(() => {
-    setIsDragging(true);
-    setTooltip(prev => ({ ...prev, isVisible: false }));
+  // const handleDragStart = useCallback(() => {
+  //   setIsDragging(true);
+  //   setTooltip(prev => ({ ...prev, isVisible: false }));
     
-    // Limpar quaisquer timeouts pendentes
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-    }
-  }, []);
+  //   // Limpar quaisquer timeouts pendentes
+  //   if (hoverTimeoutRef.current) {
+  //     clearTimeout(hoverTimeoutRef.current);
+  //   }
+  //   if (hideTimeoutRef.current) {
+  //     clearTimeout(hideTimeoutRef.current);
+  //   }
+  // }, []);
 
-  const handleDragEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+  // const handleDragEnd = useCallback(() => {
+  //   setIsDragging(false);
+  // }, []);
 
   // Log para debug - verificar se events está chegando
   useEffect(() => {
@@ -1282,7 +1356,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
               rtl={false}
               className={`barber-calendar ${isMobile ? 'mobile-calendar mobile-responsive' : ''}`}
               
-              // Funcionalidades de Interação - ajustadas para mobile
+              // Funcionalidades de Interação - DESABILITAR SELEÇÃO MÚLTIPLA
               selectable={true}
               resizable={!isMobile} // Desabilitar resize em mobile
               
@@ -1292,10 +1366,27 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
               onNavigate={handleNavigate}
               onEventDrop={isMobile ? undefined : handleEventMove} // Desabilitar drag em mobile
               onEventResize={isMobile ? undefined : handleEventResize} // Desabilitar resize em mobile
-              onDragStart={isMobile ? undefined : () => handleDragStart()}
+              onDragStart={isMobile ? undefined : handleDragStart}
               
               // Configurações adicionais para garantir seleção
-              longPressThreshold={50} // Tempo curto para mobile
+              longPressThreshold={isMobile ? 10 : 50} // Tempo muito curto para mobile
+              
+              // Configurações específicas para mobile
+              {...(isMobile && {
+                drilldownView: null,
+                getDrilldownView: null,
+                // DESABILITAR SELEÇÃO MÚLTIPLA EM MOBILE
+                selectable: 'ignoreEvents', // Só seleciona slots vazios, não eventos
+                onSelecting: () => false, // Desabilita seleção múltipla
+                // DESABILITAR COMPLETAMENTE SELEÇÃO MÚLTIPLA
+                onSelectSlot: (slotInfo: any) => {
+                  // Apenas processar cliques simples, não arrastar
+                  if (slotInfo.action === 'click') {
+                    handleSelectSlot(slotInfo);
+                  }
+                  return false; // Prevenir seleção múltipla
+                },
+              })}
             
             // Personalização Visual
             eventPropGetter={eventStyleGetter}

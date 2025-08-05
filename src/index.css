@@ -475,31 +475,36 @@
   background: transparent;
   transition: background-color 0.2s ease;
 }
-.barber-calendar .rbc-day-slot .rbc-time-slot:hover::after {
-  background-color: #e0e7ff !important;
-  z-index: 6;
-}
-.barber-calendar .rbc-day-slot .rbc-time-slot:hover::before {
-  content: attr(data-time);
-  position: absolute;
-  top: 4px;
-  left: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #4338ca;
-  background-color: rgba(255, 255, 255, 0.95);
-  padding: 2px 6px;
-  border-radius: 4px;
-  z-index: 25; /* Maior que o z-index do evento */
-  pointer-events: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  display: block;
+/* Hover effects - apenas para desktop */
+@media (hover: hover) and (pointer: fine) {
+  .barber-calendar .rbc-day-slot .rbc-time-slot:hover::after {
+    background-color: #e0e7ff !important;
+    z-index: 6;
+  }
+  .barber-calendar .rbc-day-slot .rbc-time-slot:hover::before {
+    content: attr(data-time);
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #4338ca;
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 25; /* Maior que o z-index do evento */
+    pointer-events: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    display: block;
+  }
 }
 
-/* Desabilitar hover de slot se houver um evento nele */
-.barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event):hover::after,
-.barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event):hover::before {
-  display: none !important;
+/* Desabilitar hover de slot se houver um evento nele - apenas para desktop */
+@media (hover: hover) and (pointer: fine) {
+  .barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event):hover::after,
+  .barber-calendar .rbc-day-slot .rbc-time-slot:has(.rbc-event):hover::before {
+    display: none !important;
+  }
 }
 
 /*
@@ -896,6 +901,22 @@
     user-select: none;
   }
   
+  /* Melhorar responsividade ao toque nos slots */
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(224, 231, 255, 0.3) !important;
+    -webkit-touch-callout: none !important;
+    cursor: pointer !important;
+    transition: background-color 0.1s ease !important;
+  }
+  
+  /* Feedback visual imediato no toque */
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot:active {
+    background-color: #e0e7ff !important;
+    transform: scale(0.98) !important;
+    transition: all 0.05s ease !important;
+  }
+  
   .mobile-calendar-container .rbc-event {
     position: relative;
     z-index: 20;
@@ -1194,6 +1215,65 @@
   .barber-calendar .rbc-calendar {
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
+  }
+  
+  /* DESABILITAR SELEÇÃO MÚLTIPLA EM MOBILE */
+  .mobile-calendar-container .rbc-day-slot {
+    /* Desabilitar seleção de texto e arrastar */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    
+    /* Permitir scroll vertical */
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Desabilitar indicadores de seleção múltipla */
+  .mobile-calendar-container .rbc-slot-selecting {
+    background: transparent !important;
+    border: none !important;
+  }
+  
+  .mobile-calendar-container .rbc-slot-selected {
+    background: transparent !important;
+    border: none !important;
+  }
+  
+  /* Desabilitar seleção de múltiplos slots */
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot.rbc-slot-selecting,
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot.rbc-slot-selected {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  /* Garantir que apenas cliques simples sejam processados */
+  .mobile-calendar-container .rbc-day-slot .rbc-time-slot {
+    /* Desabilitar seleção de texto */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    
+    /* Permitir scroll */
+    touch-action: pan-y;
+    
+    /* Desabilitar highlight de toque */
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Desabilitar seleção de eventos em mobile */
+  .mobile-calendar-container .rbc-event.rbc-selected {
+    background: inherit !important;
+    border: inherit !important;
+  }
+  
+  /* Permitir scroll suave */
+  .mobile-calendar-container {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
   
   /* Safe area para dispositivos com notch */
