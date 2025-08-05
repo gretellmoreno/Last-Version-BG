@@ -54,7 +54,7 @@ export default function ProfessionalModal({
 }: ProfessionalModalProps) {
   const [professionalForm, setProfessionalForm] = useState<ProfessionalFormData>({
     name: '',
-    role: '',
+    role: 'funcionario', // Valor padrão
     phone: '',
     email: '',
     cpf: '',
@@ -99,7 +99,7 @@ export default function ProfessionalModal({
     } else {
       setProfessionalForm({
         name: '',
-        role: '',
+        role: 'funcionario', // Valor padrão
         phone: '',
         email: '',
         cpf: '',
@@ -228,7 +228,8 @@ export default function ProfessionalModal({
            professionalForm.email.trim() !== '' &&
            isValidEmail(professionalForm.email) &&
            professionalForm.commission_rate >= 0 &&
-           professionalForm.commission_rate <= 100;
+           professionalForm.commission_rate <= 100 &&
+           selectedServiceIds.length > 0; // Adicionar validação para serviços
   };
 
   const handleServiceToggle = (serviceId: string) => {
@@ -369,16 +370,43 @@ export default function ProfessionalModal({
 
               {/* Função */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-700 mb-2">
                   Função <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Cabeleireira, Manicure, etc."
-                  value={professionalForm.role}
-                  onChange={(e) => handleUpdateForm('role', e.target.value)}
-                  className={`w-full px-3 ${isMobileView ? 'py-2.5' : 'py-2'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm`}
-                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateForm('role', 'funcionario')}
+                    className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      professionalForm.role === 'funcionario'
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        professionalForm.role === 'funcionario' ? 'bg-indigo-500' : 'bg-gray-300'
+                      }`} />
+                      Funcionário
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateForm('role', 'admin')}
+                    className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      professionalForm.role === 'admin'
+                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        professionalForm.role === 'admin' ? 'bg-purple-500' : 'bg-gray-300'
+                      }`} />
+                      Admin
+                    </div>
+                  </button>
+                </div>
               </div>
 
               {/* Telefone */}
@@ -468,24 +496,42 @@ export default function ProfessionalModal({
               {/* Lista de Serviços */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-2">
-                  Serviços que este profissional pode realizar
+                  Serviços que este profissional pode realizar <span className="text-red-500">*</span>
                 </label>
                 {loadingServices ? (
                   <div className="text-gray-500 text-sm">Carregando serviços...</div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {allServices.map(service => (
-                      <label key={service.id} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedServiceIds.includes(service.id)}
-                          onChange={() => handleServiceToggle(service.id)}
-                          className="accent-pink-500"
-                        />
-                        <span className="text-sm text-gray-700">{service.name}</span>
-                      </label>
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() => handleServiceToggle(service.id)}
+                        className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          selectedServiceIds.includes(service.id)
+                            ? 'bg-indigo-50 text-indigo-700 border-2 border-indigo-300 shadow-sm'
+                            : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="flex-1 text-left">{service.name}</span>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedServiceIds.includes(service.id)
+                            ? 'bg-indigo-500 border-indigo-500'
+                            : 'bg-white border-gray-300'
+                        }`}>
+                          {selectedServiceIds.includes(service.id) && (
+                            <div className="w-2 h-2 bg-white rounded-full" />
+                          )}
+                        </div>
+                      </button>
                     ))}
                   </div>
+                )}
+                {selectedServiceIds.length === 0 && (
+                  <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
+                    <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+                    É necessário selecionar pelo menos um serviço.
+                  </p>
                 )}
               </div>
             </div>
@@ -521,6 +567,13 @@ export default function ProfessionalModal({
                 ? 'bg-pink-600 text-white hover:bg-pink-700 shadow-sm'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
+            title={
+              !isFormValid() 
+                ? selectedServiceIds.length === 0 
+                  ? 'Selecione pelo menos um serviço'
+                  : 'Preencha todos os campos obrigatórios'
+                : ''
+            }
           >
             {loading || photoUploading ? (
               <>
