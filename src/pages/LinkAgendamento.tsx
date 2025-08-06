@@ -120,7 +120,8 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
   // Função para copiar link com animação
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(getFullLink());
+      const shareMessage = `Acesse nosso link e agende seu horário com facilidade:\n${getFullLink()}`;
+      await navigator.clipboard.writeText(shareMessage);
       setIsCopied(true);
       
       // Efeito visual de sucesso
@@ -734,10 +735,10 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                           <button
                               onClick={() => {
                                 if (navigator.share) {
+                                  const shareMessage = `Acesse nosso link e agende seu horário com facilidade:\n${getFullLink()}`;
                                   navigator.share({
                                     title: 'Link de Agendamento',
-                                    text: 'Compartilhe este link para agendamentos online',
-                                    url: getFullLink()
+                                    text: shareMessage
                                   });
                                 } else {
                                   handleCopyLink();

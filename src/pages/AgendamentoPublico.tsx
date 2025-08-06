@@ -885,7 +885,7 @@ export default function AgendamentoPublico() {
   if ((currentStep as string) === 'professional') {
     return (
       <div 
-        className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6"
+        className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6 relative overflow-hidden"
         style={{
           maxWidth: 480,
           margin: '0 auto',
@@ -894,6 +894,30 @@ export default function AgendamentoPublico() {
           backgroundImage: 'linear-gradient(to bottom, var(--cor-primaria), var(--cor-secundaria))',
         } as React.CSSProperties}
       >
+        {/* Gradiente responsivo na borda */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `
+              linear-gradient(45deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.1) 25%, 
+                rgba(255,255,255,0.2) 50%, 
+                rgba(255,255,255,0.1) 75%, 
+                transparent 100%
+              ),
+              linear-gradient(135deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.05) 25%, 
+                rgba(255,255,255,0.1) 50%, 
+                rgba(255,255,255,0.05) 75%, 
+                transparent 100%
+              )
+            `,
+            backgroundSize: '200% 200%, 150% 150%',
+            animation: 'gradientShift 8s ease-in-out infinite'
+          }}
+        />
         {/* Cabeçalho Compacto */}
         <div className="w-full max-w-md mb-4">
           {/* Menu Button */}
@@ -1243,7 +1267,7 @@ export default function AgendamentoPublico() {
   if ((currentStep as string) === 'datetime') {
     return (
       <div 
-        className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6"
+        className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6 relative overflow-hidden"
         style={{
           maxWidth: 480,
           margin: '0 auto',
@@ -1252,6 +1276,30 @@ export default function AgendamentoPublico() {
           backgroundImage: 'linear-gradient(to bottom, var(--cor-primaria), var(--cor-secundaria))',
         } as React.CSSProperties}
       >
+        {/* Gradiente responsivo na borda */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `
+              linear-gradient(45deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.1) 25%, 
+                rgba(255,255,255,0.2) 50%, 
+                rgba(255,255,255,0.1) 75%, 
+                transparent 100%
+              ),
+              linear-gradient(135deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.05) 25%, 
+                rgba(255,255,255,0.1) 50%, 
+                rgba(255,255,255,0.05) 75%, 
+                transparent 100%
+              )
+            `,
+            backgroundSize: '200% 200%, 150% 150%',
+            animation: 'gradientShift 8s ease-in-out infinite'
+          }}
+        />
         {/* Cabeçalho com botão voltar e calendário */}
         <div className="w-full max-w-md mb-6">
           <div className="flex items-center justify-between">
@@ -1548,7 +1596,7 @@ export default function AgendamentoPublico() {
       {/* Etapa 5: Confirmação - Layout especial */}
       {(currentStep as string) === 'confirmation' ? (
         <div 
-          className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6"
+          className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6 relative overflow-hidden"
           style={{
             maxWidth: 480,
             margin: '0 auto',
@@ -1557,6 +1605,30 @@ export default function AgendamentoPublico() {
             backgroundImage: 'linear-gradient(to bottom, var(--cor-primaria), var(--cor-secundaria))',
           } as React.CSSProperties}
         >
+          {/* Gradiente responsivo na borda */}
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: `
+                linear-gradient(45deg, 
+                  transparent 0%, 
+                  rgba(255,255,255,0.1) 25%, 
+                  rgba(255,255,255,0.2) 50%, 
+                  rgba(255,255,255,0.1) 75%, 
+                  transparent 100%
+                ),
+                linear-gradient(135deg, 
+                  transparent 0%, 
+                  rgba(255,255,255,0.05) 25%, 
+                  rgba(255,255,255,0.1) 50%, 
+                  rgba(255,255,255,0.05) 75%, 
+                  transparent 100%
+                )
+              `,
+              backgroundSize: '200% 200%, 150% 150%',
+              animation: 'gradientShift 8s ease-in-out infinite'
+            }}
+          />
           {/* Header com botão voltar */}
           <div className="w-full max-w-md mb-4">
             <div className="flex items-center justify-start">

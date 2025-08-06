@@ -2050,3 +2050,55 @@ input[type="time"]::-webkit-datetime-edit-second-field {
     }
   }
 }
+
+/* Animação do gradiente responsivo para agendamento público */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 0%, 0% 0%;
+  }
+  25% {
+    background-position: 100% 0%, 50% 50%;
+  }
+  50% {
+    background-position: 100% 100%, 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%, 50% 50%;
+  }
+}
+
+/* Gradiente responsivo para diferentes cores */
+.gradient-border-primary {
+  background: linear-gradient(45deg, 
+    transparent 0%, 
+    rgba(255,255,255,0.1) 25%, 
+    rgba(255,255,255,0.2) 50%, 
+    rgba(255,255,255,0.1) 75%, 
+    transparent 100%
+  );
+}
+
+.gradient-border-secondary {
+  background: linear-gradient(135deg, 
+    transparent 0%, 
+    rgba(255,255,255,0.05) 25%, 
+    rgba(255,255,255,0.1) 50%, 
+    rgba(255,255,255,0.05) 75%, 
+    transparent 100%
+  );
+}
+
+/* Responsividade do gradiente */
+@media (max-width: 768px) {
+  .gradient-border-primary,
+  .gradient-border-secondary {
+    background-size: 150% 150% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .gradient-border-primary,
+  .gradient-border-secondary {
+    background-size: 120% 120% !important;
+  }
+}
