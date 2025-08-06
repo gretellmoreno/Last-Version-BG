@@ -509,7 +509,15 @@ export default function ServiceConfirmation({
                       className={`flex-1 border-2 rounded-lg px-4 py-3 flex flex-col items-center justify-center ${selectedProfessional ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 bg-white'} transition-colors`}
                       onClick={onShowProfessionalSelection}
                     >
-                      <UserCheck size={22} className="mb-1 text-yellow-600" />
+                      {selectedProfessional?.url_foto ? (
+                        <img
+                          src={selectedProfessional.url_foto}
+                          alt={selectedProfessional.name}
+                          className="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-200 mb-2"
+                        />
+                      ) : (
+                        <UserCheck size={22} className="mb-1 text-yellow-600" />
+                      )}
                       <span className="text-xs font-medium text-gray-900">{selectedProfessional ? selectedProfessional.name : 'Selecionar Profissional'}</span>
                       {selectedProfessional && <span className="text-xs text-gray-500">Profissional selecionado</span>}
                     </button>

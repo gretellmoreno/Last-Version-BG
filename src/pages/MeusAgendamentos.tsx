@@ -337,6 +337,35 @@ export default function MeusAgendamentos() {
     secondaryColor: config?.cor_secundaria || '#4f46e5'
   }), [config?.cor_primaria, config?.cor_secundaria]);
 
+  // Função para calcular cor de contraste baseada na luminância
+  const getContrastColor = useCallback((color: string) => {
+    try {
+      // Remove o # se presente
+      const hex = color.replace('#', '');
+      
+      // Verifica se é um hex válido
+      if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
+        return '#FFFFFF'; // Fallback branco se inválido
+      }
+      
+      // Converte para RGB
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      
+      // Calcula a luminância relativa (fórmula WCAG)
+      const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      
+      // Retorna branco para fundos escuros, preto para fundos claros
+      return luminance > 0.6 ? '#000000' : '#FFFFFF';
+    } catch (error) {
+      return '#FFFFFF'; // Fallback branco em caso de erro
+    }
+  }, []);
+
+  // Cor de texto responsiva baseada na cor primária
+  const textColor = useMemo(() => getContrastColor(themeColors.primaryColor), [themeColors.primaryColor, getContrastColor]);
+
   // Filtrar agendamentos por tipo com memoização e ordenação
   const currentAppointments = useMemo(() => {
     const appointments = activeTab === 'atuais' ? appointmentsData.atuais : appointmentsData.passados;
@@ -360,8 +389,14 @@ export default function MeusAgendamentos() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: themeColors.primaryColor }}>
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white">
+          <div 
+            className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+            style={{ 
+              borderColor: textColor,
+              borderTopColor: 'transparent'
+            }}
+          ></div>
+          <p style={{ color: textColor }}>
             {isAutoLoading ? 'Carregando seus agendamentos...' : 'Carregando...'}
           </p>
         </div>
@@ -405,10 +440,10 @@ export default function MeusAgendamentos() {
             onClick={goBack}
             className="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
           >
-            <ArrowLeft className="w-6 h-6 text-white" />
+            <ArrowLeft className="w-6 h-6" style={{ color: textColor }} />
           </button>
           
-          <h1 className="text-xl font-bold text-white text-center flex-1 mr-10">
+          <h1 className="text-xl font-bold text-center flex-1 mr-10" style={{ color: textColor }}>
             Meus Agendamentos
           </h1>
         </div>
@@ -477,13 +512,17 @@ export default function MeusAgendamentos() {
                   className={`flex-1 py-3 px-6 rounded-xl text-sm font-medium transition-all duration-300 ${
                     activeTab === 'atuais'
                       ? 'bg-white text-gray-900 shadow-lg'
-                      : 'text-white/80 hover:text-white'
+                      : 'hover:bg-white/10'
                   }`}
+                  style={activeTab !== 'atuais' ? { color: `${textColor}80` } : {}}
                 >
                   <div className="flex items-center justify-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${
-                      activeTab === 'atuais' ? 'bg-purple-600' : 'bg-white/50'
-                    }`} />
+                    <div 
+                      className={`w-3 h-3 rounded-full ${
+                        activeTab === 'atuais' ? 'bg-purple-600' : ''
+                      }`}
+                      style={activeTab !== 'atuais' ? { backgroundColor: `${textColor}50` } : {}}
+                    />
                     <span>Atuais</span>
                   </div>
                 </button>
@@ -493,13 +532,17 @@ export default function MeusAgendamentos() {
                   className={`flex-1 py-3 px-6 rounded-xl text-sm font-medium transition-all duration-300 ${
                     activeTab === 'passados'
                       ? 'bg-white text-gray-900 shadow-lg'
-                      : 'text-white/80 hover:text-white'
+                      : 'hover:bg-white/10'
                   }`}
+                  style={activeTab !== 'passados' ? { color: `${textColor}80` } : {}}
                 >
                   <div className="flex items-center justify-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${
-                      activeTab === 'passados' ? 'bg-gray-600' : 'bg-white/50'
-                    }`} />
+                    <div 
+                      className={`w-3 h-3 rounded-full ${
+                        activeTab === 'passados' ? 'bg-gray-600' : ''
+                      }`}
+                      style={activeTab !== 'passados' ? { backgroundColor: `${textColor}50` } : {}}
+                    />
                     <span>Passados</span>
                   </div>
                 </button>
@@ -511,12 +554,12 @@ export default function MeusAgendamentos() {
               {currentAppointments.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Calendar className="w-12 h-12 text-white/60" />
+                    <Calendar className="w-12 h-12" style={{ color: `${textColor}60` }} />
                   </div>
-                  <h3 className="text-lg font-medium text-white mb-2">
+                  <h3 className="text-lg font-medium mb-2" style={{ color: textColor }}>
                     Nenhum agendamento encontrado
                   </h3>
-                  <p className="text-white/70 text-sm">
+                  <p className="text-sm" style={{ color: `${textColor}70` }}>
                     {activeTab === 'atuais' 
                       ? 'Você não possui agendamentos futuros no momento.'
                       : 'Você não possui agendamentos passados.'
@@ -544,15 +587,15 @@ export default function MeusAgendamentos() {
                         <div className="flex items-center justify-between mb-3">
                           {/* Profissional */}
                           <div className="flex items-center space-x-2">
-                            <div className="w-10 h-10  bg-purple-100 flex items-center justify-center overflow-hidden">
+                            <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center overflow-hidden">
                               {appointment.professional_photo_url ? (
                                 <img 
                                   src={appointment.professional_photo_url} 
                                   alt={appointment.professional_name}
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-cover rounded-2xl"
                                 />
                               ) : (
-                                <User className="w-3 h-3 text-purple-600" />
+                                <User className="w-6 h-6 text-purple-600" />
                               )}
                             </div>
                             <span className="text-sm text-gray-600 font-medium">

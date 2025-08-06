@@ -74,9 +74,17 @@ export default function ProfessionalSelection({
                 className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-all"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <User size={20} className="text-blue-600" />
-                  </div>
+                  {professional.url_foto ? (
+                    <img
+                      src={professional.url_foto}
+                      alt={professional.name}
+                      className="w-16 h-16 rounded-2xl object-cover border-2 border-blue-200"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
+                      <User size={24} className="text-blue-600" />
+                    </div>
+                  )}
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900">
                       {professional.name.replace('[Exemplo] ', '')}

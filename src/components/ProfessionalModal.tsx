@@ -37,8 +37,6 @@ interface ProfessionalFormData {
 const CALENDAR_COLORS = [
   '#E0E7FF', '#DBEAFE', '#BFDBFE', '#93C5FD', '#60A5FA', '#3B82F6',
   '#C084FC', '#F3E8FF', '#E879F9', '#D946EF', '#C026D2', '#A21CAF',
-  '#FDE68A', '#FCD34D', '#F59E0B', '#D97706', '#92400E', '#78350F',
-  '#86EFAC', '#4ADE80', '#22C55E', '#16A34A', '#15803D', '#166534',
   '#67E8F9', '#22D3EE', '#06B6D4', '#0891B2', '#0E7490', '#155E75'
 ];
 

@@ -394,8 +394,8 @@
 /* Eventos (Agendamentos) */
 .barber-calendar .rbc-event {
   border-radius: 6px !important;
-  padding: 3px 5px !important;
-  font-size: 11px !important;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
   font-weight: 500 !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12) !important;
   transition: all 0.2s ease !important;
@@ -877,16 +877,15 @@
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    font-size: 10px !important;
-    padding: 3px 5px !important;
+    font-size: 11px !important;
+    padding: 5px 6px !important;
     border-radius: 6px !important;
     line-height: 1.2 !important;
-    min-height: 20px !important;
+    min-height: 25px !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
     margin: 1px 2px !important;
     transition: all 0.2s ease !important;
     cursor: pointer;
-    border: 1px solid transparent !important;
     position: relative !important;
   }
   
@@ -1691,8 +1690,8 @@
 
 /* Variáveis CSS para controle preciso do posicionamento */
 .barber-calendar {
-  --rbc-slot-height: 20px; /* Desktop */
-  --rbc-timeslot-group-height: 80px; /* 4 × 20px */
+  --rbc-slot-height: 35px; /* Desktop - aumentado de 20px para 35px */
+      --rbc-timeslot-group-height: 140px; /* 4 × 35px */
 }
 
 /* Garantir que o React Big Calendar use as alturas corretas */
@@ -1736,8 +1735,8 @@
 
   /* Garantir que o posicionamento seja baseado na altura correta */
   .mobile-calendar-container {
-    --rbc-slot-height: 25px; /* Altura mobile */
-    --rbc-timeslot-group-height: 100px; /* 4 × 25px */
+    --rbc-slot-height: 40px; /* Altura mobile - aumentado de 25px para 40px */
+    --rbc-timeslot-group-height: 160px; /* 4 × 40px */
   }
 
   /* Aplicar variáveis mobile */

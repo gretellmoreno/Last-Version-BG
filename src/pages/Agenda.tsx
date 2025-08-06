@@ -110,16 +110,16 @@ const ProfessionalsHeader = ({ professionals }: { professionals: any[] }) => {
         {professionals.map((prof) => (
           <div key={prof.id} className="professional-column">
             <div className="flex flex-col items-center space-y-2">
-              {prof.url_foto ? (
+                            {prof.url_foto ? (
                 <img
                   src={prof.url_foto}
                   alt={prof.name}
-                  className="professional-avatar w-10 h-10 rounded-full object-cover border-2 border-purple-200"
+                  className="professional-avatar w-16 h-16 rounded-2xl object-cover border-2 border-purple-200"
                 />
               ) : (
                 <div 
-                  className="professional-avatar w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                                      style={{ backgroundColor: prof.color || DEFAULT_PROFESSIONAL_COLOR }}
+                  className="professional-avatar w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-lg"
+                  style={{ backgroundColor: prof.color || DEFAULT_PROFESSIONAL_COLOR }}
                 >
                   {(() => {
                     const name = prof.name.replace('[Exemplo] ', '');
@@ -349,15 +349,6 @@ const MobileHeader = ({
           >
             <ChevronRight size={18} className="text-gray-600" />
           </button>
-          {!isToday() && (
-            <button
-              onClick={goToToday}
-              className="ml-1 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors text-xs font-medium min-w-[36px] h-7 flex items-center justify-center"
-              style={{ minWidth: 0, paddingLeft: 8, paddingRight: 8 }}
-            >
-              Hoje
-            </button>
-          )}
         </div>
         {/* Seletor de Profissional e Botões */}
         <div className="flex items-center gap-1 flex-shrink-0">
@@ -922,7 +913,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
           title: '', // Remover título para evitar tooltip nativo
           start: startDateTime,
           end: endDateTime,
-          resourceId: appointment.professional?.id || appointment.professional_id,
+          resourceId: appointment.professional?.id || appointment.professional_id || professionals[0]?.id,
           client: clientName,
           service: serviceNames, // Lista dos nomes dos serviços
           services: services, // Array completo dos serviços
@@ -962,7 +953,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     let borderStyle = 'solid';
     let borderColor = baseColor;
     
-    switch (event.status) {
+    switch (event.status?.toLowerCase()) {
       case 'agendado':
         opacity = 1;
         backgroundColor = lightenColor(baseColor);
@@ -977,6 +968,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
         borderColor = '#dc2626';
         break;
       case 'concluido':
+      case 'finalizado':
         opacity = 0.8;
         borderStyle = 'dashed';
         backgroundColor = lightenColor(baseColor, 0.8);
@@ -987,6 +979,10 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
         borderColor = '#6b7280';
         borderStyle = 'dashed';
         break;
+      default:
+        opacity = 1;
+        backgroundColor = lightenColor(baseColor);
+        break;
     }
     
     return {
@@ -995,13 +991,14 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
         color: '#000000', // Texto preto
         border: `2px ${borderStyle} ${borderColor}`,
         borderRadius: '8px',
-        fontSize: '12px',
-        padding: '6px 8px',
+        fontSize: '13px',
+        padding: '8px 10px',
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
         fontWeight: '500',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        lineHeight: '1.2'
+        lineHeight: '1.2',
+        opacity: opacity
       }
     };
   };
@@ -1380,7 +1377,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
         style={{ pointerEvents: 'auto', cursor: 'pointer' }}
       >
         {/* Ícone de finalizado no canto superior direito */}
-        {event.status === 'finalizado' && (
+        {(event.status === 'finalizado' || event.status === 'concluido') && (
           <span className="absolute top-1 right-1 z-10">
             <CheckCircle size={16} className="text-green-600 drop-shadow" />
           </span>
@@ -1391,14 +1388,14 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
         </div>
         {/* Nome do cliente */}
         <div className={`font-semibold truncate leading-tight text-black ${isVeryShort ? 'text-xs' : 'text-sm'}`} style={{ pointerEvents: 'none' }}>
-          {event.client}
+          {event.client || 'Cliente não definido'}
         </div>
         {/* Serviços */}
         {!isVeryShort && event.services && event.services.length > 0 && (
           <div className="text-xs leading-tight text-black space-y-0.5" style={{ pointerEvents: 'none' }}>
             {event.services.slice(0, isShort ? 1 : 2).map((service: any, index: number) => (
-              <div key={service.id} className="truncate">
-                {service.name}
+              <div key={service.id || index} className="truncate">
+                {service.name || 'Serviço não definido'}
                 {event.services.length > 1 && index === 0 && event.services.length > (isShort ? 1 : 2) && (
                   <span className="text-gray-600"> +{event.services.length - (isShort ? 1 : 2)}</span>
                 )}
@@ -1480,7 +1477,6 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
           {professionals && professionals.length > 0 && (
             <ProfessionalsHeader professionals={professionals} />
           )}
-          {/* REMOVIDO: Barra de ações com botão Plus lateral */}
         </>
       )}
       
@@ -1501,8 +1497,8 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
               min={minTime}
               max={maxTime}
               resources={resources}
-              resourceIdAccessor="id"
-              resourceTitleAccessor="title"
+              resourceIdAccessor={(resource: any) => resource.id}
+              resourceTitleAccessor={(resource: any) => resource.title}
               rtl={false}
               className={`barber-calendar ${isMobile ? 'mobile-calendar mobile-responsive' : ''}`}
               
@@ -1533,16 +1529,6 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
                 // OTIMIZAÇÕES PARA SCROLL
                 onScroll: () => {}, // Handler vazio para scroll
                 scrollToTime: new Date(), // Scroll para horário atual
-                // DESABILITAR ANIMAÇÕES PADRÃO DO BIG REACT CALENDAR
-                onSelecting: () => false, // Desabilita seleção múltipla
-                onSelectSlot: undefined, // Remove handler padrão
-                // DESABILITAR TRANSITIONS PADRÃO
-                components: {
-                  toolbar: () => null,
-                  resourceHeader: () => null,
-                  timeSlotWrapper: TimeSlotWrapper,
-                  event: CustomEvent
-                }
               })}
             
             // Personalização Visual

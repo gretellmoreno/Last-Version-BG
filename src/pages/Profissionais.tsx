@@ -369,14 +369,14 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
                       >
                         
                         <div className="flex items-center space-x-3">
-                          {professional.url_foto ? (
+                                                    {professional.url_foto ? (
                             <img
                               src={professional.url_foto}
                               alt={professional.name}
-                              className="w-10 h-10 rounded-full object-cover border-2 border-pink-200"
+                              className="w-16 h-16 rounded-2xl object-cover border-2 border-pink-200"
                             />
                           ) : (
-                                                                                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-lg"
                               style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}>
                               {professional.name.charAt(0).toUpperCase()}
                             </div>
@@ -418,10 +418,10 @@ const ProfissionaisContent: React.FC<{ onToggleMobileSidebar?: () => void; isMob
                                   <img
                                     src={professional.url_foto}
                                     alt={professional.name}
-                                    className="w-8 h-8 rounded-full object-cover border-2 border-pink-200"
+                                    className="w-12 h-12 rounded-2xl object-cover border-2 border-pink-200"
                                   />
                                 ) : (
-                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+                                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-sm"
                                     style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}>
                                     {professional.name.charAt(0).toUpperCase()}
                                   </div>

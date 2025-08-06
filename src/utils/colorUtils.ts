@@ -13,14 +13,12 @@ export const getTextColor = (backgroundColor: string) => {
   return luminance > 0.5 ? '#000000' : '#FFFFFF';
 };
 
-// Paleta de cores pastéis para profissionais (20 tons mais lindos)
+// Paleta de cores pastéis para profissionais (tons mais lindos)
 export const PROFESSIONAL_COLORS = [
   // Rosa pastel (tons mais claros)
   '#FFE4E6', '#FECDD3',
   // Azul pastel (tons mais claros)
   '#E0F2FE', '#BAE6FD',
-  // Verde pastel (tons mais claros)
-  '#DCFCE7', '#BBF7D0',
   // Roxo pastel (tons mais claros)
   '#F3E8FF', '#E9D5FF',
   // Amarelo pastel (tons mais claros)

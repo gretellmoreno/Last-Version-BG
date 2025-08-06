@@ -108,9 +108,9 @@ export default function ValesSection({
                   
                   <div className="flex items-center mb-1.5">
                     {getProfessionalPhoto(vale.profissionalId) ? (
-                      <img src={getProfessionalPhoto(vale.profissionalId)} alt={vale.profissionalNome} className="w-8 h-8 rounded-full object-cover border-2 border-purple-200 mr-2" />
+                      <img src={getProfessionalPhoto(vale.profissionalId)} alt={vale.profissionalNome} className="w-12 h-12 rounded-2xl object-cover border-2 border-purple-200 mr-2" />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm mr-2">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm mr-2">
                         {vale.profissionalNome.charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -169,10 +169,10 @@ export default function ValesSection({
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {getProfessionalPhoto(vale.profissionalId) ? (
-                            <img src={getProfessionalPhoto(vale.profissionalId)} alt={vale.profissionalNome} className="h-10 w-10 rounded-full object-cover border-2 border-purple-200 mr-4" />
+                            <img src={getProfessionalPhoto(vale.profissionalId)} alt={vale.profissionalNome} className="h-16 w-16 rounded-2xl object-cover border-2 border-purple-200 mr-4" />
                           ) : (
-                            <div className="flex-shrink-0 h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center mr-4">
-                              <span className="text-purple-600 font-semibold text-sm">
+                            <div className="flex-shrink-0 h-16 w-16 bg-purple-100 rounded-2xl flex items-center justify-center mr-4">
+                              <span className="text-purple-600 font-semibold text-lg">
                                 {vale.profissionalNome.charAt(0).toUpperCase()}
                               </span>
                             </div>

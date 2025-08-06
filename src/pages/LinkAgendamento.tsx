@@ -743,7 +743,8 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                                   handleCopyLink();
                                 }
                               }}
-                              className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
+                              className="flex-1 px-3 py-2 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
+                              style={{ backgroundColor: '#31318D' }}
                           >
                             <Share size={16} />
                             <span className="text-sm">Compartilhar</span>
@@ -785,7 +786,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                 {activeTab === 'profile' && (
                   <div className={`${isMobile ? 'space-y-4' : 'space-y-8'}`}>
                     <div className="flex items-center mb-4 sm:mb-6">
-                      <User className="mr-3 text-purple-600" size={22} />
+                      <User className="mr-3" size={22} style={{ color: '#31318D' }} />
                       <h3 className="text-xl font-bold text-gray-900">Detalhes do Perfil</h3>
                     </div>
 
@@ -930,7 +931,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                               }`}
                             >
                               {isSelected && (
-                                <CheckCircle className="w-5 h-5 text-white bg-purple-500 rounded-full absolute -top-2 -right-2 shadow-sm" />
+                                <CheckCircle className="w-5 h-5 text-white rounded-full absolute -top-2 -right-2 shadow-sm" style={{ backgroundColor: '#31318D' }} />
                               )}
                               <div
                                 className="w-full h-16 rounded mb-3"
@@ -948,7 +949,8 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                       <button
                         onClick={saveProfileData}
                         disabled={isLoading}
-                        className="flex items-center px-8 py-3 bg-purple-600 text-white rounded-xl font-bold text-base shadow-md hover:bg-purple-700 transition-all duration-200"
+                        className="flex items-center px-8 py-3 text-white rounded-xl font-bold text-base shadow-md transition-all duration-200"
+                        style={{ backgroundColor: '#31318D' }}
                       >
                         {isLoading ? (
                           <>
@@ -970,7 +972,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                 {activeTab === 'config' && (
                   <div className={`${isMobile ? 'space-y-4' : 'space-y-8'}`}>
                     <div className="flex items-center mb-4 sm:mb-6">
-                      <Settings className="mr-3 text-purple-600" size={22} />
+                      <Settings className="mr-3" size={22} style={{ color: '#31318D' }} />
                       <h3 className="text-xl font-bold text-gray-900">Configurações da Agenda</h3>
                     </div>
 
@@ -985,7 +987,10 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                               e.stopPropagation();
                               openHelpModal('Intervalo de Horários', 'Refere-se a como a listagem de horários aparecerá para o seu cliente.');
                             }}
-                            className="text-gray-400 hover:text-purple-500 transition-colors p-1 rounded-full hover:bg-purple-50"
+                            className="text-gray-400 transition-colors p-1 rounded-full"
+                            style={{ '--tw-hover-text-opacity': '1' } as React.CSSProperties}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#31318D'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}
                           >
                             <HelpCircle size={16} />
                           </button>
@@ -993,8 +998,14 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                         <select 
                           value={timeInterval}
                           onChange={(e) => setTimeInterval(e.target.value)}
-                          className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-300 appearance-none"
-                          style={{ backgroundImage: 'none' }}
+                          className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:border-transparent transition-all duration-300 appearance-none"
+                          style={{ 
+                            backgroundImage: 'none',
+                            '--tw-ring-color': '#31318D',
+                            '--tw-ring-opacity': '0.5'
+                          } as React.CSSProperties}
+                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                         >
                           <option value="15">De 15 em 15 minutos</option>
                           <option value="30">De 30 em 30 minutos</option>
@@ -1016,7 +1027,10 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                               e.stopPropagation();
                               openHelpModal('Tempo de Antecedência Mínimo', 'Refere-se a quantidade de tempo minima permitida que antecede um atendimento. Isso serve para prevenir que clientes reserve algum horário muito "em cima" da hora.');
                             }}
-                            className="text-gray-400 hover:text-purple-500 transition-colors p-1 rounded-full hover:bg-purple-50"
+                            className="text-gray-400 transition-colors p-1 rounded-full"
+                            style={{ '--tw-hover-text-opacity': '1' } as React.CSSProperties}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#31318D'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}
                           >
                             <HelpCircle size={16} />
                           </button>
@@ -1024,8 +1038,14 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                         <select 
                           value={minAdvanceTime}
                           onChange={(e) => setMinAdvanceTime(e.target.value)}
-                          className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-300 appearance-none"
-                          style={{ backgroundImage: 'none' }}
+                          className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:border-transparent transition-all duration-300 appearance-none"
+                          style={{ 
+                            backgroundImage: 'none',
+                            '--tw-ring-color': '#31318D',
+                            '--tw-ring-opacity': '0.5'
+                          } as React.CSSProperties}
+                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                         >
                           <option value="15">15 minutos antes</option>
                           <option value="30">30 minutos antes</option>
@@ -1054,7 +1074,10 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                               e.stopPropagation();
                               openHelpModal('Período Máximo de Agendamento', 'Define até quando no futuro os clientes podem fazer agendamentos. Isso ajuda a controlar o planejamento do seu negócio.');
                             }}
-                            className="text-gray-400 hover:text-purple-500 transition-colors p-1 rounded-full hover:bg-purple-50"
+                            className="text-gray-400 transition-colors p-1 rounded-full"
+                            style={{ '--tw-hover-text-opacity': '1' } as React.CSSProperties}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#31318D'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}
                           >
                             <HelpCircle size={16} />
                           </button>
@@ -1062,8 +1085,14 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                         <select 
                           value={maxBookingPeriod}
                           onChange={(e) => setMaxBookingPeriod(e.target.value)}
-                          className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-300 appearance-none"
-                          style={{ backgroundImage: 'none' }}
+                          className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:border-transparent transition-all duration-300 appearance-none"
+                          style={{ 
+                            backgroundImage: 'none',
+                            '--tw-ring-color': '#31318D',
+                            '--tw-ring-opacity': '0.5'
+                          } as React.CSSProperties}
+                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                         >
                           <option value="2">Até 2 dias</option>
                           <option value="3">Até 3 dias</option>
@@ -1087,7 +1116,10 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                               e.stopPropagation();
                               openHelpModal('Permitir Cancelamento pelo Cliente', 'Aqui você define se permitirá seu cliente realizar o cancelamento. Com essa opção irá aparecer um botão de "Cancelar" quando seu cliente agendar.');
                             }}
-                            className="text-gray-400 hover:text-purple-500 transition-colors p-1 rounded-full hover:bg-purple-50"
+                            className="text-gray-400 transition-colors p-1 rounded-full"
+                            style={{ '--tw-hover-text-opacity': '1' } as React.CSSProperties}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#31318D'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}
                           >
                             <HelpCircle size={16} />
                           </button>
@@ -1117,7 +1149,8 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                       <button 
                         onClick={saveAgendaSettings}
                         disabled={isConfigLoading}
-                        className="flex items-center px-8 py-3 bg-purple-600 text-white rounded-xl font-bold text-base shadow-md hover:bg-purple-700 transition-all duration-200"
+                        className="flex items-center px-8 py-3 text-white rounded-xl font-bold text-base shadow-md transition-all duration-200"
+                        style={{ backgroundColor: '#31318D' }}
                       >
                         {isConfigLoading ? (
                           <>
@@ -1141,12 +1174,12 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                     {/* Serviços */}
                     <div>
                       <div className="flex items-center mb-4 sm:mb-6">
-                        <Building className="mr-3 text-purple-600" size={22} />
+                        <Building className="mr-3" size={22} style={{ color: '#31318D' }} />
                         <h3 className="text-xl font-bold text-gray-900">Serviços Disponíveis</h3>
                       </div>
                       {loading ? (
                         <div className="text-center py-12">
-                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                          <div className="animate-spin rounded-full h-10 w-10 mx-auto mb-4" style={{ borderBottom: '2px solid #31318D' }}></div>
                           <p className="text-gray-500 font-medium">Carregando serviços...</p>
                         </div>
                       ) : error ? (
@@ -1156,7 +1189,8 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                           <p className="text-gray-500 mb-6">{error}</p>
                           <button 
                             onClick={() => window.location.reload()}
-                            className="bg-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-purple-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+                            className="text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+                            style={{ backgroundColor: '#31318D' }}
                           >
                             Tentar Novamente
                           </button>
@@ -1175,7 +1209,10 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                             return (
                               <div
                                 key={service.id}
-                                className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-purple-200 transition-all duration-300"
+                                className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100 transition-all duration-300"
+                                style={{ '--tw-border-opacity': '1' } as React.CSSProperties}
+                                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
                               >
                                 <div className="flex-1">
                                   <button
@@ -1222,12 +1259,12 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                     {/* Profissionais */}
                     <div className="mt-10">
                       <div className="flex items-center mb-4 sm:mb-6">
-                        <Users className="mr-3 text-purple-600" size={22} />
+                        <Users className="mr-3" size={22} style={{ color: '#31318D' }} />
                         <h3 className="text-xl font-bold text-gray-900">Profissionais Disponíveis</h3>
                       </div>
                       {professionalsLoading ? (
                         <div className="text-center py-12">
-                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                          <div className="animate-spin rounded-full h-10 w-10 mx-auto mb-4" style={{ borderBottom: '2px solid #31318D' }}></div>
                           <p className="text-gray-500 font-medium">Carregando profissionais...</p>
                         </div>
                       ) : professionalsError ? (
@@ -1237,7 +1274,8 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                           <p className="text-gray-500 mb-6">{professionalsError}</p>
                           <button 
                             onClick={() => window.location.reload()}
-                            className="bg-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-purple-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+                            className="text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+                            style={{ backgroundColor: '#31318D' }}
                           >
                             Tentar Novamente
                           </button>
@@ -1257,7 +1295,10 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                             return (
                               <div
                                 key={professional.id}
-                                className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-purple-200 transition-all duration-300"
+                                className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100 transition-all duration-300"
+                                style={{ '--tw-border-opacity': '1' } as React.CSSProperties}
+                                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
                               >
                                 <div className="flex items-center space-x-3">
                                   <div 
@@ -1352,14 +1393,15 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
               </h3>
             </div>
             <div className="px-4 py-4">
-              <p className="text-purple-600 text-sm leading-relaxed">
+              <p className="text-sm leading-relaxed" style={{ color: '#31318D' }}>
                 {helpModalContent.content}
               </p>
             </div>
             <div className="px-4 py-3 border-t border-gray-200">
               <button
                 onClick={() => setShowHelpModal(false)}
-                className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                className="w-full text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                style={{ backgroundColor: '#31318D' }}
               >
                 Fechar
               </button>
@@ -1390,17 +1432,34 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                     }}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200 text-base font-medium focus:outline-none
                       ${settings.priceDisplay === option.value
-                        ? 'bg-purple-50 border-purple-400 text-purple-900 shadow-sm'
-                        : 'bg-white border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700'}
+                        ? 'shadow-sm'
+                        : 'bg-white border-gray-200 text-gray-700'}
                     `}
+                    style={{
+                      backgroundColor: settings.priceDisplay === option.value ? '#F3F4F6' : '#FFFFFF',
+                      borderColor: settings.priceDisplay === option.value ? '#31318D' : '#D1D5DB',
+                      color: settings.priceDisplay === option.value ? '#31318D' : '#374151'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (settings.priceDisplay !== option.value) {
+                        e.currentTarget.style.borderColor = '#31318D';
+                        e.currentTarget.style.backgroundColor = '#F3F4F6';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (settings.priceDisplay !== option.value) {
+                        e.currentTarget.style.borderColor = '#D1D5DB';
+                        e.currentTarget.style.backgroundColor = '#FFFFFF';
+                      }
+                    }}
                   >
                     <span className="font-semibold">{option.label}</span>
                     <span className="ml-2">
-                      <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all duration-200
-                        ${settings.priceDisplay === option.value
-                          ? 'border-purple-500 bg-purple-500 shadow-md'
-                          : 'border-gray-300 bg-white'}
-                      `}>
+                      <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all duration-200 shadow-md`}
+                        style={{
+                          borderColor: settings.priceDisplay === option.value ? '#31318D' : '#D1D5DB',
+                          backgroundColor: settings.priceDisplay === option.value ? '#31318D' : '#FFFFFF'
+                        }}>
                         {settings.priceDisplay === option.value && (
                           <span className="w-2.5 h-2.5 rounded-full bg-white block"></span>
                         )}
@@ -1411,7 +1470,8 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
               </div>
               <button
                 onClick={() => setShowPriceDisplayModal(false)}
-                className="w-full py-3 rounded-xl font-bold text-base bg-purple-600 text-white shadow-md hover:bg-purple-700 transition-all duration-200 mt-2"
+                className="w-full py-3 rounded-xl font-bold text-base text-white shadow-md transition-all duration-200 mt-2"
+                style={{ backgroundColor: '#31318D' }}
               >
                 Fechar
               </button>

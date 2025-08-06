@@ -336,11 +336,19 @@ export default function BookingModal({
                 return (
                   <>
                     <div className="flex items-center space-x-2">
-                      <div className="bg-yellow-100 rounded-full flex items-center justify-center w-6 h-6">
-                        <span className="text-yellow-700 font-bold text-sm">
-                          {professionalToShow.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
+                      {professionalToShow.url_foto ? (
+                        <img
+                          src={professionalToShow.url_foto}
+                          alt={professionalToShow.name}
+                          className="w-8 h-8 rounded-2xl object-cover border-2 border-yellow-200"
+                        />
+                      ) : (
+                        <div className="bg-yellow-100 rounded-2xl flex items-center justify-center w-8 h-8">
+                          <span className="text-yellow-700 font-bold text-sm">
+                            {professionalToShow.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
                       <div className="text-center">
                         <p className="font-medium text-gray-900 leading-none text-xs">
                           {professionalToShow.name}

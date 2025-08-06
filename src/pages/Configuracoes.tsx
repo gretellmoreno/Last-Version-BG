@@ -583,7 +583,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                 {activeTab === 'usuario' && (
                   <div className={`${isMobile ? 'space-y-4' : 'space-y-8'}`}> {/* menos espaço em mobile */}
                     <div className="flex items-center mb-4 sm:mb-6">
-                      <User className="mr-3 text-purple-600" size={22} />
+                      <User className="mr-3" size={22} style={{ color: '#31318D' }} />
                       <h3 className="text-xl font-bold text-gray-900">Informações Pessoais</h3>
                     </div>
                     <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 gap-6'}`}> {/* menos gap em mobile */}
@@ -619,7 +619,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                     {/* Seção de Alteração de Senha */}
                     <div className={`border-t border-gray-200 ${isMobile ? 'pt-4' : 'pt-6'}`}>
                       <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <Lock size={20} className="mr-2 text-purple-600" />
+                        <Lock size={20} className="mr-2" style={{ color: '#31318D' }} />
                         Alterar Senha
                       </h4>
                       <div className="max-w-md">
@@ -649,7 +649,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                     <div className={`flex justify-end border-t border-gray-200 ${isMobile ? 'pt-4' : 'pt-6'}`}>
                       <button
                         onClick={handleSaveUserData}
-                        className="flex items-center px-8 py-3 bg-purple-600 text-white rounded-xl font-bold text-base shadow-md hover:bg-purple-700 transition-all duration-200"
+                        className="flex items-center px-8 py-3 text-white rounded-xl font-bold text-base shadow-md transition-all duration-200"
+                        style={{ backgroundColor: '#31318D' }}
                       >
                         <Save size={18} className="mr-2" />
                         Salvar Dados
@@ -662,7 +663,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                 {activeTab === 'taxas' && (
                   <div className="space-y-6">
                     <div className="flex items-center mb-6">
-                      <CreditCard className="mr-3 text-green-600" size={20} />
+                      {!isMobile && <CreditCard className="mr-3 text-green-600" size={20} />}
                       {!isMobile && <h3 className="text-lg font-semibold text-gray-900">Taxas de Pagamento</h3>}
                       {!isMobile && (
                         <button
@@ -739,35 +740,63 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                 {activeTab === 'horarios' && (
                   <div className="space-y-6">
                     <div className="flex items-center mb-6">
-                      <Clock className="mr-3 text-purple-600" size={20} />
+                      <Clock className="mr-3" size={20} style={{ color: '#31318D' }} />
                       <h3 className="text-lg font-semibold text-gray-900">Horários de Atendimento</h3>
                     </div>
 
                     {/* Filtro de Profissional - sem título */}
-                    <div className="mb-6 relative">
-                      {/* <label className="block text-sm font-medium text-gray-700 mb-2"> */}
-                      {/*   <UserCheck size={16} className="inline mr-2" /> */}
-                      {/*   Selecione o Profissional */}
-                      {/* </label> */}
-                      <select
-                        value={selectedProfissional}
-                        onChange={e => setSelectedProfissional(e.target.value)}
-                        className="w-full mb-4 px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400 appearance-none pr-10"
-                        style={{ backgroundImage: 'none' }}
-                      >
-                        <option value="">Selecione um profissional</option>
-                        {professionals.map(prof => (
-                          <option key={prof.id} value={prof.id}>
-                            {prof.name}
-                          </option>
-                        ))}
-                      </select>
-                      {/* Ícone customizado de seta */}
-                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          <path d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
+                    <div className={`relative ${isMobile ? 'mb-4' : 'mb-6'}`}>
+                      {isMobile ? (
+                        <div className="relative">
+                          <select
+                            value={selectedProfissional}
+                            onChange={e => setSelectedProfissional(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:ring-2 focus:border-transparent transition-all duration-300 placeholder-gray-400 appearance-none pr-10"
+                            style={{ 
+                              backgroundImage: 'none',
+                              '--tw-ring-color': '#31318D',
+                              '--tw-ring-opacity': '0.5'
+                            } as React.CSSProperties}
+                            onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                            onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                          >
+                            <option value="">Profissional</option>
+                            {professionals.map(prof => (
+                              <option key={prof.id} value={prof.id}>
+                                {prof.name}
+                              </option>
+                            ))}
+                          </select>
+                          {/* Ícone customizado de seta centralizado */}
+                          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center justify-center">
+                            <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            value={selectedProfissional}
+                            onChange={e => setSelectedProfissional(e.target.value)}
+                            className="w-full mb-4 px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400 appearance-none pr-10"
+                            style={{ backgroundImage: 'none' }}
+                          >
+                            <option value="">Selecione um profissional</option>
+                            {professionals.map(prof => (
+                              <option key={prof.id} value={prof.id}>
+                                {prof.name}
+                              </option>
+                            ))}
+                          </select>
+                          {/* Ícone customizado de seta */}
+                          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Conteúdo dos horários */}
@@ -825,7 +854,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                                         <button
                                           type="button"
                                           onClick={() => handleRemoveTurno(diaIndex, 1)}
-                                          className="text-purple-600 hover:underline ml-2"
+                                          className="hover:underline ml-2"
+                            style={{ color: '#31318D' }}
                                         >
                                           Remover Turno 2
                                         </button>
@@ -835,7 +865,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveTurno(diaIndex, 1)}
-                                        className="text-purple-600 hover:underline ml-2 text-sm"
+                                        className="hover:underline ml-2 text-sm"
+                            style={{ color: '#31318D' }}
                                       >
                                         Remover Turno 2
                                       </button>
@@ -847,7 +878,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                                   <button
                                     type="button"
                                     onClick={() => handleAddTurno(diaIndex)}
-                                    className="text-purple-600 ml-2"
+                                    className="ml-2"
+                            style={{ color: '#31318D' }}
                                   >
                                     +
                                   </button>
@@ -872,7 +904,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                         <div className="flex justify-end pt-6 border-t border-gray-200">
                           <button
                             onClick={handleSaveHorarios}
-                            className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                            className="flex items-center px-6 py-2 text-white rounded-lg transition-colors font-medium"
+                            style={{ backgroundColor: '#31318D' }}
                           >
                             <Save size={16} className="mr-2" />
                             Salvar Horários
@@ -941,28 +974,72 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
+                          className="px-2 py-1 rounded font-medium text-xs shadow-sm transition-all border"
+                          style={{ 
+                            backgroundColor: '#F3F4F6',
+                            color: '#31318D',
+                            borderColor: '#31318D'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#E5E7EB';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F3F4F6';
+                          }}
                           onClick={() => inserirVariavelLembrete('#{cliente}')}
                         >
                           Cliente
                         </button>
                         <button
                           type="button"
-                          className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
+                          className="px-2 py-1 rounded font-medium text-xs shadow-sm transition-all border"
+                          style={{ 
+                            backgroundColor: '#F3F4F6',
+                            color: '#31318D',
+                            borderColor: '#31318D'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#E5E7EB';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F3F4F6';
+                          }}
                           onClick={() => inserirVariavelLembrete('#{data_horario}')}
                         >
                           Data/Horário
                         </button>
                         <button
                           type="button"
-                          className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
+                          className="px-2 py-1 rounded font-medium text-xs shadow-sm transition-all border"
+                          style={{ 
+                            backgroundColor: '#F3F4F6',
+                            color: '#31318D',
+                            borderColor: '#31318D'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#E5E7EB';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F3F4F6';
+                          }}
                           onClick={() => inserirVariavelLembrete('#{profissional}')}
                         >
                           Profissional
                         </button>
                         <button
                           type="button"
-                          className="px-2 py-1 rounded bg-purple-100 text-purple-700 font-medium text-xs shadow-sm hover:bg-purple-200 transition-all border border-purple-200"
+                          className="px-2 py-1 rounded font-medium text-xs shadow-sm transition-all border"
+                          style={{ 
+                            backgroundColor: '#F3F4F6',
+                            color: '#31318D',
+                            borderColor: '#31318D'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#E5E7EB';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F3F4F6';
+                          }}
                           onClick={() => inserirVariavelLembrete('#{servico}')}
                         >
                           Serviço
@@ -972,7 +1049,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                     <div className="flex justify-end mt-4">
                       <button
                         onClick={handleSaveLembrete}
-                        className="w-full flex items-center justify-center px-8 py-3 bg-purple-600 text-white rounded-xl font-bold text-base shadow-md hover:bg-purple-700 transition-all duration-200"
+                        className="w-full flex items-center justify-center px-8 py-3 text-white rounded-xl font-bold text-base shadow-md transition-all duration-200"
+                        style={{ backgroundColor: '#31318D' }}
                       >
                         <Save size={18} className="mr-2" />
                         Salvar
@@ -1012,7 +1090,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
             <div className="flex justify-end">
               <button
                 onClick={() => setShowObservacaoPreview(false)}
-                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                className="px-3 py-1.5 text-white rounded-lg transition-colors text-sm"
+                style={{ backgroundColor: '#31318D' }}
               >
                 Fechar
               </button>
@@ -1034,7 +1113,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
             <div className="flex justify-end">
               <button
                 onClick={() => setShowObservacaoMensagem(false)}
-                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                className="px-3 py-1.5 text-white rounded-lg transition-colors text-sm"
+                style={{ backgroundColor: '#31318D' }}
               >
                 Fechar
               </button>
@@ -1060,7 +1140,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
             <div className="flex justify-end">
               <button
                 onClick={() => setShowObservacaoVariaveis(false)}
-                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                className="px-3 py-1.5 text-white rounded-lg transition-colors text-sm"
+                style={{ backgroundColor: '#31318D' }}
               >
                 Fechar
               </button>

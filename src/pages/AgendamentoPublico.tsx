@@ -616,6 +616,25 @@ export default function AgendamentoPublico() {
     }
   };
 
+  // Função para verificar se a cor primária é branca ou muito clara
+  const isLightPrimaryColor = () => {
+    try {
+      const hex = primaryColor?.replace('#', '') || '';
+      if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
+        return false;
+      }
+      
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      
+      const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      return luminance > 0.8; // Considera clara se luminância > 0.8
+    } catch (error) {
+      return false;
+    }
+  };
+
   // Função auxiliar para obter cor de contraste para botões
   const getButtonTextColor = () => {
     return getContrastColor(primaryColor);
@@ -892,7 +911,10 @@ export default function AgendamentoPublico() {
               className="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors backdrop-blur-sm border border-white/20"
               title="Meus Agendamentos"
             >
-              <Menu className="w-6 h-6 text-white" />
+              <Menu 
+                className="w-6 h-6" 
+                style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+              />
             </button>
           </div>
 
@@ -918,8 +940,12 @@ export default function AgendamentoPublico() {
 
         {/* Nome do salão */}
             <h1
-              className="text-2xl font-bold text-center mb-3"
-              style={{ color: getTitleColor() }}
+              className="text-3xl font-extrabold text-center mb-3 tracking-wide"
+              style={{ 
+                color: isLightPrimaryColor() ? '#000000' : getTitleColor(),
+                textShadow: isLightPrimaryColor() ? '0 2px 4px rgba(0, 0, 0, 0.1)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+                fontFamily: '"Poppins", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              }}
             >
               {salonDisplayName}
             </h1>
@@ -962,7 +988,12 @@ export default function AgendamentoPublico() {
 
         {/* Título da seção */}
         <div className="w-full max-w-md mb-4">
-          <h2 className="text-xl font-semibold text-white mb-2 text-center">Selecione o profissional</h2>
+          <h2 
+            className="text-xl font-semibold mb-2 text-center"
+            style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+          >
+            Selecione o profissional
+          </h2>
           
         </div>
 
@@ -984,15 +1015,15 @@ export default function AgendamentoPublico() {
                           : 'shadow-lg'
                       }`}
                       style={selectedProfessional === professional.id ? {
-                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        backgroundColor: isLightPrimaryColor() ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.25)',
+                        border: isLightPrimaryColor() ? '2px solid rgba(0, 0, 0, 0.3)' : '1px solid rgba(255, 255, 255, 0.3)',
                         backdropFilter: 'blur(20px)',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05)'
+                        boxShadow: isLightPrimaryColor() ? '0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1)' : '0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05)'
                       } : {
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        backgroundColor: isLightPrimaryColor() ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.15)',
+                        border: isLightPrimaryColor() ? '2px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.2)',
                         backdropFilter: 'blur(15px)',
-                        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)'
+                        boxShadow: isLightPrimaryColor() ? '0 4px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08)' : '0 4px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)'
                       }}
                       onClick={() => {
                         setSelectedProfessional(professional.id);
@@ -1009,7 +1040,7 @@ export default function AgendamentoPublico() {
                             <img
                               src={professional.url_foto}
                               alt={professional.name}
-                              className="w-12 h-12 rounded-full object-cover border-2"
+                              className="w-20 h-20 rounded-2xl object-cover border-2"
                               style={{ 
                                 borderColor: selectedProfessional === professional.id ? primaryColor : 'rgba(255, 255, 255, 0.4)',
                                 boxShadow: selectedProfessional === professional.id ? `0 0 12px ${primaryColor}30` : '0 2px 8px rgba(0, 0, 0, 0.1)'
@@ -1017,7 +1048,7 @@ export default function AgendamentoPublico() {
                             />
                           ) : (
                             <div
-                              className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium text-lg"
+                              className="w-20 h-20 rounded-2xl flex items-center justify-center text-white font-medium text-xl"
                               style={{ 
                                 backgroundColor: selectedProfessional === professional.id ? primaryColor : (professional.color || DEFAULT_PROFESSIONAL_COLOR),
                                 boxShadow: selectedProfessional === professional.id ? `0 0 12px ${primaryColor}30` : '0 2px 8px rgba(0, 0, 0, 0.1)'
@@ -1033,7 +1064,7 @@ export default function AgendamentoPublico() {
                           <h3 
                             className="font-semibold text-lg truncate"
                             style={{ 
-                              color: '#FFFFFF'
+                              color: isLightPrimaryColor() ? '#000000' : '#FFFFFF'
                             }}
                           >
                             {professional.name}
@@ -1067,7 +1098,8 @@ export default function AgendamentoPublico() {
           <div className="flex items-center justify-start mb-4">
             <button
               onClick={goBack}
-              className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
+              className="flex items-center space-x-2 transition-colors"
+              style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="text-sm font-medium">Voltar</span>
@@ -1095,7 +1127,12 @@ export default function AgendamentoPublico() {
         </div>
 
                   {/* Card de serviços */}
-          <div className="w-full max-w-md bg-transparent backdrop-blur-sm rounded-3xl shadow-xl border border-white/30 overflow-hidden">
+          <div 
+            className="w-full max-w-md bg-transparent backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden"
+            style={{
+              border: isLightPrimaryColor() ? '2px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.3)'
+            }}
+          >
           <div className="p-4 pb-6">
             
             {isLoadingServices ? (
@@ -1124,14 +1161,15 @@ export default function AgendamentoPublico() {
                     key={service.id}
                             className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 min-h-[60px] ${
                               isSelected 
-                                ? 'border-white shadow-sm' 
-                                : 'border-white/20 hover:border-white/40'
+                                ? 'shadow-sm' 
+                                : 'hover:border-opacity-40'
                             }`}
                             style={isSelected ? {
-                              borderColor: '#FFFFFF',
-                              backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                              borderColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                              backgroundColor: isLightPrimaryColor() ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.05)'
                             } : {
-                              backgroundColor: 'transparent'
+                              borderColor: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
+                              backgroundColor: isLightPrimaryColor() ? 'rgba(255, 255, 255, 0.8)' : 'transparent'
                             }}
                     onClick={() => {
                       if (isSelected) {
@@ -1156,15 +1194,18 @@ export default function AgendamentoPublico() {
                                   )}
                                 </div>
                               </div>
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-3 ${
-                                isSelected ? 'border-white bg-white' : 'border-white/30'
-                              }`}
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-3`}
                               style={isSelected ? {
-                                backgroundColor: '#FFFFFF',
-                                borderColor: '#FFFFFF'
-                              } : {}}>
+                                backgroundColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                                borderColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF'
+                              } : {
+                                borderColor: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)'
+                              }}>
                         {isSelected && (
-                                  <Check className="w-3 h-3 text-gray-900" />
+                                  <Check 
+                                    className="w-3 h-3" 
+                                    style={{ color: isLightPrimaryColor() ? '#FFFFFF' : '#000000' }}
+                                  />
                         )}
                       </div>
                     </div>
@@ -1184,7 +1225,11 @@ export default function AgendamentoPublico() {
           <div className="fixed bottom-6 left-4 right-4 z-50">
             <button
               onClick={goNext}
-              className="w-full py-4 rounded-2xl text-lg font-bold shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-105 bg-white text-gray-900"
+              className="w-full py-4 rounded-2xl text-lg font-bold shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-105"
+              style={{
+                backgroundColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                color: isLightPrimaryColor() ? '#FFFFFF' : '#000000'
+              }}
             >
               Avançar
             </button>
@@ -1212,7 +1257,8 @@ export default function AgendamentoPublico() {
           <div className="flex items-center justify-between">
             <button
               onClick={goBack}
-              className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
+              className="flex items-center space-x-2 transition-colors"
+              style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="text-sm font-medium">Voltar</span>
@@ -1281,17 +1327,14 @@ export default function AgendamentoPublico() {
                           setSelectedDate(date);
                           setSelectedTime('');
                         }}
-                        className={`w-14 h-14 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center ${
-                          isSelected 
-                            ? 'border-white bg-white text-purple-600' 
-                            : 'border-white/30 hover:border-white/50'
-                        }`}
+                        className={`w-14 h-14 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center`}
                         style={isSelected ? {
-                          borderColor: '#FFFFFF',
-                          backgroundColor: '#FFFFFF',
-                          color: primaryColor
+                          borderColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                          backgroundColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                          color: isLightPrimaryColor() ? '#FFFFFF' : primaryColor
                         } : {
-                          color: getTitleColor()
+                          borderColor: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+                          color: isLightPrimaryColor() ? '#000000' : getTitleColor()
                         }}
                       >
                         <span className="text-sm font-medium">
@@ -1378,17 +1421,14 @@ export default function AgendamentoPublico() {
                             setCurrentStep('client');
                           }, 300);
                         }}
-                        className={`py-2 px-2 rounded-lg border-2 transition-all duration-200 text-xs font-medium ${
-                          selectedTime === time 
-                            ? 'border-white bg-white' 
-                            : 'border-white/30 hover:border-white/50'
-                        }`}
+                        className={`py-2 px-2 rounded-lg border-2 transition-all duration-200 text-xs font-medium`}
                         style={selectedTime === time ? {
-                          borderColor: '#FFFFFF',
-                          backgroundColor: '#FFFFFF',
-                          color: primaryColor
+                          borderColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                          backgroundColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                          color: isLightPrimaryColor() ? '#FFFFFF' : primaryColor
                         } : {
-                          color: getTitleColor()
+                          borderColor: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+                          color: isLightPrimaryColor() ? '#000000' : getTitleColor()
                         }}
                       >
                         {time}
@@ -1522,7 +1562,8 @@ export default function AgendamentoPublico() {
             <div className="flex items-center justify-start">
               <button
                 onClick={goBack}
-                className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
+                className="flex items-center space-x-2 transition-colors"
+                style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="text-sm font-medium">Voltar</span>
@@ -1532,25 +1573,42 @@ export default function AgendamentoPublico() {
 
           {/* Título */}
           <div className="w-full max-w-md mb-4">
-            <h2 className="text-xl font-semibold text-white text-center">
+            <h2 
+              className="text-xl font-semibold text-center"
+              style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+            >
               Confirme seu agendamento
             </h2>
           </div>
             
           {/* Card de confirmação transparente */}
-          <div className="w-full max-w-md bg-transparent backdrop-blur-sm rounded-3xl shadow-xl border border-white/30 overflow-hidden">
+          <div 
+            className="w-full max-w-md bg-transparent backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden"
+            style={{
+              border: isLightPrimaryColor() ? '2px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.3)'
+            }}
+          >
             <div className="p-6">
               <div className="space-y-6">
                 {/* Data e Horário */}
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 mr-4">
-                    <Calendar className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs text-white/70 mb-1">
-                      Data e Hora
-                    </div>
-                    <div className="text-base font-semibold text-white">
+                                    <div className="flex items-start">
+                      <div className="flex-shrink-0 mr-4">
+                        <Calendar 
+                          className="w-5 h-5" 
+                          style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div 
+                          className="text-xs mb-1"
+                          style={{ color: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)' }}
+                        >
+                          Data e Hora
+                        </div>
+                        <div 
+                          className="text-base font-semibold"
+                          style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                        >
                       {selectedDate && (() => {
                         const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
                         const dayName = dayNames[selectedDate.getDay()];
@@ -1563,65 +1621,89 @@ export default function AgendamentoPublico() {
                 </div>
 
                 {/* Profissional */}
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 mr-4">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs text-white/70 mb-1">
-                      Profissional
+                                    <div className="flex items-start">
+                      <div className="flex-shrink-0 mr-4">
+                        <User 
+                          className="w-5 h-5" 
+                          style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div 
+                          className="text-xs mb-1"
+                          style={{ color: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)' }}
+                        >
+                          Profissional
+                        </div>
+                        <div 
+                          className="text-base font-semibold"
+                          style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                        >
+                          {bookingData.professionals.find(p => p.id === selectedProfessional)?.name}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-base font-semibold text-white">
-                      {bookingData.professionals.find(p => p.id === selectedProfessional)?.name}
-                    </div>
-                  </div>
-                </div>
 
                 {/* Serviços */}
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 mr-4">
-                    <Scissors className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs text-white/70 mb-1">
-                      Serviços
+                                    <div className="flex items-start">
+                      <div className="flex-shrink-0 mr-4">
+                        <Scissors 
+                          className="w-5 h-5" 
+                          style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div 
+                          className="text-xs mb-1"
+                          style={{ color: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)' }}
+                        >
+                          Serviços
+                        </div>
+                        <div 
+                          className="text-base font-semibold"
+                          style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                        >
+                          {selectedServices.map((serviceId, index) => {
+                            const service = servicesForProfessional.find(s => s.id === serviceId);
+                            if (!service) return null;
+                            
+                            return (
+                              <span key={serviceId}>
+                                {service.name}
+                                {index < selectedServices.length - 1 && (
+                                  <span style={{ color: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)' }}>, </span>
+                                )}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-base font-semibold text-white">
-                      {selectedServices.map((serviceId, index) => {
-                        const service = servicesForProfessional.find(s => s.id === serviceId);
-                        if (!service) return null;
-                        
-                        return (
-                          <span key={serviceId}>
-                            {service.name}
-                            {index < selectedServices.length - 1 && <span className="text-white/50">, </span>}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Botão confirmar */}
-          <div className="w-full max-w-md mt-6">
-            <button
-              onClick={createAppointment}
-              disabled={isCreating}
-              className="w-full py-4 rounded-2xl text-lg font-bold shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-105 bg-white text-gray-900"
-            >
-              {isCreating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Confirmando...
-                </>
-              ) : (
-                'Confirmar'
-              )}
-            </button>
-          </div>
+                        {/* Botão confirmar */}
+              <div className="w-full max-w-md mt-6">
+                <button
+                  onClick={createAppointment}
+                  disabled={isCreating}
+                  className="w-full py-4 rounded-2xl text-lg font-bold shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-105"
+                  style={{
+                    backgroundColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                    color: isLightPrimaryColor() ? '#FFFFFF' : '#000000'
+                  }}
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Confirmando...
+                    </>
+                  ) : (
+                    'Confirmar'
+                  )}
+                </button>
+              </div>
         </div>
       ) : (
         <div 
@@ -1736,7 +1818,8 @@ export default function AgendamentoPublico() {
               <div className="flex items-center mb-6">
                 <button 
                   onClick={goBack}
-                  className="flex items-center text-white hover:text-gray-200 transition-colors mr-4"
+                  className="flex items-center transition-colors mr-4"
+                  style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
                 >
                   <ArrowLeft className="w-5 h-5 mr-2" />
                   <span className="text-sm font-medium">Voltar</span>
@@ -1797,14 +1880,14 @@ export default function AgendamentoPublico() {
                             <img
                               src={(professional as any).url_foto}
                               alt={professional.name}
-                              className="w-16 h-16 rounded-full object-cover border-2"
+                              className="w-24 h-24 rounded-2xl object-cover border-2"
                               style={{ 
                                 borderColor: selectedProfessional === professional.id ? primaryColor : 'rgba(255, 255, 255, 0.3)'
                               }}
                             />
                           ) : (
                             <div
-                              className="w-16 h-16 rounded-full flex items-center justify-center text-white font-medium text-xl"
+                              className="w-24 h-24 rounded-2xl flex items-center justify-center text-white font-medium text-2xl"
                               style={{ 
                                 backgroundColor: selectedProfessional === professional.id ? primaryColor : (professional.color || DEFAULT_PROFESSIONAL_COLOR)
                               }}
@@ -1819,12 +1902,15 @@ export default function AgendamentoPublico() {
                           <h3 
                             className="font-semibold text-xl truncate mb-1"
                             style={{ 
-                              color: selectedProfessional === professional.id ? primaryColor : '#FFFFFF'
+                              color: selectedProfessional === professional.id ? primaryColor : (isLightPrimaryColor() ? '#000000' : '#FFFFFF')
                             }}
                           >
                             {professional.name}
                           </h3>
-                          <p className="text-sm opacity-70 text-white/80">
+                          <p 
+                            className="text-sm opacity-70"
+                            style={{ color: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)' }}
+                          >
                             Profissional
                           </p>
                         </div>
@@ -1980,15 +2066,15 @@ export default function AgendamentoPublico() {
                               setCurrentStep('client');
                             }, 300);
                           }}
-                          className={`p-1.5 border rounded-md text-center transition-colors text-xs ${
-                            selectedTime === time
-                              ? 'text-white'
-                              : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                          className={`p-1.5 border rounded-md text-center transition-colors text-xs`}
                           style={selectedTime === time ? {
-                            backgroundColor: 'var(--cor-primaria)',
-                            borderColor: 'var(--cor-primaria)'
-                          } : {}}
+                            backgroundColor: isLightPrimaryColor() ? '#000000' : primaryColor,
+                            borderColor: isLightPrimaryColor() ? '#000000' : primaryColor,
+                            color: isLightPrimaryColor() ? '#FFFFFF' : '#FFFFFF'
+                          } : {
+                            borderColor: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+                            color: isLightPrimaryColor() ? '#000000' : '#FFFFFF'
+                          }}
                         >
                           {time}
                         </button>
@@ -2011,7 +2097,8 @@ export default function AgendamentoPublico() {
               <div className="flex items-center px-2 py-3">
                 <button
                   onClick={goBack}
-                  className="flex items-center text-white hover:text-gray-200 transition-colors"
+                  className="flex items-center transition-colors"
+                  style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
                 >
                   <ArrowLeft className="w-5 h-5 mr-2" />
                   <span className="text-sm font-medium">Voltar</span>
@@ -2020,13 +2107,19 @@ export default function AgendamentoPublico() {
 
               {/* Conteúdo principal */}
               <div className="px-4 py-6">
-                <h2 className="text-xl font-semibold mb-6 text-white">
+                <h2 
+                  className="text-xl font-semibold mb-6"
+                  style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                >
                   Seus dados
                 </h2>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label 
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                    >
                       Nome completo *
                     </label>
                     <input
@@ -2034,12 +2127,21 @@ export default function AgendamentoPublico() {
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="Digite seu nome completo"
-                      className="block w-full border border-white/30 rounded-lg px-3 py-2 bg-white/10 backdrop-blur-sm text-white placeholder-white/70 focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200"
+                      className="block w-full border-2 rounded-lg px-3 py-2 backdrop-blur-sm transition-all duration-200"
+                      style={{
+                        borderColor: isLightPrimaryColor() ? '#000000' : 'rgba(255, 255, 255, 0.4)',
+                        backgroundColor: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
+                        color: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                        '--tw-placeholder-color': isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)'
+                      } as React.CSSProperties}
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label 
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: isLightPrimaryColor() ? '#000000' : '#FFFFFF' }}
+                    >
                       WhatsApp *
                     </label>
                     <input
@@ -2048,25 +2150,17 @@ export default function AgendamentoPublico() {
                       onChange={handlePhoneChange}
                       placeholder="(11) 99999-9999"
                       maxLength={15}
-                      className="block w-full border border-white/30 rounded-lg px-3 py-2 bg-white/10 backdrop-blur-sm text-white placeholder-white/70 focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200"
+                      className="block w-full border-2 rounded-lg px-3 py-2 backdrop-blur-sm transition-all duration-200"
+                      style={{
+                        borderColor: isLightPrimaryColor() ? '#000000' : 'rgba(255, 255, 255, 0.4)',
+                        backgroundColor: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
+                        color: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                        '--tw-placeholder-color': isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)'
+                      } as React.CSSProperties}
                     />
                   </div>
 
-                  {/* Botão para limpar dados salvos */}
-                  {(clientName || clientPhone) && (
-                    <div className="text-center pt-2">
-                      <button 
-                        onClick={() => {
-                          setClientName('');
-                          setClientPhone('');
-                          localStorage.removeItem('belaGestao_clientData');
-                        }} 
-                        className="text-sm text-white/80 hover:text-white transition-colors underline"
-                      >
-                        Não é você? Limpar dados
-                      </button>
-                    </div>
-                  )}
+
                 </div>
 
                 {/* Botão avançar */}
@@ -2075,14 +2169,15 @@ export default function AgendamentoPublico() {
                     onClick={goNext}
                     disabled={!canGoNext()}
                     className={`w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                      canGoNext() 
-                        ? 'hover:opacity-90' 
-                        : 'bg-white/20 text-white/50 cursor-not-allowed'
+                      !canGoNext() ? 'cursor-not-allowed' : 'hover:opacity-90'
                     }`}
-                    style={canGoNext() ? { 
-                      backgroundColor: 'var(--cor-primaria)',
-                      color: getContrastColor(primaryColor)
-                    } : {}}
+                    style={canGoNext() ? {
+                      backgroundColor: isLightPrimaryColor() ? '#000000' : '#FFFFFF',
+                      color: isLightPrimaryColor() ? '#FFFFFF' : '#000000'
+                    } : {
+                      backgroundColor: isLightPrimaryColor() ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
+                      color: isLightPrimaryColor() ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.5)'
+                    }}
                   >
                     Avançar
                   </button>
