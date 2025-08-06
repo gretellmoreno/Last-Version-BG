@@ -2006,3 +2006,47 @@ input[type="time"]::-webkit-datetime-edit-minute-field,
 input[type="time"]::-webkit-datetime-edit-second-field {
   padding: 0 !important;
 }
+
+/* Responsividade para dispositivos móveis - evitar overflow horizontal */
+@media (max-width: 768px) {
+  input[type="time"] {
+    min-width: 0 !important;
+    width: 5rem !important; /* w-20 = 5rem */
+    max-width: 5rem !important;
+    box-sizing: border-box !important;
+  }
+  
+  .grid {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  
+  .grid-cols-2 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+  
+  /* Garantir que os cards não ultrapassem a largura da tela */
+  .bg-white.rounded-xl {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  
+  /* Ajustar padding em dispositivos muito pequenos */
+  @media (max-width: 375px) {
+    .p-4 {
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+    }
+    
+    .px-2 {
+      padding-left: 0.25rem !important;
+      padding-right: 0.25rem !important;
+    }
+    
+    input[type="time"] {
+      width: 4.5rem !important; /* Ligeiramente menor em telas muito pequenas */
+      max-width: 4.5rem !important;
+    }
+  }
+}

@@ -5,9 +5,8 @@ import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import Building from 'lucide-react/dist/esm/icons/building';
 import Mail from 'lucide-react/dist/esm/icons/mail';
-import Lock from 'lucide-react/dist/esm/icons/lock';
-import Eye from 'lucide-react/dist/esm/icons/eye';
-import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
+
+
 import Save from 'lucide-react/dist/esm/icons/save';
 import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
@@ -46,14 +45,13 @@ interface Profissional {
 function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('usuario');
-  const [showNewPassword, setShowNewPassword] = useState(false);
+
   
   // Estados para dados do usuário
   const [userData, setUserData] = useState({
     nome: '',
     email: '',
-    empresa: '',
-    novaSenha: ''
+    empresa: ''
   });
 
   // Estados para horários de atendimento
@@ -156,7 +154,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
         nome: userDataDb?.name || '',
         email: userDataDb?.email || '',
         empresa: salonDataDb?.name || '',
-        novaSenha: ''
+
       });
     }
     loadUserAndSalon();
@@ -316,12 +314,8 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
         .from('salons')
         .update({ name: userData.empresa })
         .eq('id', currentSalon?.id);
-      // 3. Atualizar e-mail e senha no Supabase Auth
-      const updateAuthData: { email: string; password?: string } = { email: userData.email };
-      if (userData.novaSenha && userData.novaSenha.length > 0) {
-        updateAuthData.password = userData.novaSenha;
-      }
-      const { error: authError } = await supabase.auth.updateUser(updateAuthData);
+      // 3. Atualizar e-mail no Supabase Auth
+      const { error: authError } = await supabase.auth.updateUser({ email: userData.email });
       if (userError || salonError || authError) {
         showSuccessModal('Erro ao salvar dados!');
       } else {
@@ -550,7 +544,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
       
       <div className="flex-1 bg-gray-50 overflow-hidden">
         <div className="h-[calc(100vh-80px)] overflow-y-auto scrollbar-thin">
-          <div className="p-4 md:p-6">
+          <div className="p-4 md:p-6 max-w-full overflow-x-hidden">
             {/* Tabs de Navegação */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
               <div className={`${isMobile ? 'p-4' : 'p-6'} border-b border-gray-200`}>
@@ -776,7 +770,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                         <div className="space-y-4">
                         {horariosAtendimento.map((dia, diaIndex) => (
                           <div key={dia.diaSemana} className="mb-4 bg-white rounded-xl p-4 border border-gray-100">
-                            <div className="flex items-center mb-2">
+                            <div className="flex items-center mb-3">
                               <input
                                 type="checkbox"
                                 checked={dia.ativo}
@@ -788,77 +782,73 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                             {dia.ativo && (
                               <div className="space-y-3">
                                 {/* Turno 1 */}
-                                <div className="flex flex-col gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex gap-2 items-center flex-1">
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-xs text-gray-500">Início 1</span>
-                                        <input
-                                          type="time"
-                                          value={dia.turnos[0].inicio}
-                                          onChange={(e) => handleTurnoChange(diaIndex, 0, 'inicio', e.target.value)}
-                                          className="border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
-                                          style={{ 
-                                            '--tw-ring-color': '#31318D',
-                                            '--tw-ring-opacity': '0.5'
-                                          } as React.CSSProperties}
-                                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
-                                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                                        />
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-xs text-gray-500">Fim 1</span>
-                                        <input
-                                          type="time"
-                                          value={dia.turnos[0].fim}
-                                          onChange={(e) => handleTurnoChange(diaIndex, 0, 'fim', e.target.value)}
-                                          className="border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
-                                          style={{ 
-                                            '--tw-ring-color': '#31318D',
-                                            '--tw-ring-opacity': '0.5'
-                                          } as React.CSSProperties}
-                                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
-                                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                                        />
-                                      </div>
+                                <div className="space-y-2">
+                                  <div className="flex gap-2">
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500">Início 1</span>
+                                      <input
+                                        type="time"
+                                        value={dia.turnos[0].inicio}
+                                        onChange={(e) => handleTurnoChange(diaIndex, 0, 'inicio', e.target.value)}
+                                        className="w-20 border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
+                                        style={{ 
+                                          '--tw-ring-color': '#31318D',
+                                          '--tw-ring-opacity': '0.5'
+                                        } as React.CSSProperties}
+                                        onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                        onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500">Fim 1</span>
+                                      <input
+                                        type="time"
+                                        value={dia.turnos[0].fim}
+                                        onChange={(e) => handleTurnoChange(diaIndex, 0, 'fim', e.target.value)}
+                                        className="w-20 border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
+                                        style={{ 
+                                          '--tw-ring-color': '#31318D',
+                                          '--tw-ring-opacity': '0.5'
+                                        } as React.CSSProperties}
+                                        onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                        onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                                      />
                                     </div>
                                   </div>
                                 </div>
                                 {/* Turno 2 (se existir) */}
                                 {dia.turnos.length === 2 && (
-                                  <div className="flex flex-col gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex gap-2 items-center flex-1">
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-xs text-gray-500">Início 2</span>
-                                          <input
-                                            type="time"
-                                            value={dia.turnos[1].inicio}
-                                            onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
-                                            className="border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
-                                            style={{ 
-                                              '--tw-ring-color': '#31318D',
-                                              '--tw-ring-opacity': '0.5'
-                                            } as React.CSSProperties}
-                                            onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
-                                            onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                                          />
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-xs text-gray-500">Fim 2</span>
-                                          <input
-                                            type="time"
-                                            value={dia.turnos[1].fim}
-                                            onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
-                                            className="border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
-                                            style={{ 
-                                              '--tw-ring-color': '#31318D',
-                                              '--tw-ring-opacity': '0.5'
-                                            } as React.CSSProperties}
-                                            onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
-                                            onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                                          />
-                                        </div>
+                                  <div className="space-y-2">
+                                    <div className="flex gap-2">
+                                      <div className="space-y-1">
+                                        <span className="text-xs text-gray-500">Início 2</span>
+                                        <input
+                                          type="time"
+                                          value={dia.turnos[1].inicio}
+                                          onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
+                                          className="w-20 border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
+                                          style={{ 
+                                            '--tw-ring-color': '#31318D',
+                                            '--tw-ring-opacity': '0.5'
+                                          } as React.CSSProperties}
+                                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <span className="text-xs text-gray-500">Fim 2</span>
+                                        <input
+                                          type="time"
+                                          value={dia.turnos[1].fim}
+                                          onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
+                                          className="w-20 border border-gray-200 rounded px-2 py-1 text-xs focus:border-transparent transition-all duration-300"
+                                          style={{ 
+                                            '--tw-ring-color': '#31318D',
+                                            '--tw-ring-opacity': '0.5'
+                                          } as React.CSSProperties}
+                                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                                        />
                                       </div>
                                     </div>
                                     <div className="flex justify-end">
