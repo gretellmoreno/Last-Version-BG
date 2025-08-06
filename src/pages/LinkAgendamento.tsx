@@ -762,7 +762,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                         </div>
                       </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          Compartilhe este link para que seus clientes possam agendar online
+                        Acesse nosso link e agende seu horário com facilidade:
                         </p>
                     </div>
 
