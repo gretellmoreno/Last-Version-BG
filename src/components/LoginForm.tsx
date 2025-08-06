@@ -84,13 +84,13 @@ export default function LoginForm() {
   const headerInfo = getHeaderInfo();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
-      <div className="w-full max-w-md">
-        <div className="bg-white shadow-premium-lg rounded-2xl p-8 border border-gray-100">
+    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50 overflow-hidden">
+      <div className="w-full max-w-sm">
+        <div className="bg-white shadow-xl rounded-2xl p-8">
           {/* Logo e Título */}
           <div className="text-center mb-8">
             {salonData?.public_profile_photo_url ? (
-              <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4 shadow-lg">
+              <div className="w-20 h-20 overflow-hidden mx-auto mb-6">
                 <img 
                   src={salonData.public_profile_photo_url} 
                   alt="Logo do salão"
@@ -98,7 +98,7 @@ export default function LoginForm() {
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6">
                 <img 
                   src="/logos/logo-bela-gestao.png" 
                   alt="BelaGestão" 
@@ -106,79 +106,59 @@ export default function LoginForm() {
                 />
               </div>
             )}
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{headerInfo.title}</h1>
-            <p className="text-gray-600">{headerInfo.subtitle}</p>
-            {salonData && (
-              <p className="text-xs text-gray-500 mt-2">
-                                    {salonData.subdomain}.belagestao.com
-              </p>
-            )}
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              {salonData ? (salonData.public_display_name || salonData.name) : 'BelaGestão'}
+            </h1>
           </div>
 
           {/* Formulário */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Campo Email */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="
-                    block w-full pl-10 pr-3 py-3 
-                    border border-gray-300 rounded-xl
-                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-                    placeholder-gray-400 text-sm
-                    transition-all duration-200
-                    bg-gray-50 focus:bg-white
-                  "
-                  placeholder="seu@email.com"
-                  disabled={loading || loadingSalon}
-                />
-              </div>
+            <div className="relative">
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="
+                  block w-full px-4 py-3 
+                  border border-gray-300 rounded-xl
+                  focus:outline-none focus:ring-2 focus:ring-[#31338D] focus:border-transparent
+                  placeholder-gray-400 text-sm
+                  transition-all duration-200
+                  bg-gray-50 focus:bg-white
+                "
+                placeholder="Email"
+                disabled={loading || loadingSalon}
+              />
             </div>
 
             {/* Campo Senha */}
-            <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Senha
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="
-                    block w-full pl-10 pr-12 py-3 
-                    border border-gray-300 rounded-xl
-                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-                    placeholder-gray-400 text-sm
-                    transition-all duration-200
-                    bg-gray-50 focus:bg-white
-                  "
-                  placeholder="Sua senha"
-                  disabled={loading || loadingSalon}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                  disabled={loading || loadingSalon}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="
+                  block w-full px-4 py-3 
+                  border border-gray-300 rounded-xl
+                  focus:outline-none focus:ring-2 focus:ring-[#31338D] focus:border-transparent
+                  placeholder-gray-400 text-sm
+                  transition-all duration-200
+                  bg-gray-50 focus:bg-white
+                "
+                placeholder="Senha"
+                disabled={loading || loadingSalon}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={loading || loadingSalon}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
 
             {/* Mensagem de Erro */}
@@ -193,15 +173,11 @@ export default function LoginForm() {
               type="submit"
               disabled={loading || loadingSalon}
               className="
-                w-full flex items-center justify-center py-3 px-4
-                bg-gradient-to-r from-indigo-600 to-indigo-700
-                text-white font-semibold rounded-xl
-                hover:from-indigo-700 hover:to-indigo-800
-                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
+                w-full py-3 px-4
+                bg-[#31338D] text-white font-semibold rounded-xl
+                hover:bg-[#2A2B7A] focus:outline-none focus:ring-2 focus:ring-[#31338D] focus:ring-offset-2
                 disabled:opacity-50 disabled:cursor-not-allowed
                 transition-all duration-200
-                shadow-lg hover:shadow-xl
-                transform hover:translate-y-[-1px]
               "
             >
               {(loading || loadingSalon) ? (
@@ -214,23 +190,6 @@ export default function LoginForm() {
               )}
             </button>
           </form>
-
-          {/* Rodapé */}
-          <div className="mt-8 text-center">
-            <p className="text-xs text-gray-500">
-              Sistema de Gestão para Salões de Beleza
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              © 2024 BelaGestão. Todos os direitos reservados.
-            </p>
-          </div>
-        </div>
-
-        {/* Informações adicionais */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-500">
-            Problemas para acessar? Entre em contato com o suporte
-          </p>
         </div>
       </div>
     </div>
