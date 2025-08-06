@@ -314,7 +314,7 @@ const MobileHeader = ({
   };
 
   return (
-    <div className="mobile-agenda-header bg-white border-b border-gray-200 flex items-center">
+    <div className="mobile-agenda-header bg-white border-b border-gray-200 flex items-center relative z-20">
       {/* Linha única - Menu, Navegação de Data, Profissional e Adicionar */}
       <div className="flex flex-wrap items-center justify-between gap-1 w-full">
         <button 
