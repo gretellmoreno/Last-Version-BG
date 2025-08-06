@@ -243,7 +243,7 @@ const MarketingApp: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-md mx-auto px-4 py-4">
@@ -267,7 +267,7 @@ const MarketingApp: React.FC = () => {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl p-6">
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
           <form onSubmit={currentStep === 3 ? handleSubmit : (e) => { e.preventDefault(); handleNextStep(); }} className="space-y-4">
             {/* Step 1: Dados Pessoais */}
             {currentStep === 1 && (
@@ -283,7 +283,7 @@ const MarketingApp: React.FC = () => {
                     value={formData.ownerName}
                     onChange={handleInputChange}
                     placeholder="Ex: João da Silva"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#31338D] focus:border-transparent text-sm"
                     required
                   />
                 </div>
@@ -299,7 +299,7 @@ const MarketingApp: React.FC = () => {
                     value={formData.salonName}
                     onChange={handleInputChange}
                     placeholder="Ex: Salão da Maria"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#31338D] focus:border-transparent text-sm"
                     required
                   />
                 </div>
@@ -321,7 +321,7 @@ const MarketingApp: React.FC = () => {
                       value={formData.subdomain}
                       onChange={handleInputChange}
                       placeholder="salao-da-maria"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-l-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-l-lg focus:ring-2 focus:ring-[#31338D] focus:border-transparent text-sm"
                       required
                     />
                     <div className="px-3 py-2 bg-gray-50 border border-l-0 border-gray-200 rounded-r-lg text-gray-500 text-xs flex items-center">
@@ -344,7 +344,7 @@ const MarketingApp: React.FC = () => {
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="(41) 99999-8888"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#31338D] focus:border-transparent text-sm"
                     required
                   />
                 </div>
@@ -365,7 +365,7 @@ const MarketingApp: React.FC = () => {
                     value={formData.ownerEmail}
                     onChange={handleInputChange}
                     placeholder="seu@email.com"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#31338D] focus:border-transparent text-sm"
                     required
                   />
                 </div>
@@ -381,7 +381,7 @@ const MarketingApp: React.FC = () => {
                     value={formData.ownerPassword}
                     onChange={handleInputChange}
                     placeholder="Mínimo 6 caracteres"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#31338D] focus:border-transparent text-sm"
                     required
                     minLength={6}
                   />
@@ -398,7 +398,7 @@ const MarketingApp: React.FC = () => {
                     value={confirmPassword}
                     onChange={handleInputChange}
                     placeholder="Digite a senha novamente"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#31338D] focus:border-transparent text-sm"
                     required
                   />
                 </div>
@@ -426,7 +426,7 @@ const MarketingApp: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className={`flex-1 bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm flex items-center justify-center space-x-2 ${currentStep > 1 ? 'flex-1' : 'w-full'}`}
+                className={`flex-1 bg-[#31338D] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#2A2B7A] focus:ring-2 focus:ring-[#31338D] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm flex items-center justify-center space-x-2 ${currentStep > 1 ? 'flex-1' : 'w-full'}`}
               >
                 {loading ? (
                   <>
@@ -455,9 +455,9 @@ const MarketingApp: React.FC = () => {
               key={step}
               className={`w-4 h-4 rounded-full transition-all duration-200 ${
                 step === currentStep
-                  ? 'bg-purple-600 shadow-md'
+                  ? 'bg-[#31338D] shadow-md'
                   : step < currentStep
-                  ? 'bg-purple-400'
+                  ? 'bg-[#31338D]/60'
                   : 'bg-gray-300'
               }`}
             />

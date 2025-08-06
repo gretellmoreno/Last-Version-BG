@@ -544,7 +544,7 @@ export default function MeusAgendamentos() {
                         <div className="flex items-center justify-between mb-3">
                           {/* Profissional */}
                           <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center overflow-hidden">
+                            <div className="w-10 h-10  bg-purple-100 flex items-center justify-center overflow-hidden">
                               {appointment.professional_photo_url ? (
                                 <img 
                                   src={appointment.professional_photo_url} 
@@ -552,7 +552,7 @@ export default function MeusAgendamentos() {
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
-                                <User className="w-4 h-4 text-purple-600" />
+                                <User className="w-3 h-3 text-purple-600" />
                               )}
                             </div>
                             <span className="text-sm text-gray-600 font-medium">

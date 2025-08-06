@@ -99,6 +99,13 @@ export default function AgendamentoPublico() {
   // Estados para configurações da agenda
   const [agendaConfig, setAgendaConfig] = useState<any>(null);
 
+  // Seleção automática quando há apenas um profissional
+  useEffect(() => {
+    if (bookingData.professionals.length === 1 && !selectedProfessional) {
+      setSelectedProfessional(bookingData.professionals[0].id);
+    }
+  }, [bookingData.professionals, selectedProfessional]);
+
   useEffect(() => {
     const loadSalonAndConfig = async () => {
       setLoading(true);
@@ -197,6 +204,26 @@ export default function AgendamentoPublico() {
       console.warn("Não foi possível carregar os dados do cliente do localStorage:", e);
     }
   }, []); // O array vazio [] garante que ele rode apenas uma vez
+
+  // useEffect para carregar dados quando entrar na etapa de cliente
+  useEffect(() => {
+    if (currentStep === 'client') {
+      try {
+        const savedDataString = localStorage.getItem('belaGestao_clientData');
+        if (savedDataString) {
+          const savedData = JSON.parse(savedDataString);
+          if (savedData.name) {
+            setClientName(savedData.name);
+          }
+          if (savedData.phone) {
+            setClientPhone(savedData.phone);
+          }
+        }
+      } catch (e) {
+        console.warn("Erro ao carregar dados do cliente:", e);
+      }
+    }
+  }, [currentStep]);
 
   // useEffect para buscar serviços específicos do profissional
   useEffect(() => {
@@ -470,6 +497,8 @@ export default function AgendamentoPublico() {
         return selectedDate && selectedTime;
       case 'client':
         return clientName.trim() !== '' && clientPhone.trim() !== '';
+      case 'confirmation':
+        return true; // Sempre pode avançar na confirmação
       default:
         return false;
     }
@@ -870,7 +899,7 @@ export default function AgendamentoPublico() {
         {/* Foto do salão */}
           <div className="flex items-center justify-center mb-4">
             {config?.foto_perfil_url ? (
-              <div className="w-20 h-20 rounded-full overflow-hidden border-3 border-white shadow-lg bg-white">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-white/40 shadow-xl bg-white/95 backdrop-blur-sm">
                 <img 
                   src={config.foto_perfil_url} 
                   alt="Foto do salão" 
@@ -879,10 +908,10 @@ export default function AgendamentoPublico() {
               </div>
             ) : (
               <div 
-                className="w-20 h-20 rounded-full border-3 border-white shadow-lg flex items-center justify-center bg-white/90"
-                style={{ borderColor: 'var(--cor-primaria)' }}
+                className="w-32 h-32 rounded-full border-2 border-white/40 shadow-xl flex items-center justify-center bg-white/95 backdrop-blur-sm"
+                style={{ borderColor: 'rgba(255, 255, 255, 0.4)' }}
               >
-                <User size={40} style={{ color: getTitleColor() }} />
+                <User size={64} style={{ color: getTitleColor() }} />
               </div>
           )}
         </div>
@@ -931,77 +960,91 @@ export default function AgendamentoPublico() {
         </div>
         </div>
 
-        {/* Card de profissionais */}
-        <div className="w-full max-w-md bg-transparent backdrop-blur-sm rounded-3xl shadow-xl border border-white/30 overflow-hidden">
-          <div className="p-4 pb-6">
-            
-            {bookingData.professionals.length === 0 ? (
-              <div className="text-center py-8">
-                <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Nenhum profissional disponível no momento.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                {bookingData.professionals.map((professional) => (
-                  <button
-                    key={professional.id}
-                    className={`flex flex-col items-center p-2 rounded-xl border-2 transition-all duration-200 min-h-[80px] ${
-                      selectedProfessional === professional.id 
-                        ? 'border-purple-200 shadow-md' 
-                        : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                    }`}
-                    style={selectedProfessional === professional.id ? {
-                      borderColor: 'var(--cor-primaria)',
-                      backgroundColor: `${primaryColor}10`
-                    } : {}}
-                    onClick={() => setSelectedProfessional(professional.id)}
-                  >
-                    <div className="mb-2">
-                      {professional.url_foto ? (
-                        <img
-                          src={professional.url_foto}
-                          alt={professional.name}
-                          className="w-14 h-14 rounded-full object-cover border-2"
-                          style={{ borderColor: 'var(--cor-primaria)' }}
-                        />
-                      ) : (
-                        <div
-                          className="w-14 h-14 rounded-full flex items-center justify-center text-white font-medium text-base"
-                          style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}
-                        >
-                          {professional.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <h4 className="font-medium text-xs" style={{ color: getTitleColor() }}>
-                        {professional.name}
-                      </h4>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Título da seção */}
+        <div className="w-full max-w-md mb-4">
+          <h2 className="text-xl font-semibold text-white mb-2 text-center">Selecione o profissional</h2>
+          
         </div>
 
-        {/* Botão avançar */}
-        <button
-          onClick={goNext}
-          disabled={!canGoNext()}
-            className={`mt-6 w-full max-w-md py-4 rounded-2xl text-lg font-bold shadow-lg transition-all duration-300 ${
-              canGoNext()
-                ? 'hover:shadow-xl transform hover:scale-105'
-                : 'cursor-not-allowed opacity-50'
-            }`}
-            style={{
-              backgroundColor: canGoNext() ? 'var(--cor-primaria)' : '#E5E7EB',
-              color: canGoNext() ? getContrastColor(primaryColor) : '#9CA3AF',
-              boxShadow: canGoNext() ? `0 10px 25px ${primaryColor}40` : 'none'
-            }}
-        >
-          Avançar
-        </button>
+        {/* Card de profissionais */}
+        <div className="w-full max-w-md">
+          {bookingData.professionals.length === 0 ? (
+            <div className="text-center py-8">
+              <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Nenhum profissional disponível no momento.</p>
+            </div>
+                        ) : (
+                <div className="space-y-3">
+                  {bookingData.professionals.map((professional) => (
+                    <div
+                      key={professional.id}
+                      className={`relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-500 transform hover:scale-[1.02] hover:shadow-xl ${
+                        selectedProfessional === professional.id 
+                          ? 'shadow-xl' 
+                          : 'shadow-lg'
+                      }`}
+                      style={selectedProfessional === professional.id ? {
+                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        backdropFilter: 'blur(20px)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05)'
+                      } : {
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(15px)',
+                        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)'
+                      }}
+                      onClick={() => {
+                        setSelectedProfessional(professional.id);
+                        // Avançar automaticamente após um pequeno delay para feedback visual
+                        setTimeout(() => {
+                          goNext();
+                        }, 300);
+                      }}
+                    >
+                      <div className="flex items-center p-4">
+                        {/* Avatar do profissional */}
+                        <div className="flex-shrink-0 mr-4">
+                          {professional.url_foto ? (
+                            <img
+                              src={professional.url_foto}
+                              alt={professional.name}
+                              className="w-12 h-12 rounded-full object-cover border-2"
+                              style={{ 
+                                borderColor: selectedProfessional === professional.id ? primaryColor : 'rgba(255, 255, 255, 0.4)',
+                                boxShadow: selectedProfessional === professional.id ? `0 0 12px ${primaryColor}30` : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium text-lg"
+                              style={{ 
+                                backgroundColor: selectedProfessional === professional.id ? primaryColor : (professional.color || DEFAULT_PROFESSIONAL_COLOR),
+                                boxShadow: selectedProfessional === professional.id ? `0 0 12px ${primaryColor}30` : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                              }}
+                            >
+                              {professional.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Nome do profissional */}
+                        <div className="flex-1 min-w-0">
+                          <h3 
+                            className="font-semibold text-lg truncate"
+                            style={{ 
+                              color: '#FFFFFF'
+                            }}
+                          >
+                            {professional.name}
+                          </h3>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -1010,7 +1053,7 @@ export default function AgendamentoPublico() {
   if ((currentStep as string) === 'services') {
     return (
       <div 
-        className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6"
+        className="min-h-screen flex flex-col items-center px-4 pt-6 pb-24"
         style={{
           maxWidth: 480,
           margin: '0 auto',
@@ -1081,13 +1124,15 @@ export default function AgendamentoPublico() {
                     key={service.id}
                             className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 min-h-[60px] ${
                               isSelected 
-                                ? 'border-purple-200 shadow-md' 
-                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                                ? 'border-white shadow-sm' 
+                                : 'border-white/20 hover:border-white/40'
                             }`}
                             style={isSelected ? {
-                              borderColor: 'var(--cor-primaria)',
-                              backgroundColor: `${primaryColor}10`
-                            } : {}}
+                              borderColor: '#FFFFFF',
+                              backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                            } : {
+                              backgroundColor: 'transparent'
+                            }}
                     onClick={() => {
                       if (isSelected) {
                         setSelectedServices(prev => prev.filter(id => id !== service.id));
@@ -1112,14 +1157,14 @@ export default function AgendamentoPublico() {
                                 </div>
                               </div>
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-3 ${
-                                isSelected ? 'border-purple-500 bg-purple-500' : 'border-gray-300'
+                                isSelected ? 'border-white bg-white' : 'border-white/30'
                               }`}
                               style={isSelected ? {
-                                backgroundColor: 'var(--cor-primaria)',
-                                borderColor: 'var(--cor-primaria)'
+                                backgroundColor: '#FFFFFF',
+                                borderColor: '#FFFFFF'
                               } : {}}>
                         {isSelected && (
-                                  <Check className="w-3 h-3" style={{ color: getContrastColor(primaryColor) }} />
+                                  <Check className="w-3 h-3 text-gray-900" />
                         )}
                       </div>
                     </div>
@@ -1134,23 +1179,17 @@ export default function AgendamentoPublico() {
         </div>
         </div>
 
-        {/* Botão avançar */}
-        <button
-          onClick={goNext}
-          disabled={!canGoNext()}
-            className={`mt-6 w-full max-w-md py-4 rounded-2xl text-lg font-bold shadow-lg transition-all duration-300 ${
-              canGoNext()
-                ? 'hover:shadow-xl transform hover:scale-105'
-                : 'cursor-not-allowed opacity-50'
-            }`}
-            style={{
-              backgroundColor: canGoNext() ? 'var(--cor-primaria)' : '#E5E7EB',
-            color: canGoNext() ? getContrastColor(primaryColor) : '#9CA3AF',
-              boxShadow: canGoNext() ? `0 10px 25px ${primaryColor}40` : 'none'
-            }}
-        >
-          Avançar
-        </button>
+        {/* Botão avançar flutuante - só aparece quando há serviços selecionados */}
+        {selectedServices.length > 0 && (
+          <div className="fixed bottom-6 left-4 right-4 z-50">
+            <button
+              onClick={goNext}
+              className="w-full py-4 rounded-2xl text-lg font-bold shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-105 bg-white text-gray-900"
+            >
+              Avançar
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -1313,24 +1352,47 @@ export default function AgendamentoPublico() {
               return (
                 <div className="grid grid-cols-4 gap-1">
                   {filteredTimes.map((time) => (
-                    <button
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={`py-2 px-2 rounded-lg border-2 transition-all duration-200 text-xs font-medium ${
-                        selectedTime === time 
-                          ? 'border-white bg-white' 
-                          : 'border-white/30 hover:border-white/50'
-                      }`}
-                      style={selectedTime === time ? {
-                        borderColor: '#FFFFFF',
-                        backgroundColor: '#FFFFFF',
-                        color: primaryColor
-                      } : {
-                        color: getTitleColor()
-                      }}
-                    >
-                      {time}
-                    </button>
+                                          <button
+                        key={time}
+                        onClick={() => {
+                          setSelectedTime(time);
+                          // Verificar dados salvos e avançar automaticamente
+                          setTimeout(() => {
+                            // Verificar se já temos dados do cliente salvos
+                            try {
+                              const savedDataString = localStorage.getItem('belaGestao_clientData');
+                              if (savedDataString) {
+                                const savedData = JSON.parse(savedDataString);
+                                if (savedData.name && savedData.phone) {
+                                  // Dados já salvos, ir direto para confirmação
+                                  setClientName(savedData.name);
+                                  setClientPhone(savedData.phone);
+                                  setCurrentStep('confirmation');
+                                  return;
+                                }
+                              }
+                            } catch (e) {
+                              console.warn("Erro ao verificar dados salvos:", e);
+                            }
+                            // Dados não salvos, ir para etapa de cliente
+                            setCurrentStep('client');
+                          }, 300);
+                        }}
+                        className={`py-2 px-2 rounded-lg border-2 transition-all duration-200 text-xs font-medium ${
+                          selectedTime === time 
+                            ? 'border-white bg-white' 
+                            : 'border-white/30 hover:border-white/50'
+                        }`}
+                        style={selectedTime === time ? {
+                          borderColor: '#FFFFFF',
+                          backgroundColor: '#FFFFFF',
+                          color: primaryColor
+                        } : {
+                          color: getTitleColor()
+                        }}
+                      >
+                        {time}
+                      </button>
                   ))}
                 </div>
               );
@@ -1338,23 +1400,7 @@ export default function AgendamentoPublico() {
           </div>
         )}
 
-        {/* Botão avançar */}
-        <button
-          onClick={goNext}
-          disabled={!canGoNext()}
-          className={`mt-6 w-full max-w-md py-4 rounded-2xl text-lg font-bold shadow-lg transition-all duration-300 ${
-            canGoNext()
-              ? 'hover:shadow-xl transform hover:scale-105'
-              : 'cursor-not-allowed opacity-50'
-          }`}
-          style={{
-            backgroundColor: canGoNext() ? 'var(--cor-primaria)' : '#E5E7EB',
-            color: canGoNext() ? getContrastColor(primaryColor) : '#9CA3AF',
-            boxShadow: canGoNext() ? `0 10px 25px ${primaryColor}40` : 'none'
-          }}
-        >
-          Avançar
-        </button>
+
 
         {/* Modal do Calendário Customizado */}
         {showCustomCalendar && (
@@ -1458,20 +1504,140 @@ export default function AgendamentoPublico() {
   console.log('🔍 Estado showCustomCalendar:', showCustomCalendar);
 
   return (
-    <div 
-      className="min-h-screen font-sans"
-      style={{
-        '--cor-primaria': primaryColor || '#E9D8FD',
-        '--cor-secundaria': secondaryColor || '#FFFFFF',
-        backgroundImage: 'linear-gradient(to bottom, var(--cor-primaria), var(--cor-secundaria))',
-      } as React.CSSProperties}
-    >
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-transparent backdrop-blur-sm rounded-lg shadow-sm p-6 border border-white/30">
-          
-          {/* Etapa 1: Seleção de Serviços */}
-          {(currentStep as string) === 'services' && (
+    <>
+      {/* Etapa 5: Confirmação - Layout especial */}
+      {(currentStep as string) === 'confirmation' ? (
+        <div 
+          className="min-h-screen flex flex-col items-center px-4 pt-6 pb-6"
+          style={{
+            maxWidth: 480,
+            margin: '0 auto',
+            '--cor-primaria': primaryColor || '#E9D8FD',
+            '--cor-secundaria': secondaryColor || '#FFFFFF',
+            backgroundImage: 'linear-gradient(to bottom, var(--cor-primaria), var(--cor-secundaria))',
+          } as React.CSSProperties}
+        >
+          {/* Header com botão voltar */}
+          <div className="w-full max-w-md mb-4">
+            <div className="flex items-center justify-start">
+              <button
+                onClick={goBack}
+                className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="text-sm font-medium">Voltar</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Título */}
+          <div className="w-full max-w-md mb-4">
+            <h2 className="text-xl font-semibold text-white text-center">
+              Confirme seu agendamento
+            </h2>
+          </div>
+            
+          {/* Card de confirmação transparente */}
+          <div className="w-full max-w-md bg-transparent backdrop-blur-sm rounded-3xl shadow-xl border border-white/30 overflow-hidden">
+            <div className="p-6">
+              <div className="space-y-6">
+                {/* Data e Horário */}
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mr-4">
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-white/70 mb-1">
+                      Data e Hora
+                    </div>
+                    <div className="text-base font-semibold text-white">
+                      {selectedDate && (() => {
+                        const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                        const dayName = dayNames[selectedDate.getDay()];
+                        const day = selectedDate.getDate().toString().padStart(2, '0');
+                        const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+                        return `${dayName}, ${day}/${month} às ${selectedTime}`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profissional */}
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mr-4">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-white/70 mb-1">
+                      Profissional
+                    </div>
+                    <div className="text-base font-semibold text-white">
+                      {bookingData.professionals.find(p => p.id === selectedProfessional)?.name}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Serviços */}
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mr-4">
+                    <Scissors className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-white/70 mb-1">
+                      Serviços
+                    </div>
+                    <div className="text-base font-semibold text-white">
+                      {selectedServices.map((serviceId, index) => {
+                        const service = servicesForProfessional.find(s => s.id === serviceId);
+                        if (!service) return null;
+                        
+                        return (
+                          <span key={serviceId}>
+                            {service.name}
+                            {index < selectedServices.length - 1 && <span className="text-white/50">, </span>}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Botão confirmar */}
+          <div className="w-full max-w-md mt-6">
+            <button
+              onClick={createAppointment}
+              disabled={isCreating}
+              className="w-full py-4 rounded-2xl text-lg font-bold shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-105 bg-white text-gray-900"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Confirmando...
+                </>
+              ) : (
+                'Confirmar'
+              )}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div 
+          className="min-h-screen font-sans"
+          style={{
+            '--cor-primaria': primaryColor || '#E9D8FD',
+            '--cor-secundaria': secondaryColor || '#FFFFFF',
+            backgroundImage: 'linear-gradient(to bottom, var(--cor-primaria), var(--cor-secundaria))',
+          } as React.CSSProperties}
+        >
+          {/* Main Content */}
+          <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="bg-transparent backdrop-blur-sm rounded-lg shadow-sm p-6">
+              
+              {/* Etapa 1: Seleção de Serviços */}
+              {(currentStep as string) === 'services' && (
             <div>
               <h2 className="text-xl font-semibold mb-6" style={{ color: getTitleColor() }}>
                 Selecione os serviços desejados
@@ -1565,59 +1731,115 @@ export default function AgendamentoPublico() {
 
           {/* Etapa 2: Seleção de Profissional */}
           {(currentStep as string) === 'professional' && (
-            <div>
-              
+            <div className="min-h-screen flex flex-col">
+              {/* Header com botão voltar */}
+              <div className="flex items-center mb-6">
+                <button 
+                  onClick={goBack}
+                  className="flex items-center text-white hover:text-gray-200 transition-colors mr-4"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  <span className="text-sm font-medium">Voltar</span>
+                </button>
+              </div>
+
+              {/* Título da seção */}
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-white mb-2">Selecione o profissional</h2>
+                <p className="text-sm text-white/70">Escolha o profissional que irá realizar seu serviço</p>
+              </div>
+
               {bookingData.professionals.length === 0 ? (
-                <div className="text-center py-8">
-                  <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">Nenhum profissional disponível no momento.</p>
+                <div className="text-center py-8 flex-1 flex items-center justify-center">
+                  <div>
+                    <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">Nenhum profissional disponível no momento.</p>
+                  </div>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {bookingData.professionals.map((professional) => (
+                <div className="space-y-4 flex-1">
+                  {bookingData.professionals.map((professional, index) => (
                     <div
                       key={professional.id}
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
+                      className={`relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
                         selectedProfessional === professional.id 
-                          ? 'border-gray-200' 
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'shadow-lg' 
+                          : 'shadow-sm hover:shadow-md'
                       }`}
                       style={selectedProfessional === professional.id ? {
-                        borderColor: 'var(--cor-primaria)',
-                        backgroundColor: `${primaryColor}10`
-                      } : {}}
-                      onClick={() => setSelectedProfessional(professional.id)}
+                        backgroundColor: `${primaryColor}20`,
+                        border: `2px solid ${primaryColor}`
+                      } : {
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        border: '2px solid rgba(255, 255, 255, 0.15)',
+                        backdropFilter: 'blur(10px)'
+                      }}
+                      onClick={() => {
+                        setSelectedProfessional(professional.id);
+                        // Avançar automaticamente após um pequeno delay para feedback visual
+                        setTimeout(() => {
+                          goNext();
+                        }, 300);
+                      }}
                     >
-                      <div className="flex items-center space-x-3">
-                        {(professional as any).url_foto ? (
-                          <img
-                            src={(professional as any).url_foto}
-                            alt={professional.name}
-                            className="w-10 h-10 rounded-full object-cover border-2"
-                            style={{ borderColor: 'var(--cor-primaria)' }}
-                          />
-                        ) : (
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
-                            style={{ backgroundColor: professional.color || DEFAULT_PROFESSIONAL_COLOR }}
-                          >
-                            {professional.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <h3 className="font-medium" style={{ color: getTitleColor() }}>{professional.name}</h3>
+                      {/* Indicador de seleção */}
+                      {selectedProfessional === professional.id && (
+                        <div 
+                          className="absolute top-0 left-0 w-1 h-full"
+                          style={{ backgroundColor: primaryColor }}
+                        />
+                      )}
+                      
+                      <div className="flex items-center p-6">
+                        {/* Avatar do profissional */}
+                        <div className="flex-shrink-0 mr-4">
+                          {(professional as any).url_foto ? (
+                            <img
+                              src={(professional as any).url_foto}
+                              alt={professional.name}
+                              className="w-16 h-16 rounded-full object-cover border-2"
+                              style={{ 
+                                borderColor: selectedProfessional === professional.id ? primaryColor : 'rgba(255, 255, 255, 0.3)'
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="w-16 h-16 rounded-full flex items-center justify-center text-white font-medium text-xl"
+                              style={{ 
+                                backgroundColor: selectedProfessional === professional.id ? primaryColor : (professional.color || DEFAULT_PROFESSIONAL_COLOR)
+                              }}
+                            >
+                              {professional.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 ${
-                          selectedProfessional === professional.id 
-                            ? 'border-gray-300' 
-                            : 'border-gray-300'
-                        }`}
-                        style={selectedProfessional === professional.id ? {
-                          backgroundColor: 'var(--cor-primaria)',
-                          borderColor: 'var(--cor-primaria)'
-                        } : {}}>
-                          {selectedProfessional === professional.id && (
-                            <Check className="w-3 h-3 text-white mx-auto mt-0.5" />
+                        
+                        {/* Informações do profissional */}
+                        <div className="flex-1 min-w-0">
+                          <h3 
+                            className="font-semibold text-xl truncate mb-1"
+                            style={{ 
+                              color: selectedProfessional === professional.id ? primaryColor : '#FFFFFF'
+                            }}
+                          >
+                            {professional.name}
+                          </h3>
+                          <p className="text-sm opacity-70 text-white/80">
+                            Profissional
+                          </p>
+                        </div>
+                        
+                        {/* Ícone de seleção */}
+                        <div className="flex-shrink-0 ml-3">
+                          {selectedProfessional === professional.id ? (
+                            <div 
+                              className="w-7 h-7 rounded-full flex items-center justify-center"
+                              style={{ backgroundColor: primaryColor }}
+                            >
+                              <Check className="w-5 h-5 text-white" />
+                            </div>
+                          ) : (
+                            <div className="w-7 h-7 rounded-full border-2 border-white/30 opacity-50" />
                           )}
                         </div>
                       </div>
@@ -1734,7 +1956,30 @@ export default function AgendamentoPublico() {
                       {availableTimes.map((time) => (
                         <button
                           key={time}
-                          onClick={() => setSelectedTime(time)}
+                          onClick={() => {
+                            setSelectedTime(time);
+                            // Verificar dados salvos e avançar automaticamente
+                            setTimeout(() => {
+                              // Verificar se já temos dados do cliente salvos
+                              try {
+                                const savedDataString = localStorage.getItem('belaGestao_clientData');
+                                if (savedDataString) {
+                                  const savedData = JSON.parse(savedDataString);
+                                  if (savedData.name && savedData.phone) {
+                                    // Dados já salvos, ir direto para confirmação
+                                    setClientName(savedData.name);
+                                    setClientPhone(savedData.phone);
+                                    setCurrentStep('confirmation');
+                                    return;
+                                  }
+                                }
+                              } catch (e) {
+                                console.warn("Erro ao verificar dados salvos:", e);
+                              }
+                              // Dados não salvos, ir para etapa de cliente
+                              setCurrentStep('client');
+                            }, 300);
+                          }}
                           className={`p-1.5 border rounded-md text-center transition-colors text-xs ${
                             selectedTime === time
                               ? 'text-white'
@@ -1759,194 +2004,104 @@ export default function AgendamentoPublico() {
             </div>
           )}
 
-          {/* Etapa 4: Dados do Cliente */}
+                    {/* Etapa 4: Dados do Cliente */}
           {(currentStep as string) === 'client' && (
-            <div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: getTitleColor() }}>
-                    Nome completo *
-                  </label>
-                  <input
-                    type="text"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Digite seu nome completo"
-                    className="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:border-transparent"
-                    style={{ '--tw-ring-color': 'var(--cor-primaria)' } as React.CSSProperties}
-                  />
-                </div>
+            <div className="min-h-screen">
+              {/* Header com botão voltar */}
+              <div className="flex items-center px-2 py-3">
+                <button
+                  onClick={goBack}
+                  className="flex items-center text-white hover:text-gray-200 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  <span className="text-sm font-medium">Voltar</span>
+                </button>
+              </div>
+
+              {/* Conteúdo principal */}
+              <div className="px-4 py-6">
+                <h2 className="text-xl font-semibold mb-6 text-white">
+                  Seus dados
+                </h2>
                 
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: getTitleColor() }}>
-                    WhatsApp *
-                  </label>
-                  <input
-                    type="tel"
-                    value={clientPhone}
-                    onChange={handlePhoneChange}
-                    placeholder="(11) 99999-9999"
-                    maxLength={15}
-                    className="block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:border-transparent"
-                    style={{ '--tw-ring-color': 'var(--cor-primaria)' } as React.CSSProperties}
-                  />
-                </div>
-
-                {/* Botão para limpar dados salvos */}
-                {(clientName || clientPhone) && (
-                  <div className="text-center pt-2">
-                    <button 
-                      onClick={() => {
-                        setClientName('');
-                        setClientPhone('');
-                        localStorage.removeItem('belaGestao_clientData');
-                      }} 
-                      className="text-sm text-gray-500 hover:text-indigo-600 transition-colors underline"
-                    >
-                      Não é você? Limpar dados
-                    </button>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Nome completo *
+                    </label>
+                    <input
+                      type="text"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      placeholder="Digite seu nome completo"
+                      className="block w-full border border-white/30 rounded-lg px-3 py-2 bg-white/10 backdrop-blur-sm text-white placeholder-white/70 focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200"
+                    />
                   </div>
-                )}
-              </div>
-            </div>
-          )}
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      WhatsApp *
+                    </label>
+                    <input
+                      type="tel"
+                      value={clientPhone}
+                      onChange={handlePhoneChange}
+                      placeholder="(11) 99999-9999"
+                      maxLength={15}
+                      className="block w-full border border-white/30 rounded-lg px-3 py-2 bg-white/10 backdrop-blur-sm text-white placeholder-white/70 focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
 
-          {/* Etapa 5: Confirmação */}
-          {(currentStep as string) === 'confirmation' && (
-            <div>
-              <h2 className="text-xl font-semibold mb-6" style={{ color: getTitleColor() }}>
-                Confirme seu agendamento
-              </h2>
-              
-              <div className="space-y-4">
-                {/* Resumo Compacto */}
-                <div className="border rounded-lg p-6">
-                  <div className="space-y-6">
-                    {/* Data e Horário */}
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 mr-4">
-                        <Calendar className="w-5 h-5" style={{ color: 'var(--cor-primaria)' }} />
+                  {/* Botão para limpar dados salvos */}
+                  {(clientName || clientPhone) && (
+                    <div className="text-center pt-2">
+                      <button 
+                        onClick={() => {
+                          setClientName('');
+                          setClientPhone('');
+                          localStorage.removeItem('belaGestao_clientData');
+                        }} 
+                        className="text-sm text-white/80 hover:text-white transition-colors underline"
+                      >
+                        Não é você? Limpar dados
+                      </button>
                     </div>
-                      <div className="flex-1">
-                        <div className="text-xs text-gray-500 mb-1" style={{ color: getContrastColor(primaryColor) }}>
-                          Data e Hora
-                        </div>
-                        <div className="text-base font-semibold" style={{ color: getTitleColor() }}>
-                          {selectedDate?.toLocaleDateString('pt-BR', { 
-                            weekday: 'short', 
-                            day: '2-digit', 
-                            month: 'short', 
-                            year: 'numeric' 
-                          })} às {selectedTime}
-                        </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Profissional */}
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 mr-4">
-                        <User className="w-5 h-5" style={{ color: 'var(--cor-primaria)' }} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-xs text-gray-500 mb-1" style={{ color: getContrastColor(primaryColor) }}>
-                    Profissional
-                        </div>
-                        <div className="text-base font-semibold" style={{ color: getTitleColor() }}>
-                          {bookingData.professionals.find(p => p.id === selectedProfessional)?.name}
-                        </div>
-                      </div>
-                </div>
-
-                    {/* Serviços */}
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 mr-4">
-                        <Scissors className="w-5 h-5" style={{ color: 'var(--cor-primaria)' }} />
-                </div>
-                      <div className="flex-1">
-                        <div className="text-xs text-gray-500 mb-1" style={{ color: getContrastColor(primaryColor) }}>
-                          Serviços
-                        </div>
-                        <div className="text-base font-semibold" style={{ color: getTitleColor() }}>
-                          {selectedServices.map((serviceId, index) => {
-                            const service = servicesForProfessional.find(s => s.id === serviceId);
-                            if (!service) return null;
-                            
-                            return (
-                              <span key={serviceId}>
-                                {service.name}
-                                {index < selectedServices.length - 1 && <span className="text-gray-400">, </span>}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                {/* Botão avançar */}
+                <div className="mt-8 px-4">
+                  <button
+                    onClick={goNext}
+                    disabled={!canGoNext()}
+                    className={`w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                      canGoNext() 
+                        ? 'hover:opacity-90' 
+                        : 'bg-white/20 text-white/50 cursor-not-allowed'
+                    }`}
+                    style={canGoNext() ? { 
+                      backgroundColor: 'var(--cor-primaria)',
+                      color: getContrastColor(primaryColor)
+                    } : {}}
+                  >
+                    Avançar
+                  </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Navigation */}
-          <div className="flex justify-between mt-8">
-            <button
-              onClick={goBack}
-              disabled={(currentStep as string) === 'services'}
-              className={`flex items-center px-4 py-2 rounded-lg ${
-                (currentStep as string) === 'services' 
-                  ? 'text-gray-400 cursor-not-allowed' 
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </button>
 
-            {(currentStep as string) === 'confirmation' ? (
-              <button
-                onClick={createAppointment}
-                disabled={isCreating}
-                className="px-6 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                style={{
-                  backgroundColor: 'var(--cor-primaria)',
-                  color: getContrastColor(primaryColor)
-                }}
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Confirmando...
-                  </>
-                ) : (
-                  'Confirmar'
-                )}
-              </button>
-            ) : (
-              <button
-                onClick={goNext}
-                disabled={!canGoNext()}
-                className={`flex items-center px-6 py-2 rounded-lg ${
-                  canGoNext() 
-                    ? 'hover:opacity-90' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-                style={canGoNext() ? { 
-                  backgroundColor: 'var(--cor-primaria)',
-                  color: getContrastColor(primaryColor)
-                } : {}}
-              >
-                Avançar
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </button>
-            )}
-          </div>
+
+
         </div>
       </main>
+      </div>
+      )}
 
       {/* Modal de Sucesso */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-sm mx-4 text-center shadow-2xl transform transition-all duration-300">
             {/* Ícone de Sucesso */}
             <div 
@@ -1973,6 +2128,6 @@ export default function AgendamentoPublico() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 } 

@@ -85,6 +85,7 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
   const [timeInterval, setTimeInterval] = useState('30');
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
 
   const priceDisplayOptions = [
     { value: 'normal', label: 'Normal' },
@@ -102,6 +103,44 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Função para formatar o link (remover http:// em mobile)
+  const formatLinkForDisplay = (fullLink: string) => {
+    if (isMobile) {
+      return fullLink.replace(/^https?:\/\//, '');
+    }
+    return fullLink;
+  };
+
+  // Função para obter o link completo
+  const getFullLink = () => {
+    return `${window.location.origin}/agendamento`;
+  };
+
+  // Função para copiar link com animação
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(getFullLink());
+      setIsCopied(true);
+      
+      // Efeito visual de sucesso
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 1500);
+      
+      toast.success('Link copiado!', {
+        duration: 2000,
+        style: {
+          background: '#10b981',
+          color: 'white',
+          borderRadius: '8px',
+          fontSize: '14px',
+        },
+      });
+    } catch (error) {
+      toast.error('Erro ao copiar link');
+    }
+  };
 
   // Carregar dados conforme a aba ativa
   useEffect(() => {
@@ -667,23 +706,58 @@ function LinkAgendamentoContent({ onToggleMobileSidebar }: LinkAgendamentoProps)
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Link de Agendamento
                         </label>
+                        <div className="space-y-3">
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                              value={formatLinkForDisplay(getFullLink())}
+                            readOnly
+                              onClick={handleCopyLink}
+                              className={`w-full px-3 py-2 pr-8 text-xs bg-gradient-to-r from-gray-50 to-gray-100 border rounded-lg text-gray-600 cursor-pointer hover:from-gray-100 hover:to-gray-200 transition-all duration-500 ${
+                                isCopied 
+                                  ? 'border-green-400 bg-gradient-to-r from-green-50 to-green-100 shadow-lg scale-105' 
+                                  : 'border-gray-200'
+                              }`}
+                          />
+                          <button
+                              onClick={handleCopyLink}
+                              className={`absolute right-2 top-1/2 transform -translate-y-1/2 transition-all duration-300 ${
+                                isCopied 
+                                  ? 'text-green-600 scale-110' 
+                                  : 'text-gray-400 hover:text-purple-600'
+                              }`}
+                          >
+                            {isCopied ? <CheckCircle size={14} /> : <Copy size={14} />}
+                          </button>
+                        </div>
                         <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                            value={`${window.location.origin}/agendamento`}
-                          readOnly
-                            className="flex-1 px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 cursor-not-allowed"
-                        />
-                        <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(`${window.location.origin}/agendamento`);
-                              toast.success('Link copiado para a área de transferência!');
-                            }}
-                            className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-1"
-                        >
-                          <Copy size={16} />
-                            <span className="text-sm">Copiar</span>
-                        </button>
+                          <button
+                              onClick={() => {
+                                if (navigator.share) {
+                                  navigator.share({
+                                    title: 'Link de Agendamento',
+                                    text: 'Compartilhe este link para agendamentos online',
+                                    url: getFullLink()
+                                  });
+                                } else {
+                                  handleCopyLink();
+                                }
+                              }}
+                              className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
+                          >
+                            <Share size={16} />
+                            <span className="text-sm">Compartilhar</span>
+                          </button>
+                          <button
+                              onClick={() => {
+                                window.open(getFullLink(), '_blank');
+                              }}
+                              className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2"
+                          >
+                            <Globe size={16} />
+                            <span className="text-sm">Visualizar Site</span>
+                          </button>
+                        </div>
                       </div>
                         <p className="text-xs text-gray-500 mt-1">
                           Compartilhe este link para que seus clientes possam agendar online
