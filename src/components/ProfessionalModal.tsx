@@ -11,6 +11,7 @@ import DatePickerCalendar from './DatePickerCalendar';
 import { useApp } from '../contexts/AppContext';
 import { supabaseService } from '../lib/supabaseService';
 import { supabase } from '../lib/supabase';
+import { PROFESSIONAL_COLORS } from '../utils/colorUtils';
 
 interface ProfessionalModalProps {
   isOpen: boolean;
@@ -34,11 +35,7 @@ interface ProfessionalFormData {
   commission_rate: number;
 }
 
-const CALENDAR_COLORS = [
-  '#E0E7FF', '#DBEAFE', '#BFDBFE', '#93C5FD', '#60A5FA', '#3B82F6',
-  '#C084FC', '#F3E8FF', '#E879F9', '#D946EF', '#C026D2', '#A21CAF',
-  '#67E8F9', '#22D3EE', '#06B6D4', '#0891B2', '#0E7490', '#155E75'
-];
+
 
 export default function ProfessionalModal({
   isOpen,
@@ -55,7 +52,7 @@ export default function ProfessionalModal({
     phone: '',
     email: '',
     cpf: '',
-    color: CALENDAR_COLORS[0],
+    color: PROFESSIONAL_COLORS[0],
     photo: '',
     url_foto: null,
     commission_rate: 50
@@ -90,7 +87,7 @@ export default function ProfessionalModal({
         phone: editingProfessional.phone || '',
         email: editingProfessional.email || '',
         cpf: (editingProfessional as any).cpf || '',
-        color: editingProfessional.color || CALENDAR_COLORS[0],
+        color: editingProfessional.color || PROFESSIONAL_COLORS[0],
         photo: editingProfessional.photo || '',
         url_foto: editingProfessional.url_foto || editingProfessional.photo || '',
         commission_rate: editingProfessional.commission_rate || 50
@@ -102,7 +99,7 @@ export default function ProfessionalModal({
         phone: '',
         email: '',
         cpf: '',
-        color: CALENDAR_COLORS[0],
+        color: PROFESSIONAL_COLORS[0],
         photo: '',
         url_foto: null,
         commission_rate: 50
@@ -486,7 +483,7 @@ export default function ProfessionalModal({
                   Cor do Profissional
                 </label>
                 <div className="grid grid-cols-6 gap-2">
-                  {CALENDAR_COLORS.map((color) => (
+                  {PROFESSIONAL_COLORS.map((color) => (
                     <button
                       key={color}
                       type="button"

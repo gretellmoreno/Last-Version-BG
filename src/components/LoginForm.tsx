@@ -98,10 +98,12 @@ export default function LoginForm() {
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <span className="text-white font-bold text-2xl">
-                  {salonData ? salonData.name.charAt(0).toUpperCase() : 'S'}
-                </span>
+              <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <img 
+                  src="/logos/logo-bela-gestao.png" 
+                  alt="BelaGestão" 
+                  className="w-full h-full object-contain"
+                />
               </div>
             )}
             <h1 className="text-2xl font-bold text-gray-900 mb-2">{headerInfo.title}</h1>

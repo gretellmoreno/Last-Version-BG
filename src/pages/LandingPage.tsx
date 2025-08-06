@@ -16,6 +16,39 @@ import {
 const LandingPage: React.FC = () => {
   const [isVideoModalOpen, setIsVideoModalOpen] = React.useState(false);
   const [isAnnual, setIsAnnual] = React.useState(true);
+  const [isScrolling, setIsScrolling] = React.useState(false);
+
+  // Detectar rolagem com transição mais suave
+  React.useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
+    
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset;
+      const threshold = 50; // Começar o efeito após 50px de rolagem
+      
+      if (scrollTop > threshold) {
+        setIsScrolling(true);
+      } else {
+        setIsScrolling(false);
+      }
+      
+      // Limpar timeout anterior
+      clearTimeout(scrollTimeout);
+      
+      // Resetar após 300ms sem rolagem (mais tempo para transição suave)
+      scrollTimeout = setTimeout(() => {
+        if (window.pageYOffset <= threshold) {
+          setIsScrolling(false);
+        }
+      }, 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, []);
 
   // Pricing logic
   const plans = [
@@ -246,14 +279,18 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100">
+      <header className={`fixed top-0 left-0 right-0 bg-white z-50 transition-all duration-500 ease-in-out ${
+        isScrolling 
+          ? 'shadow-xl backdrop-blur-lg bg-white/90' 
+          : 'shadow-none backdrop-blur-none bg-white'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <img 
                 src="/logos/logo-bela-gestao.png" 
                 alt="BelaGestão" 
-                className="w-15 h-12"
+                className="w-24 h-20"
               />
             </div>
             <nav className="hidden md:flex items-center space-x-8">
@@ -266,15 +303,15 @@ const LandingPage: React.FC = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => window.location.href = 'https://app.belagestao.com'}
-                className="text-gray-600 hover:text-gray-900 font-medium flex items-center space-x-1"
+                className="hidden lg:flex border border-[#31338D] text-[#31338D] bg-white px-6 py-2 rounded-full font-medium hover:bg-[#31338D] hover:text-white transition-all duration-200"
               >
-                <span>Entrar</span>
+                <span>Já sou cliente</span>
               </button>
               <button
                 onClick={() => window.location.href = 'https://app.belagestao.com'}
-                className="bg-[#31338D] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#2A2B7A] transition-colors"
+                className="bg-[#31338D] text-white px-6 py-2 rounded-full font-medium hover:bg-[#2A2B7A] transition-all duration-200 shadow-sm"
               >
-                Testar grátis!
+                CONHEÇA GRÁTIS
               </button>
             </div>
           </div>
@@ -282,7 +319,7 @@ const LandingPage: React.FC = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 lg:py-32">
+      <section className="relative overflow-hidden py-20 lg:py-32 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Tag */}
@@ -1118,7 +1155,7 @@ const LandingPage: React.FC = () => {
             <img 
               src="/logos/logo-bela-gestao.png" 
               alt="BelaGestão" 
-              className="w-15 h-12 mx-auto mb-4"
+              className="w-20 h-16 mx-auto mb-4"
             />
             <p className="text-gray-400">
               © 2024 BelaGestão. Todos os direitos reservados.

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Scissors from 'lucide-react/dist/esm/icons/scissors';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
@@ -35,6 +35,39 @@ const MarketingApp: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
+
+  // Detectar rolagem com transição mais suave
+  useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
+    
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset;
+      const threshold = 50; // Começar o efeito após 50px de rolagem
+      
+      if (scrollTop > threshold) {
+        setIsScrolling(true);
+      } else {
+        setIsScrolling(false);
+      }
+      
+      // Limpar timeout anterior
+      clearTimeout(scrollTimeout);
+      
+      // Resetar após 300ms sem rolagem (mais tempo para transição suave)
+      scrollTimeout = setTimeout(() => {
+        if (window.pageYOffset <= threshold) {
+          setIsScrolling(false);
+        }
+      }, 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, []);
 
   // Função para normalizar o subdomínio
   const normalizeSubdomain = (value: string): string => {
@@ -245,19 +278,23 @@ const MarketingApp: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100">
+      <header className={`fixed top-0 left-0 right-0 bg-white z-50 transition-all duration-500 ease-in-out ${
+        isScrolling 
+          ? 'shadow-xl backdrop-blur-lg bg-white/90' 
+          : 'shadow-none backdrop-blur-none bg-white'
+      }`}>
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="flex items-center justify-center">
             <img 
               src="/logos/logo-bela-gestao.png" 
               alt="BelaGestão" 
-              className="w-15 h-12"
+              className="w-24 h-20"
             />
           </div>
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-4 py-8">
+      <div className="max-w-md mx-auto px-4 py-8 mt-20">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {getStepTitle()}

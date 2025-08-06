@@ -58,19 +58,20 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   return (
     <div className={`group h-full bg-white border-r border-gray-200 ${isMobile ? 'w-64' : 'w-16 hover:w-64'} transition-all duration-300 flex flex-col`}>
       {/* Header */}
-      <div className={`flex items-center ${isMobile ? 'justify-between px-4' : 'justify-center group-hover:justify-start group-hover:px-4'} h-16 border-b border-gray-200`}>
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-lg">S</span>
+      <div className={`relative flex items-center ${isMobile ? 'justify-center px-4' : 'justify-center group-hover:justify-center group-hover:px-4'} h-20`}>
+        <div className="flex items-center justify-center mt-2">
+          <div className={`flex items-center justify-center ${isMobile ? 'w-20 h-20' : 'w-12 h-12 group-hover:w-20 group-hover:h-20'} transition-all duration-300`}>
+            <img 
+              src="/logos/logo-bela-gestao.png" 
+              alt="BelaGestão" 
+              className="w-full h-full object-contain"
+            />
           </div>
-          <h1 className={`font-bold text-gray-900 ${isMobile ? 'block' : 'hidden group-hover:block'}`}>
-            BelaGestão
-          </h1>
         </div>
         {isMobile && onClose && (
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X size={20} className="text-gray-500" />
           </button>

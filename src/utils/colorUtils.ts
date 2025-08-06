@@ -13,26 +13,26 @@ export const getTextColor = (backgroundColor: string) => {
   return luminance > 0.5 ? '#000000' : '#FFFFFF';
 };
 
-// Paleta de cores pastéis para profissionais (tons mais lindos)
+// Paleta de cores pastéis para profissionais (18 cores variadas)
 export const PROFESSIONAL_COLORS = [
-  // Rosa pastel (tons mais claros)
+  // Rosa suave
   '#FFE4E6', '#FECDD3',
-  // Azul pastel (tons mais claros)
+  // Azul suave
   '#E0F2FE', '#BAE6FD',
-  // Roxo pastel (tons mais claros)
+  // Roxo suave
   '#F3E8FF', '#E9D5FF',
-  // Amarelo pastel (tons mais claros)
+  // Verde suave
+  '#F0FDF4', '#DCFCE7',
+  // Amarelo suave
   '#FEFCE8', '#FEF9C3',
-  // Laranja pastel (tons mais claros)
+  // Laranja suave
   '#FFF7ED', '#FFEDD5',
-  // Turquesa pastel (tons mais claros)
+  // Turquesa suave
   '#CCFBF1', '#99F6E4',
-  // Coral pastel (tons mais claros)
+  // Coral suave
   '#FFF1F2', '#FFE4E6',
-  // Lavanda pastel (tons mais claros)
-  '#F5F3FF', '#EDE9FE',
-  // Pêssego pastel (tons mais claros)
-  '#FFF5F5', '#FED7D7'
+  // Bege suave
+  '#FDF6E3', '#F7E9C7'
 ];
 
 // Cor padrão para profissionais
