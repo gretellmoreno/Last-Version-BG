@@ -258,13 +258,13 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
       // Verificar resposta do backend
       if (data && typeof data === 'object') {
         if (data.success === true) {
-          toast.success(data.message || 'Horários salvos com sucesso!');
+          showSuccessModal('Salvo com sucesso!');
         } else {
           toast.error(data.message || 'Erro ao salvar horários.');
         }
       } else {
         // Fallback para compatibilidade
-        toast.success('Horários salvos com sucesso!');
+        showSuccessModal('Salvo com sucesso!');
       }
     } catch (error) {
       console.error('💥 Erro inesperado ao salvar horários:', error);
@@ -527,13 +527,13 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
       // Verificar a resposta do backend
       if (data && typeof data === 'object') {
         if (data.success === true) {
-          toast.success(data.message || 'Salvo!');
+          showSuccessModal('Salvo com sucesso!');
         } else {
           toast.error(data.message || 'Erro ao salvar mensagem do lembrete');
         }
       } else {
         // Fallback para compatibilidade com versão anterior
-        toast.success('Mensagem do lembrete salva com sucesso!');
+        showSuccessModal('Salvo com sucesso!');
       }
     } catch (err) {
       console.error('💥 Erro inesperado ao salvar lembrete:', err);
@@ -616,35 +616,7 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                         />
                       </div>
                     </div>
-                    {/* Seção de Alteração de Senha */}
-                    <div className={`border-t border-gray-200 ${isMobile ? 'pt-4' : 'pt-6'}`}>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <Lock size={20} className="mr-2" style={{ color: '#31318D' }} />
-                        Alterar Senha
-                      </h4>
-                      <div className="max-w-md">
-                        {/* Nova Senha */}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Nova Senha</label>
-                          <div className="relative">
-                            <input
-                              type={showNewPassword ? 'text' : 'password'}
-                              value={userData.novaSenha}
-                              onChange={(e) => setUserData({...userData, novaSenha: e.target.value})}
-                              className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
-                              placeholder="Digite sua nova senha"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
-                              className="absolute inset-y-0 right-0 flex items-center pr-3"
-                            >
-                              {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+
                     {/* Botão Salvar */}
                     <div className={`flex justify-end border-t border-gray-200 ${isMobile ? 'pt-4' : 'pt-6'}`}>
                       <button
@@ -814,86 +786,108 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
                               <span className="font-semibold text-gray-900">{dia.diaSemana}</span>
                             </div>
                             {dia.ativo && (
-                              <div className={isMobile ? 'flex flex-col gap-2' : 'flex items-center gap-4'}>
+                              <div className="space-y-3">
                                 {/* Turno 1 */}
-                                <div className={isMobile ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
-                                  <span>Início 1</span>
-                                  <input
-                                    type="time"
-                                    value={dia.turnos[0].inicio}
-                                    onChange={(e) => handleTurnoChange(diaIndex, 0, 'inicio', e.target.value)}
-                                    className="border rounded px-2 py-1"
-                                  />
-                                  <span>Fim 1</span>
-                                  <input
-                                    type="time"
-                                    value={dia.turnos[0].fim}
-                                    onChange={(e) => handleTurnoChange(diaIndex, 0, 'fim', e.target.value)}
-                                    className="border rounded px-2 py-1"
-                                  />
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex gap-2 items-center flex-1">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-500">Início 1</span>
+                                        <input
+                                          type="time"
+                                          value={dia.turnos[0].inicio}
+                                          onChange={(e) => handleTurnoChange(diaIndex, 0, 'inicio', e.target.value)}
+                                          className="border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
+                                          style={{ 
+                                            '--tw-ring-color': '#31318D',
+                                            '--tw-ring-opacity': '0.5'
+                                          } as React.CSSProperties}
+                                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                                        />
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-500">Fim 1</span>
+                                        <input
+                                          type="time"
+                                          value={dia.turnos[0].fim}
+                                          onChange={(e) => handleTurnoChange(diaIndex, 0, 'fim', e.target.value)}
+                                          className="border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
+                                          style={{ 
+                                            '--tw-ring-color': '#31318D',
+                                            '--tw-ring-opacity': '0.5'
+                                          } as React.CSSProperties}
+                                          onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                          onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                                 {/* Turno 2 (se existir) */}
                                 {dia.turnos.length === 2 && (
-                                  <div className={isMobile ? 'flex flex-col gap-1 items-start' : 'flex gap-2 items-center'}>
-                                    <div className={isMobile ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
-                                      <span>Início 2</span>
-                                      <input
-                                        type="time"
-                                        value={dia.turnos[1].inicio}
-                                        onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
-                                        className="border rounded px-2 py-1"
-                                      />
-                                      <span>Fim 2</span>
-                                      <input
-                                        type="time"
-                                        value={dia.turnos[1].fim}
-                                        onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
-                                        className="border rounded px-2 py-1"
-                                      />
-                                      {!isMobile && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRemoveTurno(diaIndex, 1)}
-                                          className="hover:underline ml-2"
-                            style={{ color: '#31318D' }}
-                                        >
-                                          Remover Turno 2
-                                        </button>
-                                      )}
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex gap-2 items-center flex-1">
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-xs text-gray-500">Início 2</span>
+                                          <input
+                                            type="time"
+                                            value={dia.turnos[1].inicio}
+                                            onChange={(e) => handleTurnoChange(diaIndex, 1, 'inicio', e.target.value)}
+                                            className="border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
+                                            style={{ 
+                                              '--tw-ring-color': '#31318D',
+                                              '--tw-ring-opacity': '0.5'
+                                            } as React.CSSProperties}
+                                            onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                            onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                                          />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-xs text-gray-500">Fim 2</span>
+                                          <input
+                                            type="time"
+                                            value={dia.turnos[1].fim}
+                                            onChange={(e) => handleTurnoChange(diaIndex, 1, 'fim', e.target.value)}
+                                            className="border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:border-transparent transition-all duration-300"
+                                            style={{ 
+                                              '--tw-ring-color': '#31318D',
+                                              '--tw-ring-opacity': '0.5'
+                                            } as React.CSSProperties}
+                                            onFocus={(e) => e.currentTarget.style.borderColor = '#31318D'}
+                                            onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                                          />
+                                        </div>
+                                      </div>
                                     </div>
-                                    {isMobile && (
+                                    <div className="flex justify-end">
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveTurno(diaIndex, 1)}
-                                        className="hover:underline ml-2 text-sm"
-                            style={{ color: '#31318D' }}
+                                        className="flex items-center justify-center w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200"
                                       >
-                                        Remover Turno 2
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
                                       </button>
-                                    )}
+                                    </div>
                                   </div>
                                 )}
                                 {/* Botão de adicionar turno (só se houver 1 turno) */}
                                 {dia.turnos.length === 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAddTurno(diaIndex)}
-                                    className="ml-2"
-                            style={{ color: '#31318D' }}
-                                  >
-                                    +
-                                  </button>
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddTurno(diaIndex)}
+                                      className="text-xs hover:opacity-70 transition-opacity"
+                                      style={{ color: '#31318D' }}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
                                 )}
                               </div>
-                            )}
-                            {dia.ativo && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoverDia(diaIndex)}
-                                className="ml-2 text-red-600 hover:underline text-xs"
-                              >
-                                Remover Dia
-                              </button>
                             )}
                           </div>
                         ))}
@@ -1161,7 +1155,6 @@ function ConfiguracoesContent({ onToggleMobileSidebar }: ConfiguracoesProps) {
               </div>
               <div className="flex-1">
                 <p className="text-base font-semibold text-gray-900">Salvo com sucesso!</p>
-                <p className="text-sm text-gray-600">{successMessage}</p>
               </div>
             </div>
           </div>

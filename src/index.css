@@ -1972,3 +1972,37 @@ input[type="checkbox"]:hover {
     max-height: none !important;
   }
 }
+
+/* Remover ícones de relógio dos inputs de time */
+input[type="time"]::-webkit-calendar-picker-indicator {
+  background: none !important;
+  color: transparent !important;
+  cursor: pointer !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+}
+
+input[type="time"]::-webkit-inner-spin-button,
+input[type="time"]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+input[type="time"]::-webkit-datetime-edit {
+  padding: 0 !important;
+}
+
+input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 0 !important;
+}
+
+input[type="time"]::-webkit-datetime-edit-text {
+  padding: 0 !important;
+}
+
+input[type="time"]::-webkit-datetime-edit-hour-field,
+input[type="time"]::-webkit-datetime-edit-minute-field,
+input[type="time"]::-webkit-datetime-edit-second-field {
+  padding: 0 !important;
+}
