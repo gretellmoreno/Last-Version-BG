@@ -1627,18 +1627,32 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
 
       {/* Modal de agendamentos online */}
       {showOnlineModal && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-30">
-          <div className={`bg-white rounded-2xl shadow-2xl ${isMobile ? 'max-w-sm w-full max-h-[90vh] p-2' : 'w-full max-w-md p-6 mx-2'} relative`}>
-            <button onClick={() => setShowOnlineModal(false)} className={`absolute top-2 right-2 p-2 rounded-full hover:bg-gray-100 text-gray-500 ${isMobile ? 'text-base' : ''}`}>
-              <X size={isMobile ? 20 : 22} />
-            </button>
-            <h2 className={`text-center font-bold text-gray-900 mb-3 ${isMobile ? 'text-lg' : 'text-xl'}`}>Agendamentos Online</h2>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className={`bg-white rounded-2xl shadow-2xl ${isMobile ? 'w-full max-w-sm mx-4 max-h-[85vh] p-4' : 'w-full max-w-lg p-6 mx-4'} relative`}>
+            {/* Header do modal */}
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+              <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-lg' : 'text-xl'}`}>Agendamentos Online</h2>
+              <button 
+                onClick={() => setShowOnlineModal(false)} 
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Conteúdo do modal */}
             {loadingOnline ? (
               <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#31338D] mx-auto mb-3"></div>
                 <p className="text-gray-500">Carregando agendamentos online...</p>
               </div>
             ) : onlineAppointments.length === 0 ? (
               <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
                 <p className="text-gray-500">Nenhum agendamento online encontrado para esta data.</p>
               </div>
             ) : (
@@ -1651,23 +1665,74 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
                     minutos = Math.floor((now.getTime() - created.getTime()) / 60000);
                   }
                   return (
-                    <div key={ag.id} className="w-full bg-white border border-gray-100 shadow-sm rounded-xl px-4 py-3 flex flex-col gap-1 min-w-0">
-                      {/* Nome do cliente */}
-                      <div className="font-semibold text-gray-900 text-base truncate">
-                        {ag.client?.name}
+                    <div key={ag.id} className="w-full bg-gradient-to-r from-gray-50 to-white border border-gray-200 shadow-sm rounded-xl px-4 py-4 flex flex-col gap-2 hover:shadow-md transition-all duration-200">
+                      {/* Header do card */}
+                      <div className="flex items-center justify-between">
+                        <div className="font-semibold text-gray-900 text-base truncate flex-1">
+                          {ag.client?.name || 'Cliente não definido'}
+                        </div>
+                        {minutos !== null && (
+                          <div className="text-xs font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full ml-2 border border-gray-200">
+                            {formatElapsedTime(minutos)}
+                          </div>
+                        )}
                       </div>
-                      {/* Data/horário e profissional */}
-                      <div className="flex items-center gap-2 text-xs text-gray-700 mt-1">
-                        <span>{ag.date && ag.date.split('-').reverse().join('/')} - {ag.start_time?.slice(0,5)}</span>
-                        <span className="ml-2 px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-700" style={{ background: ag.professional?.color || '#eee', color: '#333' }}>{ag.professional?.name}</span>
+                      
+                      {/* Informações em grid para desktop */}
+                      <div className={`${isMobile ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-4'}`}>
+                        {/* Data e horário */}
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                          </svg>
+                          <span className="truncate">{ag.date && ag.date.split('-').reverse().join('/')} - {ag.start_time?.slice(0,5)}</span>
+                        </div>
+                        
+                        {/* Profissional */}
+                        <div className="flex items-center gap-2">
+                          {ag.professional?.url_foto ? (
+                            <div className="w-6 h-6 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                              <img
+                                src={ag.professional.url_foto}
+                                alt={ag.professional?.name || 'Profissional'}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback para ícone se a imagem falhar
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML = `
+                                      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                      </svg>
+                                    `;
+                                    parent.className = 'w-6 h-6 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm';
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                          )}
+                          <span className="text-sm text-gray-600 truncate">{ag.professional?.name || 'Profissional não definido'}</span>
+                        </div>
                       </div>
-                      {/* Serviço */}
-                      <div className="text-xs text-gray-700 truncate mt-1">
-                        {Array.isArray(ag.services) ? ag.services.map((s: any) => s.name).join(', ') : ''}
-                      </div>
-                      {/* Quanto tempo faz */}
-                      {minutos !== null && (
-                        <div className="text-[11px] text-gray-400 italic mt-1">{formatElapsedTime(minutos)}</div>
+                      
+                      {/* Serviços - sempre em linha separada */}
+                      {Array.isArray(ag.services) && ag.services.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 15.75V18l-7.5-4.5v-6.75l7.5-4.5v6.75z" />
+                          </svg>
+                          <span className="text-sm text-gray-600 truncate">
+                            {ag.services.map((s: any) => s.name).join(', ')}
+                          </span>
+                        </div>
                       )}
                     </div>
                   );

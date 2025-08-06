@@ -47,7 +47,7 @@ export default function Header({
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
+    <div className="bg-white border-b border-gray-200 px-4 lg:px-6 py-4 relative z-10">
       {/* Mobile Layout */}
       <div className="lg:hidden">
         <div className="flex items-center justify-between mb-3">
