@@ -672,36 +672,35 @@ export default function EditAppointmentModal({
           const openWhatsApp = (url: string) => {
             console.log('📱 Tentando abrir WhatsApp com URL:', url);
             
-            // Método 1: Criar elemento <a> temporário (mais confiável)
+            // Método 1: window.location.href (mais direto para mobile)
             try {
-              const link = document.createElement('a');
-              link.href = url;
-              link.target = '_blank';
-              link.rel = 'noopener noreferrer';
-              
-              // Adicionar ao DOM temporariamente
-              document.body.appendChild(link);
-              
-              // Simular clique
-              link.click();
-              
-              // Remover do DOM
-              setTimeout(() => {
-                if (document.body.contains(link)) {
-                  document.body.removeChild(link);
-                }
-              }, 100);
-              
-              console.log('✅ Link criado e clicado com sucesso');
+              window.location.href = url;
+              console.log('✅ WhatsApp aberto com window.location.href');
             } catch (e) {
               console.log('⚠️ Erro no método 1, tentando método 2:', e);
               
-              // Método 2: window.location.href (fallback)
+              // Método 2: Criar elemento <a> temporário
               try {
-                window.location.href = url;
-                console.log('✅ Fallback executado com sucesso');
+                const link = document.createElement('a');
+                link.href = url;
+                link.style.display = 'none';
+                
+                // Adicionar ao DOM temporariamente
+                document.body.appendChild(link);
+                
+                // Simular clique
+                link.click();
+                
+                // Remover do DOM
+                setTimeout(() => {
+                  if (document.body.contains(link)) {
+                    document.body.removeChild(link);
+                  }
+                }, 100);
+                
+                console.log('✅ WhatsApp aberto com elemento <a>');
               } catch (e2) {
-                console.log('❌ Erro no fallback:', e2);
+                console.log('❌ Erro no método 2:', e2);
                 throw e2;
               }
             }
@@ -727,27 +726,38 @@ export default function EditAppointmentModal({
               decodedMessage = message;
             }
             
-            // IMPORTANTE: Não codificar novamente a mensagem, pois já vem codificada do backend
+            // Criar URL do WhatsApp nativo com mensagem codificada
             const whatsappUrl = `whatsapp://send?phone=${phoneNumber}${decodedMessage ? `&text=${encodeURIComponent(decodedMessage)}` : ''}`;
             
             console.log('📱 URL do WhatsApp nativo:', whatsappUrl);
             
-            // Tentar abrir o WhatsApp nativo
-            try {
-              openWhatsApp(whatsappUrl);
-              
-              // Adicionar timeout para fallback
-              setTimeout(() => {
-                console.log('⚠️ Timeout - tentando fallback para web...');
+                          // Tentar abrir o WhatsApp nativo
+              try {
+                openWhatsApp(whatsappUrl);
+                
+                // Adicionar timeout para fallback (reduzido para 1.5s)
+                setTimeout(() => {
+                  console.log('⚠️ Timeout - tentando fallback para web...');
+                  window.open(data.link, '_blank');
+                }, 1500);
+              } catch (e) {
+                console.log('⚠️ Erro ao abrir WhatsApp nativo, tentando web...');
                 window.open(data.link, '_blank');
-              }, 3000);
-            } catch (e) {
-              console.log('⚠️ Erro ao abrir WhatsApp nativo, tentando web...');
+              }
+          } else {
+            // Se não for um link do WhatsApp, tentar converter
+            console.log('⚠️ Link não reconhecido, tentando converter...');
+            
+            // Tentar extrair número de telefone de qualquer link
+            const phoneMatch = data.link.match(/(\d{10,})/);
+            if (phoneMatch) {
+              const phoneNumber = phoneMatch[1];
+              const whatsappUrl = `whatsapp://send?phone=${phoneNumber}`;
+              openWhatsApp(whatsappUrl);
+            } else {
+              // Fallback para web
               window.open(data.link, '_blank');
             }
-          } else {
-            // Tentar abrir normalmente
-            window.open(data.link, '_blank');
           }
         } else {
           // Em desktop, abrir em nova aba
