@@ -1065,14 +1065,18 @@ export const paymentMethodService = {
   // Listar métodos de pagamento
   async list(salonId: string): Promise<RPCResponse<PaymentMethod[]>> {
     try {
+      console.log('📞 SupabaseService: Chamando list_payment_methods com salonId:', salonId);
+      
       const { data, error } = await supabase.rpc('list_payment_methods', {
         salon_id: salonId
       });
       
       if (error) {
-        console.error('Erro ao listar métodos de pagamento:', error);
+        console.error('❌ Erro ao listar métodos de pagamento:', error);
         return { data: null, error: error.message };
       }
+      
+      console.log('✅ SupabaseService: Resposta de list_payment_methods:', data);
       
       // Mapear os dados retornados para o formato esperado
       const formattedMethods = (data || []).map((method: any) => ({
@@ -1082,8 +1086,11 @@ export const paymentMethodService = {
         value: 0
       }));
       
+      console.log('🔄 SupabaseService: Métodos formatados:', formattedMethods);
+      
       return { data: formattedMethods, error: null };
     } catch (err) {
+      console.error('💥 Erro inesperado ao listar métodos de pagamento:', err);
       return { data: null, error: `Erro ao listar métodos de pagamento: ${err}` };
     }
   },

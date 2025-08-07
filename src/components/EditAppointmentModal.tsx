@@ -14,7 +14,7 @@ import ServiceSelection from './booking/ServiceSelection';
 import ProductSelection from './booking/ProductSelection';
 import ServiceConfirmation from './booking/ServiceConfirmation';
 import DateTimeSelection from './booking/DateTimeSelection';
-import PaymentMethodSelection from './PaymentMethodSelection';
+import PaymentMethodSelectionStatic from './PaymentMethodSelectionStatic';
 import ClientSelection from './booking/ClientSelection';
 import ClientForm from './booking/ClientForm';
 import AppointmentDetailsModal from './AppointmentDetailsModal';
@@ -629,19 +629,20 @@ export default function EditAppointmentModal({
     const appointmentId = appointment?.id;
     
     if (!appointmentId) {
-      console.error('❌ ID do agendamento não encontrado');
-      alert('Erro: ID do agendamento não encontrado.');
+      console.error('❌ Erro: ID do agendamento não encontrado');
+      alert('Erro: ID do agendamento não encontrado');
       return;
     }
 
     if (!currentSalon?.id) {
-      console.error('❌ ID do salão não encontrado');
-      alert('Erro: ID do salão não encontrado.');
+      console.error('❌ Erro: ID do salão não encontrado');
+      alert('Erro: ID do salão não encontrado');
       return;
     }
 
     try {
-      console.log('📱 Gerando link do WhatsApp para:', { appointmentId, salonId: currentSalon.id });
+      console.log('📱 Chamando generate_whatsapp_reminder_link...');
+      console.log('📋 Parâmetros:', { appointmentId, salonId: currentSalon.id });
       
       // Chamar a RPC para gerar o link do WhatsApp
       const { data, error } = await supabase.rpc('generate_whatsapp_reminder_link', {
@@ -649,127 +650,25 @@ export default function EditAppointmentModal({
         p_salon_id: currentSalon.id
       });
 
-      console.log('📱 Resposta da RPC:', { data, error });
-
       if (error) {
-        console.error('❌ Erro na RPC:', error);
+        console.error('❌ Erro na RPC generate_whatsapp_reminder_link:', error);
         alert('Erro ao gerar link do WhatsApp');
         return;
       }
 
+      console.log('✅ Resposta da RPC:', data);
+
       if (data?.success && data?.link) {
-        console.log('✅ Link gerado com sucesso:', data.link);
-        
-        // Verificar se é mobile (melhorada)
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                              (window.innerWidth <= 768 && /Android|iPhone|iPad/i.test(navigator.userAgent));
-        
-        if (isMobileDevice) {
-          // Em mobile, usar método específico para abrir WhatsApp
-          console.log('📱 Dispositivo móvel detectado, abrindo WhatsApp...');
-          
-          // Função para abrir WhatsApp de forma mais robusta
-          const openWhatsApp = (url: string) => {
-            console.log('📱 Tentando abrir WhatsApp com URL:', url);
-            
-            // Método 1: window.location.href (mais direto para mobile)
-            try {
-              window.location.href = url;
-              console.log('✅ WhatsApp aberto com window.location.href');
-            } catch (e) {
-              console.log('⚠️ Erro no método 1, tentando método 2:', e);
-              
-              // Método 2: Criar elemento <a> temporário
-              try {
-                const link = document.createElement('a');
-                link.href = url;
-                link.style.display = 'none';
-                
-                // Adicionar ao DOM temporariamente
-                document.body.appendChild(link);
-                
-                // Simular clique
-                link.click();
-                
-                // Remover do DOM
-                setTimeout(() => {
-                  if (document.body.contains(link)) {
-                    document.body.removeChild(link);
-                  }
-                }, 100);
-                
-                console.log('✅ WhatsApp aberto com elemento <a>');
-              } catch (e2) {
-                console.log('❌ Erro no método 2:', e2);
-                throw e2;
-              }
-            }
-          };
-          
-          // Verificar se o link já tem o protocolo whatsapp://
-          if (data.link.startsWith('whatsapp://')) {
-            openWhatsApp(data.link);
-          } else if (data.link.startsWith('https://wa.me/')) {
-            // Converter para protocolo nativo do WhatsApp
-            const phoneNumber = data.link.replace('https://wa.me/', '').split('?')[0];
-            const message = data.link.includes('?text=') ? data.link.split('?text=')[1] : '';
-            
-            // Decodificar a mensagem se estiver codificada
-            let decodedMessage = message;
-            try {
-              if (message) {
-                decodedMessage = decodeURIComponent(message);
-                console.log('📱 Mensagem decodificada:', decodedMessage);
-              }
-            } catch (e) {
-              console.log('⚠️ Erro ao decodificar mensagem, usando original:', message);
-              decodedMessage = message;
-            }
-            
-            // Criar URL do WhatsApp nativo com mensagem codificada
-            const whatsappUrl = `whatsapp://send?phone=${phoneNumber}${decodedMessage ? `&text=${encodeURIComponent(decodedMessage)}` : ''}`;
-            
-            console.log('📱 URL do WhatsApp nativo:', whatsappUrl);
-            
-                          // Tentar abrir o WhatsApp nativo
-              try {
-                openWhatsApp(whatsappUrl);
-                
-                // Adicionar timeout para fallback (reduzido para 1.5s)
-                setTimeout(() => {
-                  console.log('⚠️ Timeout - tentando fallback para web...');
-                  window.open(data.link, '_blank');
-                }, 1500);
-              } catch (e) {
-                console.log('⚠️ Erro ao abrir WhatsApp nativo, tentando web...');
-                window.open(data.link, '_blank');
-              }
-          } else {
-            // Se não for um link do WhatsApp, tentar converter
-            console.log('⚠️ Link não reconhecido, tentando converter...');
-            
-            // Tentar extrair número de telefone de qualquer link
-            const phoneMatch = data.link.match(/(\d{10,})/);
-            if (phoneMatch) {
-              const phoneNumber = phoneMatch[1];
-              const whatsappUrl = `whatsapp://send?phone=${phoneNumber}`;
-              openWhatsApp(whatsappUrl);
-            } else {
-              // Fallback para web
-              window.open(data.link, '_blank');
-            }
-          }
-        } else {
-          // Em desktop, abrir em nova aba
-          console.log('💻 Desktop detectado, abrindo em nova aba...');
-          window.open(data.link, '_blank');
-        }
+        console.log('✅ Link do WhatsApp gerado com sucesso:', data.link);
+        // Abrir o link do WhatsApp
+        window.open(data.link, '_blank');
       } else {
-        console.error('❌ Link não foi gerado corretamente:', data);
+        console.error('❌ Link do WhatsApp não foi gerado corretamente');
+        console.error('❌ Resposta da RPC:', data);
         alert('Erro: Link do WhatsApp não foi gerado corretamente');
       }
     } catch (error) {
-      console.error('❌ Erro inesperado ao gerar link do WhatsApp:', error);
+      console.error('💥 Erro inesperado ao gerar link do WhatsApp:', error);
       alert('Erro ao gerar link do WhatsApp');
     }
   }
@@ -1154,11 +1053,15 @@ export default function EditAppointmentModal({
                 </div>
               </div>
               
-                <PaymentMethodSelection
+                <PaymentMethodSelectionStatic
+                  paymentMethods={paymentMethods.map(method => ({
+                    ...method,
+                    icon: 'credit-card', // ícone padrão
+                    active: true
+                  }))}
                   onSelectPaymentMethod={handleSelectPaymentMethod}
                   selectedPaymentMethodId={selectedPaymentMethodId}
                   isLoading={isUpdatingAppointment}
-                  paymentMethods={paymentMethods}
                 />
               </div>
               

@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
 import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
 import Smartphone from 'lucide-react/dist/esm/icons/smartphone';
 import Building from 'lucide-react/dist/esm/icons/building';
-import { useApp } from '../contexts/AppContext';
-import { supabaseService } from '../lib/supabaseService';
 import { PaymentMethod } from '../types';
 
 interface PaymentMethodWithIcon extends PaymentMethod {
@@ -12,63 +10,19 @@ interface PaymentMethodWithIcon extends PaymentMethod {
   active?: boolean;
 }
 
-interface PaymentMethodSelectionProps {
+interface PaymentMethodSelectionStaticProps {
+  paymentMethods: PaymentMethodWithIcon[];
   onSelectPaymentMethod: (paymentMethodId: string) => void;
   selectedPaymentMethodId?: string;
   isLoading?: boolean;
 }
 
-export default function PaymentMethodSelection({
+export default function PaymentMethodSelectionStatic({
+  paymentMethods,
   onSelectPaymentMethod,
   selectedPaymentMethodId,
   isLoading = false
-}: PaymentMethodSelectionProps) {
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodWithIcon[]>([]);
-  const [isLoadingMethods, setIsLoadingMethods] = useState(true);
-  const { currentSalon } = useApp();
-
-  useEffect(() => {
-    const fetchPaymentMethods = async () => {
-      console.log('🔍 PaymentMethodSelection: currentSalon:', currentSalon);
-      
-      if (!currentSalon?.id) {
-        console.log('❌ PaymentMethodSelection: Nenhum salão disponível');
-        return;
-      }
-
-      try {
-        console.log('📞 PaymentMethodSelection: Buscando métodos de pagamento para salão:', currentSalon.id);
-        setIsLoadingMethods(true);
-        const { data, error } = await supabaseService.paymentMethods.list(currentSalon.id);
-        
-        if (error) {
-          console.error('❌ Erro ao buscar métodos de pagamento:', error);
-          return;
-        }
-
-        if (data) {
-          console.log('✅ PaymentMethodSelection: Métodos encontrados:', data);
-          // Assumir que todos os métodos retornados estão ativos
-          // e adicionar propriedades padrão para icon
-          const methodsWithDefaults = data.map(method => ({
-            ...method,
-            icon: 'credit-card', // ícone padrão
-            active: true
-          }));
-          setPaymentMethods(methodsWithDefaults);
-        } else {
-          console.log('⚠️ PaymentMethodSelection: Nenhum método de pagamento retornado');
-        }
-      } catch (error) {
-        console.error('💥 Erro inesperado ao buscar métodos de pagamento:', error);
-      } finally {
-        setIsLoadingMethods(false);
-      }
-    };
-
-    fetchPaymentMethods();
-  }, [currentSalon?.id]);
-
+}: PaymentMethodSelectionStaticProps) {
   const getIcon = (iconName: string) => {
     switch (iconName.toLowerCase()) {
       case 'credit-card':
@@ -88,7 +42,7 @@ export default function PaymentMethodSelection({
     }
   };
 
-  if (isLoadingMethods) {
+  if (isLoading) {
     return (
       <div className="space-y-3">
         <h3 className="text-base font-semibold text-gray-900">Método de Pagamento</h3>

@@ -469,6 +469,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   
   // Estado para métodos de pagamento
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   
 
   
@@ -501,6 +502,35 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   const { appointments, refreshAppointments } = useBooking();
   const { professionals } = useProfessional();
   const { currentSalon } = useApp();
+
+  // Função para carregar métodos de pagamento
+  const loadPaymentMethods = async () => {
+    if (!currentSalon?.id) return;
+
+    try {
+      setLoadingPaymentMethods(true);
+      console.log('📞 Agenda: Carregando métodos de pagamento para salão:', currentSalon.id);
+      
+      const { data, error } = await supabaseService.paymentMethods.list(currentSalon.id);
+      
+      if (error) {
+        console.error('❌ Erro ao carregar métodos de pagamento:', error);
+        return;
+      }
+
+      if (data) {
+        console.log('✅ Agenda: Métodos de pagamento carregados:', data);
+        setPaymentMethods(data);
+      } else {
+        console.log('⚠️ Agenda: Nenhum método de pagamento encontrado');
+        setPaymentMethods([]);
+      }
+    } catch (error) {
+      console.error('💥 Erro inesperado ao carregar métodos de pagamento:', error);
+    } finally {
+      setLoadingPaymentMethods(false);
+    }
+  };
 
   // Removido: useBooking já carrega automaticamente
 
@@ -553,30 +583,11 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     }
   }, [professionals, selectedProfessionalId]);
 
-  // Carregar métodos de pagamento
+  // Carregar métodos de pagamento quando o salão estiver disponível
   useEffect(() => {
-    const loadPaymentMethods = async () => {
-      if (!currentSalon?.id) return;
-      
-      try {
-        const { data: methodsData, error: methodsError } = await supabase.rpc('list_payment_methods', {
-          salon_id: currentSalon.id
-        });
-
-        if (methodsData) {
-          console.log('💳 Métodos de pagamento carregados:', methodsData);
-          setPaymentMethods(methodsData);
-        } else if (methodsError) {
-          console.error('❌ Erro ao buscar métodos de pagamento:', methodsError);
-          toast.error('Erro ao carregar métodos de pagamento');
-        }
-      } catch (error) {
-        console.error('❌ Erro inesperado ao carregar métodos de pagamento:', error);
-        toast.error('Erro ao carregar métodos de pagamento');
-      }
-    };
-
-    loadPaymentMethods();
+    if (currentSalon?.id) {
+      loadPaymentMethods();
+    }
   }, [currentSalon?.id]);
 
 
@@ -1642,12 +1653,12 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
         <AppointmentStatusGate
           appointmentId={selectedAppointmentId}
           isOpen={isEditModalOpen}
-          paymentMethods={paymentMethods}
           onClose={() => {
             setIsEditModalOpen(false);
             setSelectedAppointmentId(null);
             // Remover refreshAppointments() desnecessário - TanStack Query já gerencia cache
           }}
+          paymentMethods={paymentMethods}
         />
       )}
       
@@ -1847,7 +1858,17 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   );
 }
 
-function AppointmentStatusGate({ appointmentId, isOpen, onClose, paymentMethods }: { appointmentId: string, isOpen: boolean, onClose: () => void, paymentMethods?: any[] }) {
+function AppointmentStatusGate({ 
+  appointmentId, 
+  isOpen, 
+  onClose, 
+  paymentMethods 
+}: { 
+  appointmentId: string, 
+  isOpen: boolean, 
+  onClose: () => void,
+  paymentMethods: any[]
+}) {
   const { currentSalon } = useApp();
   
   // Não fazer requisição aqui - deixar para os modais individuais
@@ -1860,7 +1881,7 @@ function AppointmentStatusGate({ appointmentId, isOpen, onClose, paymentMethods 
       onClose={onClose}
       appointment={null}
       appointmentId={appointmentId}
-      paymentMethods={paymentMethods || []}
+      paymentMethods={paymentMethods}
     />
   );
 }

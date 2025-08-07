@@ -124,16 +124,16 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
   return (
       <div className="space-y-4">
         <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
-            <div 
-              onClick={() => setActiveResumoMetric('total_revenue')} 
-              className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
-                activeResumoMetric === 'total_revenue' 
-                  ? 'bg-blue-100/80 border-blue-400 ring-2 ring-blue-200' 
-                  : 'bg-white/80 border-gray-200'
-              } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
-            >
+                                  <div
+                        onClick={() => setActiveResumoMetric('total_revenue')}
+                        className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+                          activeResumoMetric === 'total_revenue'
+                            ? 'bg-blue-100/80 border-blue-400 ring-2 ring-blue-200'
+                            : 'bg-white/80 border-gray-200'
+                        } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
+                      >
                 <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Faturamento</h3>
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(totals?.total_revenue || 0)}</p>
+                          <p className="text-lg font-bold text-gray-900">{formatCurrency(totals?.total_revenue || 0)}</p>
           </div>
             <div 
               onClick={() => setActiveResumoMetric('total_profit')} 
