@@ -25,6 +25,33 @@ interface ProductFormData {
   disponivel: boolean;
 }
 
+// Função para formatar valor para moeda brasileira
+const formatCurrency = (value: string): string => {
+  // Remove tudo que não é número (incluindo R$ e espaços)
+  const numericValue = value.replace(/[^\d]/g, '');
+  
+  // Se não há números, retorna vazio
+  if (numericValue === '') return '';
+  
+  // Converte para número e divide por 100 (para considerar centavos)
+  const number = parseFloat(numericValue) / 100;
+  
+  // Formata para moeda brasileira
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(number);
+};
+
+// Função para converter valor formatado de volta para número
+const parseCurrency = (formattedValue: string): number => {
+  // Remove símbolos de moeda e espaços
+  const cleanValue = formattedValue.replace(/[R$\s.]/g, '').replace(',', '.');
+  return parseFloat(cleanValue) || 0;
+};
+
 export default function ProductModal({
   isOpen,
   onClose,
@@ -65,8 +92,8 @@ export default function ProductModal({
       
       setProductForm({
         nome: editingProduct.nome || '',
-        custoAquisicao: editingProduct.custoAquisicao?.toString() || '',
-        precoVenda: editingProduct.preco.toString() || '',
+        custoAquisicao: editingProduct.custoAquisicao ? formatCurrency((editingProduct.custoAquisicao * 100).toString()) : '',
+        precoVenda: editingProduct.preco ? formatCurrency((editingProduct.preco * 100).toString()) : '',
         margemLucro: margemCalculada,
         estoque: editingProduct.estoque.toString() || '',
         observacoes: '',
@@ -95,13 +122,13 @@ export default function ProductModal({
     
     if (!productForm.custoAquisicao.trim()) {
       newErrors.custoAquisicao = 'Custo é obrigatório';
-    } else if (parseFloat(productForm.custoAquisicao) < 0) {
+    } else if (parseCurrency(productForm.custoAquisicao) < 0) {
       newErrors.custoAquisicao = 'Custo deve ser positivo';
     }
     
     if (!productForm.precoVenda.trim()) {
       newErrors.precoVenda = 'Preço é obrigatório';
-    } else if (parseFloat(productForm.precoVenda) <= 0) {
+    } else if (parseCurrency(productForm.precoVenda) <= 0) {
       newErrors.precoVenda = 'Preço deve ser maior que zero';
     }
     
@@ -112,8 +139,8 @@ export default function ProductModal({
     }
     
     // Validar se preço é maior que custo
-    const custo = parseFloat(productForm.custoAquisicao) || 0;
-    const preco = parseFloat(productForm.precoVenda) || 0;
+    const custo = parseCurrency(productForm.custoAquisicao) || 0;
+    const preco = parseCurrency(productForm.precoVenda) || 0;
     if (custo > 0 && preco > 0 && preco <= custo) {
       newErrors.precoVenda = 'Preço deve ser maior que o custo';
     }
@@ -128,8 +155,8 @@ export default function ProductModal({
       
       // Calcular margem automaticamente quando custo ou preço mudam
       if (field === 'custoAquisicao' || field === 'precoVenda') {
-        const custo = parseFloat(field === 'custoAquisicao' ? value as string : prev.custoAquisicao) || 0;
-        const preco = parseFloat(field === 'precoVenda' ? value as string : prev.precoVenda) || 0;
+        const custo = field === 'custoAquisicao' ? parseCurrency(value as string) : parseCurrency(prev.custoAquisicao);
+        const preco = field === 'precoVenda' ? parseCurrency(value as string) : parseCurrency(prev.precoVenda);
         
         if (custo > 0 && preco > 0) {
           const margem = ((preco - custo) / preco) * 100;
@@ -151,12 +178,44 @@ export default function ProductModal({
     }
   };
 
+  // Função para lidar com mudanças nos campos de valor
+  const handleCurrencyChange = (field: 'custoAquisicao' | 'precoVenda', value: string) => {
+    // Aplica a máscara de formatação
+    const formattedValue = formatCurrency(value);
+    handleUpdateForm(field, formattedValue);
+    
+    // Limpar erro específico do campo quando valor é válido
+    if (errors[field]) {
+      const custo = field === 'custoAquisicao' ? parseCurrency(formattedValue) : parseCurrency(productForm.custoAquisicao);
+      const preco = field === 'precoVenda' ? parseCurrency(formattedValue) : parseCurrency(productForm.precoVenda);
+      
+      if (custo >= 0 && preco > 0 && preco > custo) {
+        setErrors(prev => ({
+          ...prev,
+          [field]: ''
+        }));
+      }
+    }
+  };
+
   const isFormValid = () => {
-    return productForm.nome.trim() !== '' && 
-           productForm.custoAquisicao.trim() !== '' &&
-           productForm.precoVenda.trim() !== '' &&
-           productForm.estoque.trim() !== '' &&
-           Object.keys(errors).length === 0;
+    // Verificar se todos os campos obrigatórios estão preenchidos
+    const hasRequiredFields = productForm.nome.trim() !== '' && 
+                             productForm.custoAquisicao.trim() !== '' &&
+                             productForm.precoVenda.trim() !== '' &&
+                             productForm.estoque.trim() !== '';
+    
+    // Verificar se não há erros de validação
+    const hasNoErrors = Object.keys(errors).length === 0;
+    
+    // Verificar se os valores numéricos são válidos
+    const custo = parseCurrency(productForm.custoAquisicao);
+    const preco = parseCurrency(productForm.precoVenda);
+    const estoque = parseInt(productForm.estoque) || 0;
+    
+    const hasValidNumbers = custo >= 0 && preco > 0 && estoque >= 0 && preco > custo;
+    
+    return hasRequiredFields && hasNoErrors && hasValidNumbers;
   };
 
   const handleSave = () => {
@@ -165,8 +224,8 @@ export default function ProductModal({
     const produto: Produto = {
       id: editingProduct?.id || Date.now().toString(),
       nome: productForm.nome.trim(),
-      preco: parseFloat(productForm.precoVenda) || 0,
-      custoAquisicao: parseFloat(productForm.custoAquisicao) || 0,
+      preco: parseCurrency(productForm.precoVenda) || 0,
+      custoAquisicao: parseCurrency(productForm.custoAquisicao) || 0,
       estoque: parseInt(productForm.estoque) || 0
     };
     
@@ -254,12 +313,10 @@ export default function ProductModal({
                   R$
                 </span>
                 <input
-                  type="number"
+                  type="text"
                   placeholder="0,00"
-                  step="0.01"
-                  min="0"
                   value={productForm.custoAquisicao}
-                  onChange={(e) => handleUpdateForm('custoAquisicao', e.target.value)}
+                  onChange={(e) => handleCurrencyChange('custoAquisicao', e.target.value)}
                   className={`w-full pl-8 pr-3 py-2.5 border rounded-lg text-sm transition-colors ${
                     errors.custoAquisicao 
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
@@ -281,12 +338,10 @@ export default function ProductModal({
                   R$
                 </span>
                 <input
-                  type="number"
+                  type="text"
                   placeholder="0,00"
-                  step="0.01"
-                  min="0"
                   value={productForm.precoVenda}
-                  onChange={(e) => handleUpdateForm('precoVenda', e.target.value)}
+                  onChange={(e) => handleCurrencyChange('precoVenda', e.target.value)}
                   className={`w-full pl-8 pr-3 py-2.5 border rounded-lg text-sm transition-colors ${
                     errors.precoVenda 
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
@@ -400,6 +455,7 @@ export default function ProductModal({
                 ? 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
+            title={`Debug: nome=${productForm.nome.trim() !== ''}, custo=${productForm.custoAquisicao.trim() !== ''}, preco=${productForm.precoVenda.trim() !== ''}, estoque=${productForm.estoque.trim() !== ''}, errors=${Object.keys(errors).length}`}
           >
             {editingProduct ? 'Atualizar' : 'Criar Produto'}
           </button>

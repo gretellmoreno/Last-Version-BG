@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
-import { BarChart2, List, Package, Star, Users } from 'lucide-react';
+import { BarChart2, List, Package, Star, Users, User, Award } from 'lucide-react';
 
 import Header from '../components/Header';
 import PeriodFilterModal from '../components/PeriodFilterModal';
@@ -315,8 +315,8 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
 
     if (error) {
       return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className={`${isMobile ? 'p-3' : 'p-6'}`}>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
             <h2 className={`font-semibold text-gray-900 mb-4 ${isMobile ? 'text-sm' : 'text-lg'}`}>Melhores Clientes</h2>
             <ErrorDisplay message={error} />
           </div>
@@ -326,11 +326,11 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
 
     if (!data.clientes) {
       return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className={`${isMobile ? 'p-3' : 'p-6'}`}>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
             <h2 className={`font-semibold text-gray-900 mb-4 ${isMobile ? 'text-sm' : 'text-lg'}`}>Melhores Clientes</h2>
-            <div className="text-center py-8">
-              <div className="text-gray-400 mb-4">📊</div>
+            <div className="text-center py-12">
+              <div className="text-gray-300 mb-4 text-4xl">📊</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum dado disponível</h3>
               <p className="text-gray-500 mb-4">Não há dados de clientes para o período selecionado</p>
             </div>
@@ -342,134 +342,40 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     const { rankings } = data.clientes.report;
 
     return (
-      <div className="space-y-6">
-        {/* Tabela de Rankings (ou Cards para Mobile) */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className={`${isMobile ? 'p-3' : 'p-6'}`}>
-            <h3 className={`font-semibold text-gray-900 mb-4 ${isMobile ? 'text-sm' : 'text-lg'}`}>
-              Ranking de Clientes
-            </h3>
-
-            {rankings.by_revenue.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                Nenhum cliente encontrado no período
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                {isMobile ? (
-                  // Versão Mobile - Cards
-                  <div className="space-y-3">
-                    {rankings.by_revenue.map((cliente, index) => (
-                      <div key={cliente.client_id} className="bg-gray-50 rounded-lg p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm">
-                              {index + 1}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm">{cliente.client_name}</p>
-                              <p className="text-xs text-gray-500">{cliente.total_visits} visitas</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-green-600 text-sm">{formatCurrency(cliente.total_revenue)}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            cliente.frequency === 'Semanal'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {cliente.frequency}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+      <div className="space-y-8">
+        {/* Cards de Top 3 - Mais Impactantes */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top 3 por Receita */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <User size={14} className="text-blue-600" />
                   </div>
-                ) : (
-                  // Versão Desktop - Tabela
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Posição
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Cliente
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Frequência
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Visitas
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Receita Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {rankings.by_revenue.map((cliente, index) => (
-                        <tr key={cliente.client_id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm">
-                                {index + 1}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {cliente.client_name}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              cliente.frequency === 'Semanal'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {cliente.frequency}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <div className="text-sm text-gray-900 font-medium">
-                              {cliente.total_visits}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <div className="text-sm font-bold text-green-600">
-                              {formatCurrency(cliente.total_revenue)}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  Top 3 por Receita
+                </h4>
+                {!isMobile && (
+                  <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    3 clientes
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Resumo dos Rankings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Top 3 por Receita */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4">
-              <h4 className="font-semibold text-gray-900 mb-3 text-sm">Top 3 por Receita</h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {rankings.by_revenue.slice(0, 3).map((cliente, index) => (
-                  <div key={cliente.client_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-xs">
+                  <div key={cliente.client_id} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-lg border border-gray-100 hover:bg-gray-50 transition-all duration-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center justify-center font-bold text-blue-600 text-lg">
                         {index + 1}
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{cliente.client_name}</span>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{cliente.client_name}</p>
+                        <p className="text-xs text-gray-500">{cliente.total_visits} visitas</p>
+                      </div>
                     </div>
-                    <span className="text-sm font-bold text-green-600">{formatCurrency(cliente.total_revenue)}</span>
+                    <div className="text-right">
+                      <p className="font-bold text-blue-600 text-sm">{formatCurrency(cliente.total_revenue)}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -477,23 +383,179 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
           </div>
 
           {/* Top 3 por Visitas */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4">
-              <h4 className="font-semibold text-gray-900 mb-3 text-sm">Top 3 por Visitas</h4>
-              <div className="space-y-2">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                  <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Users size={14} className="text-purple-600" />
+                  </div>
+                  Top 3 por Visitas
+                </h4>
+                {!isMobile && (
+                  <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    3 clientes
+                  </div>
+                )}
+              </div>
+              <div className="space-y-3">
                 {rankings.by_visits.slice(0, 3).map((cliente, index) => (
-                  <div key={cliente.client_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-xs">
+                  <div key={cliente.client_id} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-lg border border-gray-100 hover:bg-gray-50 transition-all duration-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center justify-center font-bold text-purple-600 text-lg">
                         {index + 1}
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{cliente.client_name}</span>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{cliente.client_name}</p>
+                        <p className="text-xs text-gray-500">{formatCurrency(cliente.total_revenue)}</p>
+                      </div>
                     </div>
-                    <span className="text-sm font-bold text-purple-600">{cliente.total_visits} visitas</span>
+                    <div className="text-right">
+                      <p className="font-bold text-purple-600 text-sm">{cliente.total_visits}</p>
+                      <p className="text-xs text-purple-500">visitas</p>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Tabela de Rankings - Mais Clean */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`font-bold text-gray-900 ${isMobile ? 'text-base' : 'text-xl'}`}>
+                Ranking Completo de Clientes
+              </h3>
+              <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {rankings.by_revenue.length} clientes
+              </div>
+            </div>
+
+            {rankings.by_revenue.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <div className="text-4xl mb-4">📊</div>
+                <p className="text-sm">Nenhum cliente encontrado no período</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                {isMobile ? (
+                  // Versão Mobile - Cards Modernos
+                  <div className="space-y-3">
+                    {rankings.by_revenue.map((cliente, index) => (
+                      <div key={cliente.client_id} className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg ${
+                              index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
+                              index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' :
+                              index === 2 ? 'bg-gradient-to-br from-amber-600 to-orange-600' :
+                              'bg-gradient-to-br from-blue-500 to-blue-600'
+                            }`}>
+                              {index === 0 ? <Award size={16} className="text-white" /> :
+                              index === 1 ? <Award size={16} className="text-white" /> :
+                              index === 2 ? <Award size={16} className="text-white" /> :
+                              index + 1}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900 text-sm">{cliente.client_name}</p>
+                              <p className="text-xs text-gray-500">{cliente.total_visits} visitas</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-emerald-600 text-sm">{formatCurrency(cliente.total_revenue)}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-2">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            cliente.frequency === 'Semanal'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}>
+                            {cliente.frequency}
+                          </span>
+                          <div className="text-xs text-gray-400">
+                            Posição #{index + 1}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  // Versão Desktop - Tabela Moderna
+                  <div className="overflow-hidden rounded-xl border border-gray-100">
+                    <table className="min-w-full divide-y divide-gray-100">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Posição
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Cliente
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Frequência
+                          </th>
+                          <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Visitas
+                          </th>
+                          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Receita Total
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-50">
+                        {rankings.by_revenue.map((cliente, index) => (
+                          <tr key={cliente.client_id} className="hover:bg-gray-50/50 transition-colors duration-200">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg ${
+                                  index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
+                                  index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' :
+                                  index === 2 ? 'bg-gradient-to-br from-amber-600 to-orange-600' :
+                                  'bg-gradient-to-br from-blue-500 to-blue-600'
+                                }`}>
+                                  {index === 0 ? <Award size={16} className="text-white" /> :
+                                  index === 1 ? <Award size={16} className="text-white" /> :
+                                  index === 2 ? <Award size={16} className="text-white" /> :
+                                  index + 1}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-semibold text-gray-900">
+                                {cliente.client_name}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                                cliente.frequency === 'Semanal'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : 'bg-amber-100 text-amber-800 border border-amber-200'
+                              }`}>
+                                {cliente.frequency}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                              <div className="text-sm font-semibold text-gray-900">
+                                {cliente.total_visits}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <div className="text-sm font-bold text-emerald-600">
+                                {formatCurrency(cliente.total_revenue)}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
