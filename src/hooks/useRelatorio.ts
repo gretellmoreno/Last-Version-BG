@@ -7,26 +7,24 @@ interface RelatorioPeriod {
   end: string;
 }
 
-interface FinancialDashboard {
-  dashboard: {
-    summary: {
-      total_services_revenue: number;
-      total_products_revenue: number;
-      total_gross_revenue: number;
-      total_net_profit: number;
-      salon_profit_from_services: number;
-      total_commissions: number;
-      salon_profit_from_products: number;
-    };
-  };
+interface DailyEvolutionData {
+  date: string;
+  services_revenue: number;
+  services_profit: number;
+  services_count: number;
+  products_revenue: number;
+  products_profit: number;
+  products_items_sold: number;
 }
 
-interface DailyMetric {
-  date: string;
-  atendimentos: number;
-  produtos: number;
-  faturamento_total: number;
-  lucro_liquido: number;
+interface ReportTotals {
+  total_revenue: number;
+  total_profit: number;
+}
+
+interface DailyEvolutionReport {
+  totals: ReportTotals;
+  daily_report: DailyEvolutionData[];
 }
 
 interface Atendimento {
@@ -77,8 +75,7 @@ interface ClientesPerformanceReport {
 }
 
 interface RelatorioData {
-  dashboard: FinancialDashboard | null;
-  dailyMetrics: DailyMetric[];
+  reportData: DailyEvolutionReport | null;
   atendimentos: Atendimento[];
   produtos: VendaProduto[];
   clientes: ClientesPerformanceReport | null;
@@ -88,19 +85,17 @@ interface UseRelatorioReturn {
   data: RelatorioData;
   loading: boolean;
   error: string | null;
-  loadDashboardData: (period: RelatorioPeriod) => Promise<void>;
+  loadReportData: (period: RelatorioPeriod) => Promise<void>;
   loadAtendimentosData: (period: RelatorioPeriod) => Promise<void>;
   loadProdutosData: (period: RelatorioPeriod) => Promise<void>;
   loadClientesData: (period: RelatorioPeriod) => Promise<void>;
-  loadDailyMetrics: (period: RelatorioPeriod) => Promise<void>;
   loadAllData: (period: RelatorioPeriod) => Promise<void>;
 }
 
 export const useRelatorio = (): UseRelatorioReturn => {
   const { currentSalon } = useApp();
   const [data, setData] = useState<RelatorioData>({
-    dashboard: null,
-    dailyMetrics: [],
+    reportData: null,
     atendimentos: [],
     produtos: [],
     clientes: null,
@@ -108,67 +103,37 @@ export const useRelatorio = (): UseRelatorioReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDashboardData = useCallback(async (period: RelatorioPeriod) => {
+  const loadReportData = useCallback(async (period: RelatorioPeriod) => {
     if (!currentSalon) return;
     
     setLoading(true);
     setError(null);
 
     try {
-      const { data: dashboardResponse, error: dashboardError } = await supabase.rpc('get_financial_dashboard', {
+      const { data: evolutionResponse, error: evolutionError } = await supabase.rpc('get_daily_evolution_report', {
         p_salon_id: currentSalon.id,
         p_date_from: period.start,
         p_date_to: period.end
       });
 
-      if (dashboardError) {
-        console.error('Erro ao buscar dashboard financeiro:', dashboardError);
-        setError('Erro ao carregar dados do dashboard');
-      } else {
+      if (evolutionError) {
+        console.error('Erro ao buscar relatório de evolução diária:', evolutionError);
+        setError('Erro ao carregar relatório de evolução diária');
+      } else if (evolutionResponse && evolutionResponse.data) {
         setData(prev => ({
           ...prev,
-          dashboard: dashboardResponse
+          reportData: evolutionResponse.data
+        }));
+      } else {
+        console.log('Nenhum dado retornado da função get_daily_evolution_report');
+        setData(prev => ({
+          ...prev,
+          reportData: null
         }));
       }
     } catch (err) {
-      console.error('Erro inesperado ao carregar dashboard:', err);
-      setError('Erro inesperado ao carregar dados');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentSalon]);
-
-  const loadDailyMetrics = useCallback(async (period: RelatorioPeriod) => {
-    if (!currentSalon) return;
-    
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { data: metricsResponse, error: metricsError } = await supabase.rpc('get_daily_metrics', {
-        p_salon_id: currentSalon.id,
-        p_date_from: period.start,
-        p_date_to: period.end
-      });
-
-      if (metricsError) {
-        console.error('Erro ao buscar métricas diárias:', metricsError);
-        setError('Erro ao carregar métricas diárias');
-      } else if (metricsResponse && metricsResponse.metrics && Array.isArray(metricsResponse.metrics)) {
-        setData(prev => ({
-          ...prev,
-          dailyMetrics: metricsResponse.metrics
-        }));
-      } else {
-        console.log('Nenhum dado retornado da função get_daily_metrics');
-        setData(prev => ({
-          ...prev,
-          dailyMetrics: []
-        }));
-      }
-    } catch (err) {
-      console.error('Erro inesperado ao carregar métricas:', err);
-      setError('Erro inesperado ao carregar métricas');
+      console.error('Erro inesperado ao carregar relatório de evolução:', err);
+      setError('Erro inesperado ao carregar relatório de evolução');
     } finally {
       setLoading(false);
     }
@@ -198,7 +163,7 @@ export const useRelatorio = (): UseRelatorioReturn => {
       }
     } catch (err) {
       console.error('Erro inesperado ao carregar atendimentos:', err);
-      setError('Erro inesperado ao carregar atendimentos');
+      setError('Erro inesperado ao carregar dados');
     } finally {
       setLoading(false);
     }
@@ -228,7 +193,7 @@ export const useRelatorio = (): UseRelatorioReturn => {
       }
     } catch (err) {
       console.error('Erro inesperado ao carregar produtos:', err);
-      setError('Erro inesperado ao carregar produtos');
+      setError('Erro inesperado ao carregar dados');
     } finally {
       setLoading(false);
     }
@@ -241,24 +206,24 @@ export const useRelatorio = (): UseRelatorioReturn => {
     setError(null);
 
     try {
-      const { data: clientsData, error: clientsError } = await supabase.rpc('get_clients_performance_report', {
+      const { data: clientsResponse, error: clientsError } = await supabase.rpc('get_clients_performance_report', {
         p_salon_id: currentSalon.id,
         p_date_from: period.start,
         p_date_to: period.end
       });
 
       if (clientsError) {
-        console.error('Erro ao buscar performance dos clientes:', clientsError);
+        console.error('Erro ao buscar relatório de clientes:', clientsError);
         setError('Erro ao carregar dados de clientes');
       } else {
         setData(prev => ({
           ...prev,
-          clientes: clientsData
+          clientes: clientsResponse
         }));
       }
     } catch (err) {
       console.error('Erro inesperado ao carregar clientes:', err);
-      setError('Erro inesperado ao carregar clientes');
+      setError('Erro inesperado ao carregar dados');
     } finally {
       setLoading(false);
     }
@@ -271,20 +236,8 @@ export const useRelatorio = (): UseRelatorioReturn => {
     setError(null);
 
     try {
-      // Carregar todos os dados em paralelo
-      const [
-        dashboardResponse,
-        metricsResponse,
-        appointmentsResponse,
-        productsResponse,
-        clientsResponse
-      ] = await Promise.all([
-        supabase.rpc('get_financial_dashboard', {
-          p_salon_id: currentSalon.id,
-          p_date_from: period.start,
-          p_date_to: period.end
-        }),
-        supabase.rpc('get_daily_metrics', {
+      const [evolutionResponse, appointmentsResponse, productsResponse, clientsResponse] = await Promise.all([
+        supabase.rpc('get_daily_evolution_report', {
           p_salon_id: currentSalon.id,
           p_date_from: period.start,
           p_date_to: period.end
@@ -306,29 +259,12 @@ export const useRelatorio = (): UseRelatorioReturn => {
         })
       ]);
 
-      // Verificar erros
-      const errors = [
-        dashboardResponse.error,
-        metricsResponse.error,
-        appointmentsResponse.error,
-        productsResponse.error,
-        clientsResponse.error
-      ].filter(Boolean);
-
-      if (errors.length > 0) {
-        console.error('Erros ao carregar dados:', errors);
-        setError('Erro ao carregar alguns dados');
-      }
-
-      // Atualizar estado com todos os dados
       setData({
-        dashboard: dashboardResponse.data,
-        dailyMetrics: metricsResponse.data?.metrics || [],
+        reportData: evolutionResponse.data?.data || null,
         atendimentos: appointmentsResponse.data || [],
         produtos: productsResponse.data || [],
         clientes: clientsResponse.data
       });
-
     } catch (err) {
       console.error('Erro inesperado ao carregar todos os dados:', err);
       setError('Erro inesperado ao carregar dados');
@@ -341,11 +277,10 @@ export const useRelatorio = (): UseRelatorioReturn => {
     data,
     loading,
     error,
-    loadDashboardData,
+    loadReportData,
     loadAtendimentosData,
     loadProdutosData,
     loadClientesData,
-    loadDailyMetrics,
-    loadAllData,
+    loadAllData
   };
 }; 

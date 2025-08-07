@@ -51,18 +51,20 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     };
   });
 
-  const [activeMetric, setActiveMetric] = useState<'atendimentos' | 'produtos' | 'faturamento_total' | 'lucro_liquido'>('faturamento_total');
+  // Estados para métricas ativas em cada aba
+  const [activeServicesMetric, setActiveServicesMetric] = useState<'services_revenue' | 'services_profit' | 'services_count'>('services_revenue');
+  const [activeProductsMetric, setActiveProductsMetric] = useState<'products_revenue' | 'products_profit' | 'products_items_sold'>('products_revenue');
+  const [activeResumoMetric, setActiveResumoMetric] = useState<'total_revenue' | 'total_profit'>('total_revenue');
 
   // Usar o hook personalizado
   const { 
     data, 
     loading, 
     error, 
-    loadDashboardData, 
+    loadReportData,
     loadAtendimentosData, 
     loadProdutosData, 
     loadClientesData, 
-    loadDailyMetrics,
     loadAllData 
   } = useRelatorio();
 
@@ -75,7 +77,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
-    
+
   // Função para formatar data apenas com dia e mês
   const formatDateShort = (dateString: string) => {
     const date = new Date(dateString);
@@ -83,20 +85,21 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     return `${day}/${month}`;
   };
-
+    
   // Carregar dados quando o componente monta ou quando o período muda
   useEffect(() => {
     if (currentSalon) {
       // Carregar dados específicos da aba ativa
       switch (activeTab) {
         case 'resumo':
-          loadDashboardData(selectedPeriod);
-          loadDailyMetrics(selectedPeriod);
+          loadReportData(selectedPeriod);
           break;
         case 'comandas':
+          loadReportData(selectedPeriod);
           loadAtendimentosData(selectedPeriod);
           break;
         case 'produtos':
+          loadReportData(selectedPeriod);
           loadProdutosData(selectedPeriod);
           break;
         case 'clientes':
@@ -104,19 +107,12 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
           break;
       }
     }
-  }, [currentSalon, selectedPeriod, activeTab, loadDashboardData, loadDailyMetrics, loadAtendimentosData, loadProdutosData, loadClientesData]);
+  }, [currentSalon, selectedPeriod, activeTab, loadReportData, loadAtendimentosData, loadProdutosData, loadClientesData]);
 
   const renderResumoTab = () => {
-    const summary = data.dashboard?.dashboard?.summary;
+    const totals = data.reportData?.totals;
+    const dailyData = data.reportData?.daily_report || [];
     
-    const isPeriodInvalid = () => {
-        const start = new Date(selectedPeriod.start);
-        const end = new Date(selectedPeriod.end);
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays < 2;
-    }
-
     if (loading) {
         return <LoadingSpinner size="lg" className="p-8" />;
     }
@@ -125,48 +121,189 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
         return <ErrorDisplay message={error} />;
     }
 
-  return (
+    return (
       <div className="space-y-4">
-        <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-            <div onClick={() => setActiveMetric('faturamento_total')} className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${activeMetric === 'faturamento_total' ? 'bg-orange-100/80 border-orange-400 ring-2 ring-orange-200' : 'bg-white/80 border-gray-200'} border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}>
+        <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
+            <div 
+              onClick={() => setActiveResumoMetric('total_revenue')} 
+              className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+                activeResumoMetric === 'total_revenue' 
+                  ? 'bg-blue-100/80 border-blue-400 ring-2 ring-blue-200' 
+                  : 'bg-white/80 border-gray-200'
+              } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
+            >
                 <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Faturamento</h3>
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary?.total_gross_revenue || 0)}</p>
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(totals?.total_revenue || 0)}</p>
           </div>
-            <div onClick={() => setActiveMetric('lucro_liquido')} className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${activeMetric === 'lucro_liquido' ? 'bg-purple-100/80 border-purple-400 ring-2 ring-purple-200' : 'bg-white/80 border-gray-200'} border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}>
+            <div 
+              onClick={() => setActiveResumoMetric('total_profit')} 
+              className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+                activeResumoMetric === 'total_profit' 
+                  ? 'bg-purple-100/80 border-purple-400 ring-2 ring-purple-200' 
+                  : 'bg-white/80 border-gray-200'
+              } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
+            >
                 <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Lucro Líquido</h3>
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary?.total_net_profit || 0)}</p>
-          </div>
-            <div onClick={() => setActiveMetric('atendimentos')} className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${activeMetric === 'atendimentos' ? 'bg-blue-100/80 border-blue-400 ring-2 ring-blue-200' : 'bg-white/80 border-gray-200'} border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}>
-                <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Atendimentos</h3>
-                <p className="text-lg font-bold text-gray-900">{data.atendimentos.length}</p>
-          </div>
-            <div onClick={() => setActiveMetric('produtos')} className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${activeMetric === 'produtos' ? 'bg-green-100/80 border-green-400 ring-2 ring-green-200' : 'bg-white/80 border-gray-200'} border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}>
-                <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Produtos</h3>
-                <p className="text-lg font-bold text-gray-900">{data.produtos.length}</p>
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(totals?.total_profit || 0)}</p>
           </div>
         </div>
 
-        {/* Gráfico sempre visível */}
+        {/* Gráfico */}
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Evolução Diária</h3>
-            <p className="text-sm text-gray-600">Clique nos cards acima para alterar a métrica exibida</p>
-          </div>
-          
-          {data.dailyMetrics.length === 0 ? (
+          {dailyData.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <div className="text-gray-400 mb-4">📊</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum dado disponível</h3>
               <p className="text-gray-500 mb-4">Não há dados para o período selecionado</p>
             </div>
-        ) : (
+          ) : (
             <ResumoChart 
-              data={data.dailyMetrics} 
-              metricKey={activeMetric}
+              data={dailyData}
+              metricKey={activeResumoMetric === 'total_revenue' ? 'services_revenue' : 'services_profit'}
               isMobile={isMobile}
             />
           )}
         </div>
+      </div>
+    );
+  };
+
+  const renderComandasTab = () => {
+    if (loading) {
+      return <LoadingSpinner size="lg" className="h-64" />;
+    }
+
+    if (error) {
+      return <ErrorDisplay message={error} />;
+    }
+
+    const dailyData = data.reportData?.daily_report || [];
+
+    return (
+      <div className="space-y-6">
+        {/* Pills para seleção de métrica */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveServicesMetric('services_revenue')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeServicesMetric === 'services_revenue'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Faturamento
+          </button>
+          <button
+            onClick={() => setActiveServicesMetric('services_profit')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeServicesMetric === 'services_profit'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Lucro Líquido
+          </button>
+          <button
+            onClick={() => setActiveServicesMetric('services_count')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeServicesMetric === 'services_count'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Nº de Atendimentos
+          </button>
+        </div>
+
+        {/* Gráfico */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-4">
+          {dailyData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-gray-400 mb-4">📊</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum dado disponível</h3>
+              <p className="text-gray-500 mb-4">Não há dados para o período selecionado</p>
+            </div>
+          ) : (
+            <ResumoChart 
+              data={dailyData}
+              metricKey={activeServicesMetric}
+              isMobile={isMobile}
+            />
+          )}
+        </div>
+
+        {/* Tabela de Atendimentos */}
+        <ComandasTab comandas={data.atendimentos} isLoading={loading} />
+      </div>
+    );
+  };
+
+  const renderProdutosTab = () => {
+    if (loading) {
+      return <LoadingSpinner size="lg" className="h-64" />;
+    }
+
+    if (error) {
+      return <ErrorDisplay message={error} />;
+    }
+
+    const dailyData = data.reportData?.daily_report || [];
+
+    return (
+      <div className="space-y-6">
+        {/* Pills para seleção de métrica */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveProductsMetric('products_revenue')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeProductsMetric === 'products_revenue'
+                ? 'bg-orange-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Faturamento
+          </button>
+          <button
+            onClick={() => setActiveProductsMetric('products_profit')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeProductsMetric === 'products_profit'
+                ? 'bg-red-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Lucro Líquido
+          </button>
+          <button
+            onClick={() => setActiveProductsMetric('products_items_sold')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeProductsMetric === 'products_items_sold'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Itens Vendidos
+          </button>
+        </div>
+
+        {/* Gráfico */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-4">
+          {dailyData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-gray-400 mb-4">📊</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum dado disponível</h3>
+              <p className="text-gray-500 mb-4">Não há dados para o período selecionado</p>
+            </div>
+          ) : (
+            <ResumoChart 
+              data={dailyData}
+              metricKey={activeProductsMetric}
+              isMobile={isMobile}
+            />
+          )}
+        </div>
+
+        {/* Tabela de Produtos */}
+        <ProdutosTab vendas={data.produtos} isLoading={loading} />
       </div>
     );
   };
@@ -451,22 +588,22 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
 
             <div className="tab-content">
               {activeTab === 'resumo' && renderResumoTab()}
-              {activeTab === 'comandas' && <ComandasTab comandas={data.atendimentos} isLoading={loading} />}
-              {activeTab === 'produtos' && <ProdutosTab vendas={data.produtos} isLoading={loading} />}
+              {activeTab === 'comandas' && renderComandasTab()}
+              {activeTab === 'produtos' && renderProdutosTab()}
               {activeTab === 'clientes' && renderClientesTab()}
             </div>
-                                </div>
-                              </div>
-                            </div>
-                            
+          </div>
+        </div>
+      </div>
+      
       {isPeriodModalOpen && (
-      <PeriodFilterModal
+        <PeriodFilterModal
           isOpen={isPeriodModalOpen}
           onClose={() => setIsPeriodModalOpen(false)}
-        onApply={handlePeriodChange}
-        currentPeriod={selectedPeriod}
-      />
-        )}
+          onApply={handlePeriodChange}
+          currentPeriod={selectedPeriod}
+        />
+      )}
     </div>
   );
 }

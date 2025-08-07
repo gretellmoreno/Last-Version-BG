@@ -11,25 +11,29 @@ import {
   CartesianGrid,
 } from 'recharts';
 
-interface Metric {
+interface DailyEvolutionData {
   date: string;
-  atendimentos: number;
-  produtos: number;
-  faturamento_total: number;
-  lucro_liquido: number;
+  services_revenue: number;
+  services_profit: number;
+  services_count: number;
+  products_revenue: number;
+  products_profit: number;
+  products_items_sold: number;
 }
 
 interface ResumoChartProps {
-  data: Metric[];
-  metricKey: 'atendimentos' | 'produtos' | 'faturamento_total' | 'lucro_liquido';
+  data: DailyEvolutionData[];
+  metricKey: 'services_revenue' | 'services_profit' | 'services_count' | 'products_revenue' | 'products_profit' | 'products_items_sold';
   isMobile: boolean;
 }
 
 const metricConfig = {
-  atendimentos: { name: 'Atendimentos', color: '#3b82f6' },
-  produtos: { name: 'Produtos', color: '#16a34a' },
-  faturamento_total: { name: 'Faturamento', color: '#f97316' },
-  lucro_liquido: { name: 'Lucro Líquido', color: '#8b5cf6' },
+  services_revenue: { name: 'Faturamento de Serviços', color: '#3b82f6' },
+  services_profit: { name: 'Lucro de Serviços', color: '#8b5cf6' },
+  services_count: { name: 'Nº de Atendimentos', color: '#16a34a' },
+  products_revenue: { name: 'Faturamento de Produtos', color: '#f97316' },
+  products_profit: { name: 'Lucro de Produtos', color: '#dc2626' },
+  products_items_sold: { name: 'Itens Vendidos', color: '#059669' },
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -37,7 +41,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const value = payload[0].value;
     const key = payload[0].dataKey;
     const name = metricConfig[key as keyof typeof metricConfig].name;
-    const isCurrency = key === 'faturamento_total' || key === 'lucro_liquido';
+    const isCurrency = key === 'services_revenue' || key === 'services_profit' || key === 'products_revenue' || key === 'products_profit';
 
     return (
       <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-gray-200">
@@ -54,6 +58,20 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function ResumoChart({ data, metricKey, isMobile }: ResumoChartProps) {
   const config = metricConfig[metricKey];
+
+  // Função para formatar valores do eixo Y de forma mais legível
+  const formatYAxisValue = (value: number) => {
+    const isCurrency = metricKey === 'services_revenue' || metricKey === 'services_profit' || metricKey === 'products_revenue' || metricKey === 'products_profit';
+    
+    if (isCurrency) {
+      if (value >= 1000) {
+        return `R$ ${(value / 1000).toFixed(1)}k`;
+      } else {
+        return `R$ ${value.toFixed(0)}`;
+      }
+    }
+    return value.toString();
+  };
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-4" style={{ height: isMobile ? 250 : 350 }}>
@@ -78,7 +96,7 @@ export default function ResumoChart({ data, metricKey, isMobile }: ResumoChartPr
             tick={{ fontSize: 11, fill: '#6b7280' }} 
             axisLine={false}
             tickLine={false}
-            tickFormatter={(value) => (metricKey === 'faturamento_total' || metricKey === 'lucro_liquido' ? `R$${value / 1000}k` : value)}
+            tickFormatter={formatYAxisValue}
           />
           <Tooltip content={<CustomTooltip />} />
           <defs>
