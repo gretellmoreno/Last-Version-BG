@@ -130,6 +130,20 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
         return <ErrorDisplay message={error} />;
     }
 
+    // Criar dados consolidados somando serviços + produtos
+    const consolidatedData = dailyData.map(day => ({
+      date: day.date,
+      total_revenue: day.services_revenue + day.products_revenue,
+      total_profit: day.services_profit + day.products_profit,
+      // Manter dados originais para compatibilidade
+      services_revenue: day.services_revenue,
+      services_profit: day.services_profit,
+      services_count: day.services_count,
+      products_revenue: day.products_revenue,
+      products_profit: day.products_profit,
+      products_items_sold: day.products_items_sold,
+    }));
+
   return (
       <div className="space-y-4">
         <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
@@ -159,7 +173,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
 
         {/* Gráfico */}
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200 p-4">
-          {dailyData.length === 0 ? (
+          {consolidatedData.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <div className="text-gray-400 mb-4">📊</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum dado disponível</h3>
@@ -167,8 +181,8 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
             </div>
           ) : (
             <ResumoChart 
-              data={dailyData}
-              metricKey={activeResumoMetric === 'total_revenue' ? 'services_revenue' : 'services_profit'}
+              data={consolidatedData}
+              metricKey={activeResumoMetric === 'total_revenue' ? 'total_revenue' : 'total_profit'}
               isMobile={isMobile}
             />
           )}

@@ -19,11 +19,13 @@ interface DailyEvolutionData {
   products_revenue: number;
   products_profit: number;
   products_items_sold: number;
+  total_revenue?: number;
+  total_profit?: number;
 }
 
 interface ResumoChartProps {
   data: DailyEvolutionData[];
-  metricKey: 'services_revenue' | 'services_profit' | 'services_count' | 'products_revenue' | 'products_profit' | 'products_items_sold';
+  metricKey: 'services_revenue' | 'services_profit' | 'services_count' | 'products_revenue' | 'products_profit' | 'products_items_sold' | 'total_revenue' | 'total_profit';
   isMobile: boolean;
 }
 
@@ -34,6 +36,8 @@ const metricConfig = {
   products_revenue: { name: 'Faturamento de Produtos', color: '#3b82f6' }, // Azul (mesmo que serviços)
   products_profit: { name: 'Lucro de Produtos', color: '#8b5cf6' }, // Roxo (mesmo que serviços)
   products_items_sold: { name: 'Itens Vendidos', color: '#16a34a' }, // Verde (mesmo que serviços)
+  total_revenue: { name: 'Receita Total', color: '#3b82f6' }, // Azul
+  total_profit: { name: 'Lucro Total', color: '#8b5cf6' }, // Roxo
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -41,7 +45,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const value = payload[0].value;
     const key = payload[0].dataKey;
     const name = metricConfig[key as keyof typeof metricConfig].name;
-    const isCurrency = key === 'services_revenue' || key === 'services_profit' || key === 'products_revenue' || key === 'products_profit';
+    const isCurrency = key === 'services_revenue' || key === 'services_profit' || 
+                      key === 'products_revenue' || key === 'products_profit' ||
+                      key === 'total_revenue' || key === 'total_profit';
 
     return (
       <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-gray-200">
@@ -61,7 +67,9 @@ export default function ResumoChart({ data, metricKey, isMobile }: ResumoChartPr
 
   // Função para formatar valores do eixo Y de forma mais legível
   const formatYAxisValue = (value: number) => {
-    const isCurrency = metricKey === 'services_revenue' || metricKey === 'services_profit' || metricKey === 'products_revenue' || metricKey === 'products_profit';
+    const isCurrency = metricKey === 'services_revenue' || metricKey === 'services_profit' || 
+                      metricKey === 'products_revenue' || metricKey === 'products_profit' ||
+                      metricKey === 'total_revenue' || metricKey === 'total_profit';
     
     if (isCurrency) {
       if (value >= 1000) {
