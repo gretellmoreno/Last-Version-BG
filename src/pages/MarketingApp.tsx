@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Scissors from 'lucide-react/dist/esm/icons/scissors';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
@@ -22,7 +21,6 @@ interface CreateSalonResponse {
 }
 
 const MarketingApp: React.FC = () => {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState<CreateSalonPayload>({
     ownerEmail: '',
     ownerPassword: '',
@@ -186,59 +184,39 @@ const MarketingApp: React.FC = () => {
       if (response.ok && data.success) {
         setSuccess(true);
         
-        // --- MELHORIA: Login automático mais robusto ---
+        // Fazer login automático após criação do salão
         try {
-          console.log('🔐 Iniciando login automático...');
-          
-          // 1. Tentar fazer login com as credenciais fornecidas
+          console.log('🔐 Fazendo login automático...');
           const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: formData.ownerEmail,
             password: formData.ownerPassword
           });
           
-          // 2. Verificar se o login foi bem-sucedido
           if (authError) {
             console.error('❌ Erro no login automático:', authError);
-            throw authError;
-          }
-          
-          // 3. Verificar se temos uma sessão válida
-          if (authData.user && authData.session) {
-            console.log('✅ Login automático realizado com sucesso!');
-            console.log('👤 Usuário logado:', authData.user.email);
-            
-            // 4. Redirecionar para a agenda após a tela de sucesso ser exibida
+            // Se falhar o login automático, redirecionar normalmente
             setTimeout(() => {
-              console.log('🚀 Redirecionando para /agenda...');
-              navigate('/agenda', { replace: true });
-            }, 3000); // 3 segundos para mostrar a tela de sucesso
-            
-          } else if (authData.user && !authData.session) {
-            // 5. Caso de confirmação de e-mail necessária
-            console.log('📧 Usuário criado mas precisa confirmar e-mail');
-            setError('Cadastro realizado! Por favor, verifique seu e-mail para confirmar sua conta.');
-            setSuccess(false);
-            
+              if (data.salonUrl) {
+                window.location.href = data.salonUrl;
+              }
+            }, 2000);
           } else {
-            // 6. Caso inesperado
-            throw new Error('Ocorreu um erro inesperado durante o login automático.');
+            console.log('✅ Login automático realizado com sucesso!');
+            // Redirecionar imediatamente após login bem-sucedido
+            setTimeout(() => {
+              if (data.salonUrl) {
+                window.location.href = data.salonUrl;
+              }
+            }, 1000);
           }
-          
         } catch (loginErr) {
           console.error('💥 Erro inesperado no login automático:', loginErr);
-          
-          // Fallback: redirecionar para a URL do salão se disponível
-          if (data.salonUrl) {
-            console.log('🔄 Fallback: redirecionando para URL do salão...');
-            setTimeout(() => {
-              window.location.href = data.salonUrl!;
-            }, 2000);
-          } else {
-            // Se não há URL do salão, redirecionar para agenda
-            setTimeout(() => {
-              navigate('/agenda', { replace: true });
-            }, 2000);
-          }
+          // Fallback: redirecionar normalmente
+          setTimeout(() => {
+            if (data.salonUrl) {
+              window.location.href = data.salonUrl;
+            }
+          }, 2000);
         }
       } else {
         setError(data.message || 'Erro desconhecido ao criar salão');
