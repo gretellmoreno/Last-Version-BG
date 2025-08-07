@@ -62,8 +62,17 @@ export default function PeriodFilterModal({ isOpen, onClose, onApply, currentPer
     const today = new Date();
     const lastWeek = new Date(today);
     lastWeek.setDate(today.getDate() - 7);
-    const start = lastWeek.toISOString().split('T')[0];
-    const end = today.toISOString().split('T')[0];
+    
+    // Formatação de data que respeita o timezone local
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const start = formatDate(lastWeek);
+    const end = formatDate(today);
     setSelectedPeriod({ start, end });
   };
 
@@ -71,8 +80,17 @@ export default function PeriodFilterModal({ isOpen, onClose, onApply, currentPer
     const today = new Date();
     const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-    const start = lastMonth.toISOString().split('T')[0];
-    const end = lastMonthEnd.toISOString().split('T')[0];
+    
+    // Formatação de data que respeita o timezone local
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const start = formatDate(lastMonth);
+    const end = formatDate(lastMonthEnd);
     setSelectedPeriod({ start, end });
   };
 

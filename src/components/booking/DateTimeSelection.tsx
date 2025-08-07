@@ -180,12 +180,22 @@ export default function DateTimeSelection({
 
       console.log('🔍 Fluxo completo - buscando disponibilidade para:', {
         professionalId: selectedProfessionalId,
-        date: bookingDate.toISOString().split('T')[0],
+        date: (() => {
+          const year = bookingDate.getFullYear();
+          const month = String(bookingDate.getMonth() + 1).padStart(2, '0');
+          const day = String(bookingDate.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        })(),
         totalDuration
       });
 
       setLoadingTimes(true);
-      const dateStr = bookingDate.toISOString().split('T')[0];
+      
+      // Formatação de data que respeita o timezone local
+      const year = bookingDate.getFullYear();
+      const month = String(bookingDate.getMonth() + 1).padStart(2, '0');
+      const day = String(bookingDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       
       try {
         const { data, error } = await supabaseService.professionals.getAvailability(

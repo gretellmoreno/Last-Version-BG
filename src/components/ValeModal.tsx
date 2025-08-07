@@ -87,7 +87,13 @@ export default function ValeModal({ isOpen, onClose, editingVale, onSave, onDele
           profissionalId: selectedProfessional,
           profissionalNome: professionals.find((p: Professional) => p.id === selectedProfessional)?.name || '',
           valor: valorNumerico,
-          data: new Date().toISOString().split('T')[0],
+          data: (() => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          })(),
         });
 
         if (!success) {

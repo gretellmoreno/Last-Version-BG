@@ -101,10 +101,14 @@ export default function AgendamentoPublico() {
 
   // Seleção automática quando há apenas um profissional
   useEffect(() => {
-    if (bookingData.professionals.length === 1 && !selectedProfessional) {
-      setSelectedProfessional(bookingData.professionals[0].id);
+    // Se há apenas um profissional, e estamos na etapa de seleção, avança automaticamente
+    if (bookingData.professionals.length === 1 && !selectedProfessional && salonData?.id && currentStep === 'professional') {
+      const singleProfessional = bookingData.professionals[0];
+      console.log('✅ Navegação automática para (profissional único):', singleProfessional.name);
+      setSelectedProfessional(singleProfessional.id);
+      setCurrentStep('services');
     }
-  }, [bookingData.professionals, selectedProfessional]);
+  }, [bookingData.professionals, selectedProfessional, salonData?.id, currentStep]);
 
   useEffect(() => {
     const loadSalonAndConfig = async () => {
@@ -203,26 +207,6 @@ export default function AgendamentoPublico() {
     } catch (e) {
       console.warn("Não foi possível carregar os dados do cliente do localStorage:", e);
     }
-  }, []); // O array vazio [] garante que ele rode apenas uma vez
-
-  // useEffect para carregar dados quando entrar na etapa de cliente
-  useEffect(() => {
-    if (currentStep === 'client') {
-      try {
-        const savedDataString = localStorage.getItem('belaGestao_clientData');
-        if (savedDataString) {
-          const savedData = JSON.parse(savedDataString);
-          if (savedData.name) {
-            setClientName(savedData.name);
-          }
-          if (savedData.phone) {
-            setClientPhone(savedData.phone);
-          }
-        }
-      } catch (e) {
-        console.warn("Erro ao carregar dados do cliente:", e);
-      }
-    }
   }, [currentStep]);
 
   // useEffect para buscar serviços específicos do profissional
@@ -287,7 +271,12 @@ export default function AgendamentoPublico() {
     const now = new Date();
     const minAdvanceMinutes = agendaConfig?.tempo_minimo_antecedencia || 60;
     const minDate = new Date(now.getTime() + minAdvanceMinutes * 60000);
-    return minDate.toISOString().split('T')[0];
+    
+    // Formatação de data que respeita o timezone local
+    const year = minDate.getFullYear();
+    const month = String(minDate.getMonth() + 1).padStart(2, '0');
+    const day = String(minDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Função para calcular data máxima (considerando período máximo)
@@ -295,7 +284,12 @@ export default function AgendamentoPublico() {
     const now = new Date();
     const maxDays = agendaConfig?.periodo_maximo_agendamento || 7;
     const maxDate = new Date(now.getTime() + maxDays * 24 * 60 * 60 * 1000);
-    return maxDate.toISOString().split('T')[0];
+    
+    // Formatação de data que respeita o timezone local
+    const year = maxDate.getFullYear();
+    const month = String(maxDate.getMonth() + 1).padStart(2, '0');
+    const day = String(maxDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Função para calcular a data/hora mínima permitida
@@ -362,13 +356,18 @@ export default function AgendamentoPublico() {
 
       console.log('🎯 === PARÂMETROS FINAIS ===');
       console.log('  - selectedProfessional:', selectedProfessional);
-      console.log('  - selectedDate:', selectedDate.toISOString().split('T')[0]);
+      console.log('  - selectedDate:', selectedDate);
       console.log('  - totalDuration:', totalDuration);
       console.log('  - agendaConfig?.intervalo_tempo:', agendaConfig?.intervalo_tempo);
 
-      const dateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      // Formatação de data que respeita o timezone local
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD
 
       console.log('📞 === CHAMANDO get_availability ===');
+      console.log('  - dateStr (formatação local):', dateStr);
       const { data, error } = await supabaseService.professionals.getAvailability(
         selectedProfessional,
         dateStr,
@@ -432,7 +431,11 @@ export default function AgendamentoPublico() {
     setIsCreating(true);
 
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Formatação de data que respeita o timezone local
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD
       
       const { data, error } = await supabaseService.linkAgendamento.createPublicAppointment({
         salonId: salonData.id,
@@ -1033,28 +1036,18 @@ export default function AgendamentoPublico() {
                   {bookingData.professionals.map((professional) => (
                     <div
                       key={professional.id}
-                      className={`relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-500 transform hover:scale-[1.02] hover:shadow-xl ${
-                        selectedProfessional === professional.id 
-                          ? 'shadow-xl' 
-                          : 'shadow-lg'
-                      }`}
-                      style={selectedProfessional === professional.id ? {
-                        backgroundColor: isLightPrimaryColor() ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.25)',
-                        border: isLightPrimaryColor() ? '2px solid rgba(0, 0, 0, 0.3)' : '1px solid rgba(255, 255, 255, 0.3)',
-                        backdropFilter: 'blur(20px)',
-                        boxShadow: isLightPrimaryColor() ? '0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1)' : '0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05)'
-                      } : {
+                      className={`relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-500 transform hover:scale-[1.02] hover:shadow-xl shadow-lg`}
+                      style={{
                         backgroundColor: isLightPrimaryColor() ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.15)',
                         border: isLightPrimaryColor() ? '2px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.2)',
                         backdropFilter: 'blur(15px)',
                         boxShadow: isLightPrimaryColor() ? '0 4px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08)' : '0 4px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)'
                       }}
                       onClick={() => {
+                        // Ir direto para a próxima etapa sem mostrar borda
                         setSelectedProfessional(professional.id);
-                        // Avançar automaticamente após um pequeno delay para feedback visual
-                        setTimeout(() => {
-                          goNext();
-                        }, 300);
+                        // Forçar navegação direta para a próxima etapa
+                        setCurrentStep('services');
                       }}
                     >
                       <div className="flex items-center p-4">
@@ -1066,16 +1059,16 @@ export default function AgendamentoPublico() {
                               alt={professional.name}
                               className="w-20 h-20 rounded-2xl object-cover border-2"
                               style={{ 
-                                borderColor: selectedProfessional === professional.id ? primaryColor : 'rgba(255, 255, 255, 0.4)',
-                                boxShadow: selectedProfessional === professional.id ? `0 0 12px ${primaryColor}30` : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                                borderColor: 'rgba(255, 255, 255, 0.4)',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                               }}
                             />
                           ) : (
                             <div
                               className="w-20 h-20 rounded-2xl flex items-center justify-center text-white font-medium text-xl"
                               style={{ 
-                                backgroundColor: selectedProfessional === professional.id ? primaryColor : (professional.color || DEFAULT_PROFESSIONAL_COLOR),
-                                boxShadow: selectedProfessional === professional.id ? `0 0 12px ${primaryColor}30` : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                                backgroundColor: (professional.color || DEFAULT_PROFESSIONAL_COLOR),
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                               }}
                             >
                               {professional.name.charAt(0).toUpperCase()}
@@ -1916,34 +1909,20 @@ export default function AgendamentoPublico() {
                   {bookingData.professionals.map((professional, index) => (
                     <div
                       key={professional.id}
-                      className={`relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
-                        selectedProfessional === professional.id 
-                          ? 'shadow-lg' 
-                          : 'shadow-sm hover:shadow-md'
-                      }`}
-                      style={selectedProfessional === professional.id ? {
-                        backgroundColor: `${primaryColor}20`,
-                        border: `2px solid ${primaryColor}`
-                      } : {
+                      className={`relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-[1.02] shadow-sm hover:shadow-md`}
+                      style={{
                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
                         border: '2px solid rgba(255, 255, 255, 0.15)',
                         backdropFilter: 'blur(10px)'
                       }}
                       onClick={() => {
+                        // Ir direto para a próxima etapa sem mostrar borda
                         setSelectedProfessional(professional.id);
-                        // Avançar automaticamente após um pequeno delay para feedback visual
-                        setTimeout(() => {
-                          goNext();
-                        }, 300);
+                        // Forçar navegação direta para a próxima etapa
+                        setCurrentStep('services');
                       }}
                     >
-                      {/* Indicador de seleção */}
-                      {selectedProfessional === professional.id && (
-                        <div 
-                          className="absolute top-0 left-0 w-1 h-full"
-                          style={{ backgroundColor: primaryColor }}
-                        />
-                      )}
+                      {/* Indicador de seleção - Removido */}
                       
                       <div className="flex items-center p-6">
                         {/* Avatar do profissional */}
@@ -1954,14 +1933,14 @@ export default function AgendamentoPublico() {
                               alt={professional.name}
                               className="w-24 h-24 rounded-2xl object-cover border-2"
                               style={{ 
-                                borderColor: selectedProfessional === professional.id ? primaryColor : 'rgba(255, 255, 255, 0.3)'
+                                borderColor: 'rgba(255, 255, 255, 0.3)'
                               }}
                             />
                           ) : (
                             <div
                               className="w-24 h-24 rounded-2xl flex items-center justify-center text-white font-medium text-2xl"
                               style={{ 
-                                backgroundColor: selectedProfessional === professional.id ? primaryColor : (professional.color || DEFAULT_PROFESSIONAL_COLOR)
+                                backgroundColor: (professional.color || DEFAULT_PROFESSIONAL_COLOR)
                               }}
                             >
                               {professional.name.charAt(0).toUpperCase()}
@@ -1974,7 +1953,7 @@ export default function AgendamentoPublico() {
                           <h3 
                             className="font-semibold text-xl truncate mb-1"
                             style={{ 
-                              color: selectedProfessional === professional.id ? primaryColor : (isLightPrimaryColor() ? '#000000' : '#FFFFFF')
+                              color: (isLightPrimaryColor() ? '#000000' : '#FFFFFF')
                             }}
                           >
                             {professional.name}
@@ -1989,16 +1968,7 @@ export default function AgendamentoPublico() {
                         
                         {/* Ícone de seleção */}
                         <div className="flex-shrink-0 ml-3">
-                          {selectedProfessional === professional.id ? (
-                            <div 
-                              className="w-7 h-7 rounded-full flex items-center justify-center"
-                              style={{ backgroundColor: primaryColor }}
-                            >
-                              <Check className="w-5 h-5 text-white" />
-                            </div>
-                          ) : (
                             <div className="w-7 h-7 rounded-full border-2 border-white/30 opacity-50" />
-                          )}
                         </div>
                       </div>
                     </div>
