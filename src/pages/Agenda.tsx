@@ -315,7 +315,7 @@ const MobileHeader = ({
 
   return (
     <div className="mobile-agenda-header bg-white border-b border-gray-200 flex items-center relative z-20">
-      {/* Linha única - Menu, Navegação de Data, Profissional e Adicionar */}
+      {/* Linha única - Menu, Navegação de Data, Botão Hoje, Profissional e Adicionar */}
       <div className="flex flex-wrap items-center justify-between gap-1 w-full">
         <button 
           onClick={onToggleSidebar}
@@ -350,6 +350,15 @@ const MobileHeader = ({
             <ChevronRight size={18} className="text-gray-600" />
           </button>
         </div>
+        {/* Botão Hoje - aparece apenas quando não está no dia atual */}
+        {!isToday() && (
+          <button
+            onClick={goToToday}
+            className="px-2 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors flex-shrink-0"
+          >
+            Hoje
+          </button>
+        )}
         {/* Seletor de Profissional e Botões */}
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
