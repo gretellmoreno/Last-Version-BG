@@ -660,8 +660,107 @@ export default function EditAppointmentModal({
 
       if (data?.success && data?.link) {
         console.log('✅ Link do WhatsApp gerado com sucesso:', data.link);
-        // Abrir o link do WhatsApp
-        window.open(data.link, '_blank');
+        
+        // Função para abrir WhatsApp de forma compatível com mobile
+        const openWhatsApp = (url: string) => {
+          try {
+            // Detectar tipo de dispositivo
+            const userAgent = navigator.userAgent;
+            const isiPhone = /iPhone|iPad|iPod/i.test(userAgent);
+            const isAndroid = /Android/i.test(userAgent);
+            const isMobile = isiPhone || isAndroid || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+            
+            console.log('📱 Detecção de dispositivo:', { isiPhone, isAndroid, isMobile, userAgent });
+            
+            if (isMobile) {
+              console.log('📱 Dispositivo móvel detectado, usando método mobile');
+              
+              // Estratégia 1: Tentar abrir diretamente
+              try {
+                window.location.href = url;
+                console.log('✅ Método 1 (window.location) executado');
+                return;
+              } catch (error1) {
+                console.log('❌ Método 1 falhou:', error1);
+              }
+              
+              // Estratégia 2: Criar link e clicar
+              try {
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(() => {
+                  document.body.removeChild(link);
+                }, 100);
+                
+                console.log('✅ Método 2 (link.click) executado');
+                return;
+              } catch (error2) {
+                console.log('❌ Método 2 falhou:', error2);
+              }
+              
+              // Estratégia 3: Tentar window.open
+              try {
+                const newWindow = window.open(url, '_blank');
+                if (newWindow) {
+                  console.log('✅ Método 3 (window.open) executado');
+                  return;
+                } else {
+                  console.log('❌ Método 3 falhou: popup bloqueado');
+                }
+              } catch (error3) {
+                console.log('❌ Método 3 falhou:', error3);
+              }
+              
+              // Estratégia 4: Para iPhone, tentar com iframe
+              if (isiPhone) {
+                try {
+                  console.log('🍎 iPhone detectado, tentando método específico');
+                  
+                  // Criar iframe temporário
+                  const iframe = document.createElement('iframe');
+                  iframe.style.display = 'none';
+                  iframe.src = url;
+                  
+                  document.body.appendChild(iframe);
+                  
+                  setTimeout(() => {
+                    document.body.removeChild(iframe);
+                  }, 1000);
+                  
+                  console.log('✅ Método 4 (iframe) executado para iPhone');
+                  return;
+                } catch (error4) {
+                  console.log('❌ Método 4 falhou:', error4);
+                }
+              }
+              
+              // Estratégia 5: Mostrar link para copiar
+              console.log('⚠️ Todos os métodos falharam, mostrando link para copiar');
+              alert(`📱 WhatsApp não pôde ser aberto automaticamente.\n\nLink: ${url}\n\nCopie e cole no seu navegador ou WhatsApp.`);
+              
+            } else {
+              console.log('💻 Desktop detectado, usando window.open');
+              // Para desktop, usar window.open normalmente
+              window.open(url, '_blank');
+            }
+            
+          } catch (error) {
+            console.error('💥 Erro geral ao abrir WhatsApp:', error);
+            // Fallback final: mostrar o link
+            alert(`Link do WhatsApp: ${url}\n\nCopie e cole no seu navegador.`);
+          }
+        };
+        
+        // Abrir o WhatsApp
+        openWhatsApp(data.link);
+        
       } else {
         console.error('❌ Link do WhatsApp não foi gerado corretamente');
         console.error('❌ Resposta da RPC:', data);
