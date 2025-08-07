@@ -590,6 +590,26 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     }
   }, [currentSalon?.id]);
 
+  // Função para scroll para início do dia
+  const scrollToStartOfDay = useCallback(() => {
+    // Criar uma data com horário 8:00
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(8, 0, 0, 0);
+    
+    // Aplicar scroll após um pequeno delay para garantir que o calendário esteja renderizado
+    setTimeout(() => {
+      const calendarElement = document.querySelector('.rbc-time-content');
+      if (calendarElement) {
+        calendarElement.scrollTop = 0;
+      }
+    }, 100);
+  }, [selectedDate]);
+
+  // Scroll para início do dia quando a data mudar
+  useEffect(() => {
+    scrollToStartOfDay();
+  }, [selectedDate, scrollToStartOfDay]);
+
 
 
   // Função para verificar novos agendamentos online
@@ -1566,6 +1586,9 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
               // Configurações adicionais para garantir seleção
               longPressThreshold={isMobile ? 10 : 50} // Tempo muito curto para mobile
               
+              // Scroll para início do dia (8:00) - tanto mobile quanto desktop
+              scrollToTime={new Date(new Date().setHours(8, 0, 0, 0))}
+              
               // Configurações específicas para mobile
               {...(isMobile && {
                 drilldownView: null,
@@ -1577,7 +1600,6 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
                 onSelectSlot: undefined, // Deixar apenas o TimeSlotWrapper lidar com cliques
                 // OTIMIZAÇÕES PARA SCROLL
                 onScroll: () => {}, // Handler vazio para scroll
-                scrollToTime: new Date(), // Scroll para horário atual
               })}
             
             // Personalização Visual
