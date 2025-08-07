@@ -63,7 +63,7 @@ export default function PeriodFilterModal({ isOpen, onClose, onApply, currentPer
     const lastWeek = new Date(today);
     lastWeek.setDate(today.getDate() - 7);
     
-    // Formatação de data que respeita o timezone local
+    // Usar as funções do dateUtils que tratam corretamente o timezone
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -81,7 +81,7 @@ export default function PeriodFilterModal({ isOpen, onClose, onApply, currentPer
     const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
     
-    // Formatação de data que respeita o timezone local
+    // Usar as funções do dateUtils que tratam corretamente o timezone
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');

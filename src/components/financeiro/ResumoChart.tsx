@@ -28,12 +28,12 @@ interface ResumoChartProps {
 }
 
 const metricConfig = {
-  services_revenue: { name: 'Faturamento de Serviços', color: '#3b82f6' },
-  services_profit: { name: 'Lucro de Serviços', color: '#8b5cf6' },
-  services_count: { name: 'Nº de Atendimentos', color: '#16a34a' },
-  products_revenue: { name: 'Faturamento de Produtos', color: '#f97316' },
-  products_profit: { name: 'Lucro de Produtos', color: '#dc2626' },
-  products_items_sold: { name: 'Itens Vendidos', color: '#059669' },
+  services_revenue: { name: 'Faturamento de Serviços', color: '#3b82f6' }, // Azul
+  services_profit: { name: 'Lucro de Serviços', color: '#8b5cf6' }, // Roxo
+  services_count: { name: 'Nº de Atendimentos', color: '#16a34a' }, // Verde
+  products_revenue: { name: 'Faturamento de Produtos', color: '#3b82f6' }, // Azul (mesmo que serviços)
+  products_profit: { name: 'Lucro de Produtos', color: '#8b5cf6' }, // Roxo (mesmo que serviços)
+  products_items_sold: { name: 'Itens Vendidos', color: '#16a34a' }, // Verde (mesmo que serviços)
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {

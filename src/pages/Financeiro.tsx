@@ -80,10 +80,13 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     
   // Função para formatar data apenas com dia e mês
   const formatDateShort = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month}`;
+    // Criar data no fuso horário local para evitar problemas de timezone
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    const dayFormatted = String(date.getDate()).padStart(2, '0');
+    const monthFormatted = String(date.getMonth() + 1).padStart(2, '0');
+    return `${dayFormatted}/${monthFormatted}`;
   };
 
   // Carregar dados quando o componente monta ou quando o período muda
@@ -109,6 +112,12 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     }
   }, [currentSalon, selectedPeriod, activeTab, loadReportData, loadAtendimentosData, loadProdutosData, loadClientesData]);
 
+  // Debug do período selecionado
+  useEffect(() => {
+    console.log('🔍 selectedPeriod mudou:', selectedPeriod);
+    console.log('🔍 Período formatado:', `${formatDateShort(selectedPeriod.start)} - ${formatDateShort(selectedPeriod.end)}`);
+  }, [selectedPeriod]);
+
   const renderResumoTab = () => {
     const totals = data.reportData?.totals;
     const dailyData = data.reportData?.daily_report || [];
@@ -132,7 +141,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
                             : 'bg-white/80 border-gray-200'
                         } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
                       >
-                <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Faturamento</h3>
+                <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Receita</h3>
                           <p className="text-lg font-bold text-gray-900">{formatCurrency(totals?.total_revenue || 0)}</p>
           </div>
             <div 
@@ -143,7 +152,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
                   : 'bg-white/80 border-gray-200'
               } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
             >
-                <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Lucro Líquido</h3>
+                <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Lucro</h3>
                 <p className="text-lg font-bold text-gray-900">{formatCurrency(totals?.total_profit || 0)}</p>
           </div>
         </div>
@@ -182,36 +191,39 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     return (
       <div className="space-y-6">
         {/* Pills para seleção de métrica */}
-        <div className="flex flex-wrap gap-2">
+        <div className={`grid gap-3 ${isMobile ? 'grid-cols-3' : 'grid-cols-3'}`}>
           <button
             onClick={() => setActiveServicesMetric('services_revenue')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
               activeServicesMetric === 'services_revenue'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                ? 'bg-blue-100/80 border-blue-400 ring-2 ring-blue-200'
+                : 'bg-white/80 border-gray-200'
+            } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
-            Faturamento
+            <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Receita</h3>
+            <p className="text-sm font-bold text-gray-900">Valor Total</p>
           </button>
           <button
             onClick={() => setActiveServicesMetric('services_profit')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
               activeServicesMetric === 'services_profit'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                ? 'bg-purple-100/80 border-purple-400 ring-2 ring-purple-200'
+                : 'bg-white/80 border-gray-200'
+            } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
-            Lucro Líquido
+            <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Lucro</h3>
+            <p className="text-sm font-bold text-gray-900">Valor Total</p>
           </button>
           <button
             onClick={() => setActiveServicesMetric('services_count')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
               activeServicesMetric === 'services_count'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                ? 'bg-emerald-100/80 border-emerald-400 ring-2 ring-emerald-200'
+                : 'bg-white/80 border-gray-200'
+            } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
-            Nº de Atendimentos
+            <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Atendimentos</h3>
+            <p className="text-sm font-bold text-gray-900">Realizados</p>
           </button>
         </div>
 
@@ -252,36 +264,39 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     return (
       <div className="space-y-6">
         {/* Pills para seleção de métrica */}
-        <div className="flex flex-wrap gap-2">
+        <div className={`grid gap-3 ${isMobile ? 'grid-cols-3' : 'grid-cols-3'}`}>
           <button
             onClick={() => setActiveProductsMetric('products_revenue')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
               activeProductsMetric === 'products_revenue'
-                ? 'bg-orange-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                ? 'bg-blue-100/80 border-blue-400 ring-2 ring-blue-200'
+                : 'bg-white/80 border-gray-200'
+            } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
-            Faturamento
+            <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Receita</h3>
+            <p className="text-sm font-bold text-gray-900">Valor Total</p>
           </button>
           <button
             onClick={() => setActiveProductsMetric('products_profit')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
               activeProductsMetric === 'products_profit'
-                ? 'bg-red-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                ? 'bg-purple-100/80 border-purple-400 ring-2 ring-purple-200'
+                : 'bg-white/80 border-gray-200'
+            } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
-            Lucro Líquido
+            <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Lucro</h3>
+            <p className="text-sm font-bold text-gray-900">Valor Total</p>
           </button>
           <button
             onClick={() => setActiveProductsMetric('products_items_sold')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
               activeProductsMetric === 'products_items_sold'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                ? 'bg-emerald-100/80 border-emerald-400 ring-2 ring-emerald-200'
+                : 'bg-white/80 border-gray-200'
+            } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
-            Itens Vendidos
+            <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Itens</h3>
+            <p className="text-sm font-bold text-gray-900">Vendidos</p>
           </button>
         </div>
 
@@ -355,11 +370,6 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
                   </div>
                   Top 3 por Receita
                 </h4>
-                {!isMobile && (
-                  <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    3 clientes
-                  </div>
-                )}
               </div>
               <div className="space-y-3">
                 {rankings.by_revenue.slice(0, 3).map((cliente, index) => (
@@ -392,11 +402,6 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
                   </div>
                   Top 3 por Visitas
                 </h4>
-                {!isMobile && (
-                  <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    3 clientes
-                  </div>
-                )}
               </div>
               <div className="space-y-3">
                 {rankings.by_visits.slice(0, 3).map((cliente, index) => (
@@ -482,8 +487,8 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
                         </div>
                       </div>
                     ))}
-                  </div>
-                ) : (
+            </div>
+        ) : (
                   // Versão Desktop - Tabela Moderna
                   <div className="overflow-hidden rounded-xl border border-gray-100">
                     <table className="min-w-full divide-y divide-gray-100">
@@ -563,7 +568,10 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
   };
 
   const handlePeriodChange = (period: { start: string, end: string }) => {
+    console.log('🔄 handlePeriodChange chamado com:', period);
+    console.log('📅 Período anterior:', selectedPeriod);
     setSelectedPeriod(period);
+    console.log('✅ Novo período definido:', period);
     setIsPeriodModalOpen(false);
   };
 
@@ -631,16 +639,16 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
               
               {/* Período */}
               <div className={`w-full ${isMobile ? 'flex justify-center' : 'flex justify-end'}`}>
-                <div className={`${isMobile ? 'w-full' : 'w-80'}`}>
+                <div className={`${isMobile ? 'w-full' : 'w-auto'}`}>
                   <button
                     onClick={() => setIsPeriodModalOpen(true)}
-                    className={`inline-flex items-center w-full border border-gray-300 shadow-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${
-                      isMobile ? 'px-6 py-3 text-sm justify-center' : 'px-4 py-2 text-sm h-10'
+                    className={`inline-flex items-center border border-gray-300 shadow-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${
+                      isMobile ? 'w-full px-6 py-3 text-sm justify-center' : 'px-4 py-2 text-sm h-10'
                     }`}
                     style={!isMobile ? { minHeight: '40px' } : {}}
                   >
-                    <Calendar className={`mr-3 ${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
-                    <span className={isMobile ? 'block w-full text-center font-medium' : 'block w-full text-left'}>
+                    <Calendar className={`mr-3 ${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                    <span className={isMobile ? 'block w-full text-center font-medium' : 'whitespace-nowrap font-medium'}>
                       Período: {`${formatDateShort(selectedPeriod.start)} - ${formatDateShort(selectedPeriod.end)}`}
                     </span>
                   </button>
