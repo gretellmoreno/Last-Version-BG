@@ -660,37 +660,89 @@ export default function EditAppointmentModal({
       if (data?.success && data?.link) {
         console.log('✅ Link gerado com sucesso:', data.link);
         
-        // Verificar se é mobile
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Verificar se é mobile (melhorada)
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                              (window.innerWidth <= 768 && /Android|iPhone|iPad/i.test(navigator.userAgent));
         
         if (isMobileDevice) {
-          // Em mobile, tentar abrir diretamente no WhatsApp
+          // Em mobile, usar método específico para abrir WhatsApp
           console.log('📱 Dispositivo móvel detectado, abrindo WhatsApp...');
+          
+          // Função para abrir WhatsApp de forma mais robusta
+          const openWhatsApp = (url: string) => {
+            console.log('📱 Tentando abrir WhatsApp com URL:', url);
+            
+            // Método 1: Criar elemento <a> temporário (mais confiável)
+            try {
+              const link = document.createElement('a');
+              link.href = url;
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              
+              // Adicionar ao DOM temporariamente
+              document.body.appendChild(link);
+              
+              // Simular clique
+              link.click();
+              
+              // Remover do DOM
+              setTimeout(() => {
+                if (document.body.contains(link)) {
+                  document.body.removeChild(link);
+                }
+              }, 100);
+              
+              console.log('✅ Link criado e clicado com sucesso');
+            } catch (e) {
+              console.log('⚠️ Erro no método 1, tentando método 2:', e);
+              
+              // Método 2: window.location.href (fallback)
+              try {
+                window.location.href = url;
+                console.log('✅ Fallback executado com sucesso');
+              } catch (e2) {
+                console.log('❌ Erro no fallback:', e2);
+                throw e2;
+              }
+            }
+          };
           
           // Verificar se o link já tem o protocolo whatsapp://
           if (data.link.startsWith('whatsapp://')) {
-            window.location.href = data.link;
+            openWhatsApp(data.link);
           } else if (data.link.startsWith('https://wa.me/')) {
             // Converter para protocolo nativo do WhatsApp
             const phoneNumber = data.link.replace('https://wa.me/', '').split('?')[0];
             const message = data.link.includes('?text=') ? data.link.split('?text=')[1] : '';
-            const whatsappUrl = `whatsapp://send?phone=${phoneNumber}${message ? `&text=${encodeURIComponent(message)}` : ''}`;
+            
+            // Decodificar a mensagem se estiver codificada
+            let decodedMessage = message;
+            try {
+              if (message) {
+                decodedMessage = decodeURIComponent(message);
+                console.log('📱 Mensagem decodificada:', decodedMessage);
+              }
+            } catch (e) {
+              console.log('⚠️ Erro ao decodificar mensagem, usando original:', message);
+              decodedMessage = message;
+            }
+            
+            // IMPORTANTE: Não codificar novamente a mensagem, pois já vem codificada do backend
+            const whatsappUrl = `whatsapp://send?phone=${phoneNumber}${decodedMessage ? `&text=${encodeURIComponent(decodedMessage)}` : ''}`;
+            
+            console.log('📱 URL do WhatsApp nativo:', whatsappUrl);
             
             // Tentar abrir o WhatsApp nativo
             try {
-              // Adicionar timeout para detectar se o WhatsApp foi aberto
-              const timeout = setTimeout(() => {
-                console.log('⚠️ Timeout - WhatsApp pode não estar instalado, tentando web...');
+              openWhatsApp(whatsappUrl);
+              
+              // Adicionar timeout para fallback
+              setTimeout(() => {
+                console.log('⚠️ Timeout - tentando fallback para web...');
                 window.open(data.link, '_blank');
-              }, 2000);
-              
-              window.location.href = whatsappUrl;
-              
-              // Se chegou aqui, provavelmente o WhatsApp foi aberto
-              clearTimeout(timeout);
+              }, 3000);
             } catch (e) {
               console.log('⚠️ Erro ao abrir WhatsApp nativo, tentando web...');
-              // Fallback para web se o app não estiver instalado
               window.open(data.link, '_blank');
             }
           } else {
