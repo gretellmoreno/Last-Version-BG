@@ -16,14 +16,16 @@ interface PaymentMethodSelectionProps {
   onSelectPaymentMethod: (paymentMethodId: string) => void;
   selectedPaymentMethodId?: string;
   isLoading?: boolean;
+  paymentMethods?: any[];
 }
 
 export default function PaymentMethodSelection({
   onSelectPaymentMethod,
   selectedPaymentMethodId,
-  isLoading = false
+  isLoading = false,
+  paymentMethods = []
 }: PaymentMethodSelectionProps) {
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodWithIcon[]>([]);
+  const [formattedPaymentMethods, setFormattedPaymentMethods] = useState<PaymentMethodWithIcon[]>([]);
   const [isLoadingMethods, setIsLoadingMethods] = useState(true);
   const { userContext } = useAuth();
   
@@ -51,7 +53,7 @@ export default function PaymentMethodSelection({
             icon: 'credit-card', // ícone padrão
             active: true
           }));
-          setPaymentMethods(methodsWithDefaults);
+          setFormattedPaymentMethods(methodsWithDefaults);
         }
       } catch (error) {
         console.error('Erro inesperado:', error);
@@ -60,8 +62,20 @@ export default function PaymentMethodSelection({
       }
     };
 
-    fetchPaymentMethods();
-  }, [currentSalon?.id]);
+    // Se paymentMethods foram passados como prop, usar eles
+    if (paymentMethods && paymentMethods.length > 0) {
+      const methodsWithDefaults = paymentMethods.map(method => ({
+        ...method,
+        icon: 'credit-card', // ícone padrão
+        active: true
+      }));
+      setFormattedPaymentMethods(methodsWithDefaults);
+      setIsLoadingMethods(false);
+    } else {
+      // Caso contrário, carregar do backend
+      fetchPaymentMethods();
+    }
+  }, [currentSalon?.id, paymentMethods]);
 
   const getIcon = (iconName: string) => {
     switch (iconName.toLowerCase()) {
@@ -101,7 +115,7 @@ export default function PaymentMethodSelection({
     <div className="space-y-3">
       <h3 className="text-base font-semibold text-gray-900">Método de Pagamento</h3>
       
-      {paymentMethods.length === 0 ? (
+      {formattedPaymentMethods.length === 0 ? (
         <div className="text-center py-6">
           <p className="text-gray-500 text-sm">Nenhum método de pagamento disponível</p>
           <p className="text-xs text-gray-400 mt-1">
@@ -110,7 +124,7 @@ export default function PaymentMethodSelection({
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2">
-          {paymentMethods.map((method) => (
+          {formattedPaymentMethods.map((method) => (
             <button
               key={method.id}
               onClick={() => onSelectPaymentMethod(method.id)}

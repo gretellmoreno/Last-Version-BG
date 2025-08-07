@@ -77,7 +77,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
-
+    
   // Função para formatar data apenas com dia e mês
   const formatDateShort = (dateString: string) => {
     const date = new Date(dateString);
@@ -85,7 +85,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     return `${day}/${month}`;
   };
-    
+
   // Carregar dados quando o componente monta ou quando o período muda
   useEffect(() => {
     if (currentSalon) {
@@ -112,7 +112,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
   const renderResumoTab = () => {
     const totals = data.reportData?.totals;
     const dailyData = data.reportData?.daily_report || [];
-    
+
     if (loading) {
         return <LoadingSpinner size="lg" className="p-8" />;
     }
@@ -121,7 +121,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
         return <ErrorDisplay message={error} />;
     }
 
-    return (
+  return (
       <div className="space-y-4">
         <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
             <div 
@@ -592,18 +592,18 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
               {activeTab === 'produtos' && renderProdutosTab()}
               {activeTab === 'clientes' && renderClientesTab()}
             </div>
-          </div>
-        </div>
-      </div>
-      
+                                </div>
+                              </div>
+                            </div>
+                            
       {isPeriodModalOpen && (
-        <PeriodFilterModal
+      <PeriodFilterModal
           isOpen={isPeriodModalOpen}
           onClose={() => setIsPeriodModalOpen(false)}
-          onApply={handlePeriodChange}
-          currentPeriod={selectedPeriod}
-        />
-      )}
+        onApply={handlePeriodChange}
+        currentPeriod={selectedPeriod}
+      />
+        )}
     </div>
   );
 }

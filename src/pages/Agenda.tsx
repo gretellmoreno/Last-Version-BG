@@ -467,6 +467,9 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
+  // Estado para métodos de pagamento
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  
 
   
   // Estados para o tooltip
@@ -549,6 +552,32 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
       setSelectedProfessionalId(professionals[0].id);
     }
   }, [professionals, selectedProfessionalId]);
+
+  // Carregar métodos de pagamento
+  useEffect(() => {
+    const loadPaymentMethods = async () => {
+      if (!currentSalon?.id) return;
+      
+      try {
+        const { data: methodsData, error: methodsError } = await supabase.rpc('list_payment_methods', {
+          salon_id: currentSalon.id
+        });
+
+        if (methodsData) {
+          console.log('💳 Métodos de pagamento carregados:', methodsData);
+          setPaymentMethods(methodsData);
+        } else if (methodsError) {
+          console.error('❌ Erro ao buscar métodos de pagamento:', methodsError);
+          toast.error('Erro ao carregar métodos de pagamento');
+        }
+      } catch (error) {
+        console.error('❌ Erro inesperado ao carregar métodos de pagamento:', error);
+        toast.error('Erro ao carregar métodos de pagamento');
+      }
+    };
+
+    loadPaymentMethods();
+  }, [currentSalon?.id]);
 
 
 
@@ -1613,6 +1642,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
         <AppointmentStatusGate
           appointmentId={selectedAppointmentId}
           isOpen={isEditModalOpen}
+          paymentMethods={paymentMethods}
           onClose={() => {
             setIsEditModalOpen(false);
             setSelectedAppointmentId(null);
@@ -1817,7 +1847,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   );
 }
 
-function AppointmentStatusGate({ appointmentId, isOpen, onClose }: { appointmentId: string, isOpen: boolean, onClose: () => void }) {
+function AppointmentStatusGate({ appointmentId, isOpen, onClose, paymentMethods }: { appointmentId: string, isOpen: boolean, onClose: () => void, paymentMethods?: any[] }) {
   const { currentSalon } = useApp();
   
   // Não fazer requisição aqui - deixar para os modais individuais
@@ -1830,6 +1860,7 @@ function AppointmentStatusGate({ appointmentId, isOpen, onClose }: { appointment
       onClose={onClose}
       appointment={null}
       appointmentId={appointmentId}
+      paymentMethods={paymentMethods || []}
     />
   );
 }

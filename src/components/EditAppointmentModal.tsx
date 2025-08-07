@@ -36,6 +36,7 @@ interface EditAppointmentModalProps {
   onClose: () => void;
   appointment: CalendarEvent | null;
   appointmentId?: string | null;
+  paymentMethods?: any[];
 }
 
 interface ClientFormData {
@@ -52,7 +53,8 @@ export default function EditAppointmentModal({
   isOpen,
   onClose,
   appointment,
-  appointmentId
+  appointmentId,
+  paymentMethods = []
 }: EditAppointmentModalProps) {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -627,36 +629,85 @@ export default function EditAppointmentModal({
     const appointmentId = appointment?.id;
     
     if (!appointmentId) {
+      console.error('❌ ID do agendamento não encontrado');
       alert('Erro: ID do agendamento não encontrado.');
       return;
     }
 
     if (!currentSalon?.id) {
+      console.error('❌ ID do salão não encontrado');
       alert('Erro: ID do salão não encontrado.');
       return;
     }
 
     try {
+      console.log('📱 Gerando link do WhatsApp para:', { appointmentId, salonId: currentSalon.id });
+      
       // Chamar a RPC para gerar o link do WhatsApp
       const { data, error } = await supabase.rpc('generate_whatsapp_reminder_link', {
         p_appointment_id: appointmentId,
         p_salon_id: currentSalon.id
       });
 
+      console.log('📱 Resposta da RPC:', { data, error });
+
       if (error) {
-        console.error('Erro na RPC:', error);
+        console.error('❌ Erro na RPC:', error);
         alert('Erro ao gerar link do WhatsApp');
         return;
       }
 
       if (data?.success && data?.link) {
-        // Abrir o link do WhatsApp
-        window.open(data.link, '_blank');
+        console.log('✅ Link gerado com sucesso:', data.link);
+        
+        // Verificar se é mobile
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobileDevice) {
+          // Em mobile, tentar abrir diretamente no WhatsApp
+          console.log('📱 Dispositivo móvel detectado, abrindo WhatsApp...');
+          
+          // Verificar se o link já tem o protocolo whatsapp://
+          if (data.link.startsWith('whatsapp://')) {
+            window.location.href = data.link;
+          } else if (data.link.startsWith('https://wa.me/')) {
+            // Converter para protocolo nativo do WhatsApp
+            const phoneNumber = data.link.replace('https://wa.me/', '').split('?')[0];
+            const message = data.link.includes('?text=') ? data.link.split('?text=')[1] : '';
+            const whatsappUrl = `whatsapp://send?phone=${phoneNumber}${message ? `&text=${encodeURIComponent(message)}` : ''}`;
+            
+            // Tentar abrir o WhatsApp nativo
+            try {
+              // Adicionar timeout para detectar se o WhatsApp foi aberto
+              const timeout = setTimeout(() => {
+                console.log('⚠️ Timeout - WhatsApp pode não estar instalado, tentando web...');
+                window.open(data.link, '_blank');
+              }, 2000);
+              
+              window.location.href = whatsappUrl;
+              
+              // Se chegou aqui, provavelmente o WhatsApp foi aberto
+              clearTimeout(timeout);
+            } catch (e) {
+              console.log('⚠️ Erro ao abrir WhatsApp nativo, tentando web...');
+              // Fallback para web se o app não estiver instalado
+              window.open(data.link, '_blank');
+            }
+          } else {
+            // Tentar abrir normalmente
+            window.open(data.link, '_blank');
+          }
+        } else {
+          // Em desktop, abrir em nova aba
+          console.log('💻 Desktop detectado, abrindo em nova aba...');
+          window.open(data.link, '_blank');
+        }
       } else {
+        console.error('❌ Link não foi gerado corretamente:', data);
         alert('Erro: Link do WhatsApp não foi gerado corretamente');
       }
     } catch (error) {
-      console.error('Erro ao gerar link do WhatsApp:', error);
+      console.error('❌ Erro inesperado ao gerar link do WhatsApp:', error);
       alert('Erro ao gerar link do WhatsApp');
     }
   }
@@ -1045,6 +1096,7 @@ export default function EditAppointmentModal({
                   onSelectPaymentMethod={handleSelectPaymentMethod}
                   selectedPaymentMethodId={selectedPaymentMethodId}
                   isLoading={isUpdatingAppointment}
+                  paymentMethods={paymentMethods}
                 />
               </div>
               
