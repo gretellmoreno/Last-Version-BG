@@ -101,14 +101,15 @@ export default function AgendamentoPublico() {
 
   // Seleção automática quando há apenas um profissional
   useEffect(() => {
-    // Se há apenas um profissional, e estamos na etapa de seleção, avança automaticamente
-    if (bookingData.professionals.length === 1 && !selectedProfessional && salonData?.id && currentStep === 'professional') {
+    // Mantemos na página inicial (profissionais). Se existir apenas um profissional,
+    // podemos pré-selecionar internamente, mas NÃO avançamos de etapa automaticamente.
+    if (bookingData.professionals.length === 1 && !selectedProfessional && salonData?.id) {
       const singleProfessional = bookingData.professionals[0];
-      console.log('✅ Navegação automática para (profissional único):', singleProfessional.name);
+      console.log('ℹ️ Profissional único detectado:', singleProfessional.name, '— mantendo na etapa de profissionais');
+      // Opcional: pré-selecionar para agilizar depois
       setSelectedProfessional(singleProfessional.id);
-      setCurrentStep('services');
     }
-  }, [bookingData.professionals, selectedProfessional, salonData?.id, currentStep]);
+  }, [bookingData.professionals, selectedProfessional, salonData?.id]);
 
   useEffect(() => {
     const loadSalonAndConfig = async () => {
@@ -471,13 +472,7 @@ export default function AgendamentoPublico() {
 
         setShowSuccessModal(true);
         
-        // Redirecionar após 800ms (menos de 1 segundo)
-        setTimeout(() => {
-          // Redirecionar para a página principal do agendamento público
-          // Limpar todos os parâmetros e voltar ao início
-          const baseUrl = window.location.origin + window.location.pathname;
-          window.location.href = baseUrl;
-        }, 800);
+        // Não redireciona automaticamente; as ações ficam no modal de sucesso
       } else {
         alert(data?.message || 'Erro desconhecido ao criar agendamento');
       }
@@ -901,7 +896,7 @@ export default function AgendamentoPublico() {
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `
+            backgroundImage: `
               linear-gradient(45deg, 
                 transparent 0%, 
                 rgba(255,255,255,0.1) 25%, 
@@ -917,6 +912,7 @@ export default function AgendamentoPublico() {
                 transparent 100%
               )
             `,
+            backgroundRepeat: 'no-repeat, no-repeat',
             backgroundSize: '200% 200%, 150% 150%',
             animation: 'gradientShift 8s ease-in-out infinite'
           }}
@@ -1273,7 +1269,7 @@ export default function AgendamentoPublico() {
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `
+            backgroundImage: `
               linear-gradient(45deg, 
                 transparent 0%, 
                 rgba(255,255,255,0.1) 25%, 
@@ -1289,6 +1285,7 @@ export default function AgendamentoPublico() {
                 transparent 100%
               )
             `,
+            backgroundRepeat: 'no-repeat, no-repeat',
             backgroundSize: '200% 200%, 150% 150%',
             animation: 'gradientShift 8s ease-in-out infinite'
           }}
@@ -1602,7 +1599,7 @@ export default function AgendamentoPublico() {
           <div 
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: `
+              backgroundImage: `
                 linear-gradient(45deg, 
                   transparent 0%, 
                   rgba(255,255,255,0.1) 25%, 
@@ -1618,6 +1615,7 @@ export default function AgendamentoPublico() {
                   transparent 100%
                 )
               `,
+              backgroundRepeat: 'no-repeat, no-repeat',
               backgroundSize: '200% 200%, 150% 150%',
               animation: 'gradientShift 8s ease-in-out infinite'
             }}
@@ -2239,32 +2237,63 @@ export default function AgendamentoPublico() {
       {/* Modal de Sucesso */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-sm mx-4 text-center shadow-2xl transform transition-all duration-300">
-            {/* Ícone de Sucesso */}
-            <div 
-              className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center"
-              style={{ backgroundColor: `${primaryColor}20` }}
-            >
-              <div 
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: primaryColor }}
-              >
-                <Check className="w-5 h-5 text-white" />
-              </div>
-            </div>
-
-            {/* Título */}
-            <h3 className="text-xl font-bold mb-2 text-gray-800">
-              Agendamento Confirmado!
-            </h3>
-
-            {/* Mensagem */}
-            <p className="text-sm text-gray-600">
-              Seu agendamento foi realizado com sucesso. Nos vemos em breve!
-            </p>
-          </div>
-        </div>
-      )}
+          <div className="bg-white rounded-2xl max-w-sm mx-4 my-8 text-center shadow-2xl transform transition-all duration-300 px-8 sm:px-10 pt-8 sm:pt-10 pb-10 sm:pb-12">
+             {/* Ícone de Sucesso */}
+             <div 
+               className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center"
+               style={{ backgroundColor: `${primaryColor}20` }}
+             >
+               <div 
+                 className="w-8 h-8 rounded-full flex items-center justify-center"
+                 style={{ backgroundColor: primaryColor }}
+               >
+                 <Check className="w-5 h-5 text-white" />
+               </div>
+             </div>
+ 
+             {/* Título */}
+             <h3 className="text-xl font-bold mb-3 text-gray-800">
+               Agendamento Confirmado!
+             </h3>
+ 
+             {/* Mensagem */}
+             <p className="text-sm text-gray-600 mb-7">
+               Seu agendamento foi realizado com sucesso. O que deseja fazer agora?
+             </p>
+ 
+             <div className="space-y-3">
+               <button
+                 onClick={() => {
+                   // Voltar ao início do agendamento público
+                   const baseUrl = window.location.origin + window.location.pathname;
+                   window.location.href = baseUrl;
+                 }}
+                 className="w-full py-3 rounded-lg font-semibold text-white"
+                 style={{ backgroundColor: primaryColor }}
+               >
+                 Agendar outro serviço
+               </button>
+ 
+               <button
+                 onClick={() => {
+                   // Ir para Meus Agendamentos (com ou sem salonId)
+                   const params = new URLSearchParams();
+                   if (!salonSlug && salonData?.id) {
+                     params.set('salonId', salonData.id);
+                     navigate(`/meus-agendamentos?${params.toString()}`);
+                   } else {
+                     navigate('/meus-agendamentos');
+                   }
+                 }}
+                 className="w-full py-3 rounded-lg font-semibold border"
+                 style={{ color: primaryColor, borderColor: primaryColor }}
+               >
+                 Ver meus agendamentos
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
     </>
   );
 } 

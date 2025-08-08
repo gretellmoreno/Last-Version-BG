@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useRe
 import { useAuth } from './AuthContext';
 import { useSalonSlug, useIsMainDomain } from '../hooks/useSubdomain';
 import { salonService } from '../lib/salonService';
+import { supabaseService } from '../lib/supabaseService';
 
 interface Salon {
   id: string;
@@ -9,6 +10,7 @@ interface Salon {
   subdomain: string;
   public_profile_photo_url: string | null;
   public_display_name: string | null;
+  has_services?: boolean;
 }
 
 interface AppContextType {
@@ -18,7 +20,10 @@ interface AppContextType {
   error: string | null;
   salonSlug: string | null;
   isMainDomain: boolean;
+  hasServices: boolean;
+  initialLoading: boolean;
   setSalon: (salon: Salon | null) => void;
+  updateHasServices: (hasServices: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -40,21 +45,49 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [hasServices, setHasServices] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const loadingRef = useRef(false);
   
   const { user, isAuthenticated } = useAuth();
   const salonSlug = useSalonSlug();
   const isMainDomain = useIsMainDomain();
 
+  // Função para carregar dados iniciais do salão (incluindo has_services)
+  const loadInitialData = async (salonId: string) => {
+    try {
+      const { data, error } = await supabaseService.utilities.getUserContext();
+      
+      if (error) {
+        console.error('❌ Erro ao carregar dados iniciais:', error);
+        return;
+      }
+      
+      if (data && data.salons && data.salons.length > 0) {
+        const salonData = data.salons.find((salon: any) => salon.id === salonId);
+        if (salonData) {
+          setHasServices(!!salonData.has_services);
+          
+          // Atualizar o salão atual com os dados completos
+          setCurrentSalon(prev => prev ? {
+            ...prev,
+            has_services: !!salonData.has_services
+          } : null);
+        }
+      }
+    } catch (err) {
+      console.error('💥 Erro inesperado ao carregar dados iniciais:', err);
+    }
+  };
+
   // Função para buscar salão pelo subdomínio
   const loadSalonBySlug = async (slug: string) => {
     if (loadingRef.current) {
-      console.log('⚠️ Carregamento de salão já em andamento, ignorando...');
       return;
     }
 
-    console.log('🔄 Carregando salão pelo slug:', slug);
     setLoading(true);
+    setInitialLoading(true);
     setError(null);
     loadingRef.current = true;
 
@@ -62,11 +95,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const response = await salonService.getSalonBySlug(slug);
       
       if (response.success && response.salon) {
-        console.log('✅ Salão carregado:', response.salon.name);
         setCurrentSalon(response.salon);
+        // Carregar dados iniciais incluindo has_services
+        await loadInitialData(response.salon.id);
+        // Só marcar como pronto após dados iniciais
         setIsReady(true);
       } else {
-        console.error('❌ Falha ao carregar salão:', response.error);
         setError(response.error || 'Salão não encontrado');
         setCurrentSalon(null);
         setIsReady(false);
@@ -78,6 +112,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setIsReady(false);
     } finally {
       setLoading(false);
+      setInitialLoading(false);
       loadingRef.current = false;
     }
   };
@@ -85,35 +120,35 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // Função para carregar salão do usuário (método antigo, para domínio principal)
   const loadUserSalons = async () => {
     if (loadingRef.current) {
-      console.log('⚠️ Carregamento de salão já em andamento, ignorando...');
       return;
     }
 
     if (!user?.id) {
-      console.log('❌ Usuário não encontrado');
       setLoading(false);
+      setInitialLoading(false);
       return;
     }
 
-    console.log('🔄 Carregando salões do usuário...');
     setLoading(true);
+    setInitialLoading(true);
     setError(null);
     loadingRef.current = true;
 
     try {
-      // Buscar salões do usuário (implementar conforme necessário)
-      // Por enquanto, usar dados mockados ou API existente
-      
-      // Simulação - você pode adaptar para sua lógica existente
+      // Simulação - adapte conforme sua lógica
       const mockSalon = {
         id: 'mock-salon-id',
         name: 'Salão Principal',
         subdomain: 'principal',
         public_profile_photo_url: null,
-        public_display_name: null
+        public_display_name: null,
+        has_services: false
       };
       
       setCurrentSalon(mockSalon);
+      setHasServices(!!mockSalon.has_services);
+      // Carregar dados iniciais incluindo has_services
+      await loadInitialData(mockSalon.id);
       setIsReady(true);
     } catch (err) {
       console.error('💥 Erro ao carregar salões:', err);
@@ -122,45 +157,50 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setIsReady(false);
     } finally {
       setLoading(false);
+      setInitialLoading(false);
       loadingRef.current = false;
     }
   };
 
   // Carregar dados baseado no contexto
   useEffect(() => {
-    console.log('🌐 AppProvider - Contexto:', { 
-      salonSlug, 
-      isMainDomain, 
-      isAuthenticated,
-      userId: user?.id,
-      loading: loadingRef.current
-    });
-
-    // Se tem slug de salão (subdomínio), carregar pelo slug
     if (salonSlug && !isMainDomain) {
       loadSalonBySlug(salonSlug);
     }
-    // Se está no domínio principal e autenticado, carregar salões do usuário
     else if (isMainDomain && isAuthenticated && user) {
       loadUserSalons();
     }
-    // Se não está autenticado no domínio principal, apenas marcar como pronto
     else if (isMainDomain && !isAuthenticated) {
-      console.log('🏠 Domínio principal sem autenticação, marcando como pronto');
       setLoading(false);
       setIsReady(false);
+      setInitialLoading(false);
     }
-    // Fallback
     else {
-      console.log('🔄 Fallback - marcando como pronto');
       setLoading(false);
       setIsReady(false);
+      setInitialLoading(false);
     }
   }, [salonSlug, isMainDomain, isAuthenticated, user?.id]);
 
   const setSalon = (salon: Salon | null) => {
     setCurrentSalon(salon);
-    setIsReady(!!salon);
+    if (salon) {
+      setHasServices(!!salon.has_services);
+      setIsReady(true);
+    } else {
+      setIsReady(false);
+    }
+  };
+
+  const updateHasServices = (newHasServices: boolean) => {
+    setHasServices(newHasServices);
+    // Atualizar também no salão atual
+    if (currentSalon) {
+      setCurrentSalon({
+        ...currentSalon,
+        has_services: newHasServices
+      });
+    }
   };
 
   const value: AppContextType = {
@@ -170,7 +210,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     error,
     salonSlug,
     isMainDomain,
-    setSalon
+    hasServices,
+    initialLoading,
+    setSalon,
+    updateHasServices
   };
 
   return (

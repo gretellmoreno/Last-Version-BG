@@ -10,6 +10,7 @@ import InviteRedirect from './components/InviteRedirect';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import LandingPage from './pages/LandingPage';
 import LandingPageLoader from './components/LandingPageLoader';
+import ServiceRedirect from './components/ServiceRedirect';
 import { usePWAInstallation } from './hooks/usePWAInstallation';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
@@ -143,60 +144,62 @@ function AppLayout() {
 
   // Layout principal com sidebar (para usuários autenticados)
   return (
-    <div className={`flex h-screen bg-gray-50 overflow-hidden ${isMobile ? 'mobile-app-layout' : ''}`}>
-      {/* Desktop Sidebar */}
-      <div className={isMobile ? 'hidden' : 'block'}>
-        <Sidebar />
-      </div>
-      
-      {/* Mobile Sidebar Overlay */}
-      {isMobile && isMobileSidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50"
-            onClick={() => setIsMobileSidebarOpen(false)}
-          />
-          <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
-            <Sidebar 
-              isMobile={true}
-              onClose={() => setIsMobileSidebarOpen(false)}
+    <ServiceRedirect>
+      <div className={`flex h-screen bg-gray-50 overflow-hidden ${isMobile ? 'mobile-app-layout' : ''}`}>
+        {/* Desktop Sidebar */}
+        <div className={isMobile ? 'hidden' : 'block'}>
+          <Sidebar />
+        </div>
+        
+        {/* Mobile Sidebar Overlay */}
+        {isMobile && isMobileSidebarOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50"
+              onClick={() => setIsMobileSidebarOpen(false)}
             />
+            <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
+              <Sidebar 
+                isMobile={true}
+                onClose={() => setIsMobileSidebarOpen(false)}
+              />
+            </div>
+          </div>
+        )}
+        
+        {/* Main Content */}
+        <div className={`flex-1 transition-all duration-300 main-content-area ${isMobile ? 'ml-0' : 'ml-16 group-hover:ml-64'}`}>
+          <div className="h-full w-full page-container">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={
+                  isEmployee ? <Navigate to="/agenda" replace /> : <InviteRedirect />
+                } />
+                <Route path="/agenda" element={<Agenda {...commonProps} />} />
+                {/* Rotas restritas apenas para admins */}
+                {!isEmployee && (
+                  <>
+                    <Route path="/clientes" element={<Clientes {...commonProps} />} />
+                    <Route path="/profissionais" element={<Profissionais {...commonProps} />} />
+                    <Route path="/servicos" element={<Servicos {...commonProps} />} />
+                    <Route path="/financeiro" element={<Relatorio {...commonProps} />} />
+                    <Route path="/configuracoes" element={<Configuracoes {...commonProps} />} />
+                    <Route path="/link-agendamento" element={<LinkAgendamento {...commonProps} />} />
+                  </>
+                )}
+                {/* Redirecionar funcionários para agenda se tentarem acessar outras rotas */}
+                {isEmployee && (
+                  <Route path="/*" element={<Navigate to="/agenda" replace />} />
+                )}
+              </Routes>
+            </Suspense>
           </div>
         </div>
-      )}
-      
-      {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 main-content-area ${isMobile ? 'ml-0' : 'ml-16 group-hover:ml-64'}`}>
-        <div className="h-full w-full page-container">
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={
-                isEmployee ? <Navigate to="/agenda" replace /> : <InviteRedirect />
-              } />
-              <Route path="/agenda" element={<Agenda {...commonProps} />} />
-              {/* Rotas restritas apenas para admins */}
-              {!isEmployee && (
-                <>
-                  <Route path="/clientes" element={<Clientes {...commonProps} />} />
-                  <Route path="/profissionais" element={<Profissionais {...commonProps} />} />
-                  <Route path="/servicos" element={<Servicos {...commonProps} />} />
-                  <Route path="/financeiro" element={<Relatorio {...commonProps} />} />
-                  <Route path="/configuracoes" element={<Configuracoes {...commonProps} />} />
-                  <Route path="/link-agendamento" element={<LinkAgendamento {...commonProps} />} />
-                </>
-              )}
-              {/* Redirecionar funcionários para agenda se tentarem acessar outras rotas */}
-              {isEmployee && (
-                <Route path="/*" element={<Navigate to="/agenda" replace />} />
-              )}
-            </Routes>
-          </Suspense>
-        </div>
+        
+        {/* PWA Install Banner */}
+        <PWAInstallBanner />
       </div>
-      
-      {/* PWA Install Banner */}
-      <PWAInstallBanner />
-    </div>
+    </ServiceRedirect>
   );
 }
 

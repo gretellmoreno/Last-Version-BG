@@ -61,7 +61,13 @@ export default function Header({
             </button>
           )}
           
-          <h1 className="text-lg font-semibold text-gray-900 flex-1 text-center">{title}</h1>
+          {/* Título + subtítulo contextual na mesma linha */}
+          <div className="flex-1 flex items-center justify-center gap-1 min-w-0">
+            <h1 className="text-lg font-semibold text-gray-900 truncate">{title}</h1>
+            {subtitle && (
+              <span className="text-lg font-semibold text-indigo-600 truncate">{subtitle}</span>
+            )}
+          </div>
           
           <div className="flex items-center space-x-2">
             {showHistoryButton && (
@@ -92,12 +98,6 @@ export default function Header({
             />
           </div>
         )}
-        
-        {subtitle && (
-          <div className={`${onMenuClick ? 'ml-0' : 'ml-12'} mt-2`}>
-            <span className="text-sm text-gray-500">{subtitle}</span>
-          </div>
-        )}
       </div>
 
       {/* Desktop Layout */}
@@ -113,7 +113,7 @@ export default function Header({
           )}
           
           {subtitle && (
-            <span className="text-sm text-gray-500">{subtitle}</span>
+            <span className="text-base font-semibold text-indigo-600">{subtitle}</span>
           )}
         </div>
 

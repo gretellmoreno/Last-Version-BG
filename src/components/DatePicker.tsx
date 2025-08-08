@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Portal from './Portal';
 
 interface DatePickerProps {
   selectedDate: Date;
@@ -20,6 +21,15 @@ export default function DatePicker({ selectedDate, onDateChange }: DatePickerPro
   const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
   const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const updatePopupPosition = () => {
+    const btn = buttonRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    setPopupPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+  };
 
   // Fechar dropdown quando clicar fora
   useEffect(() => {
@@ -38,6 +48,19 @@ export default function DatePicker({ selectedDate, onDateChange }: DatePickerPro
     setCurrentMonth(selectedDate.getMonth());
     setCurrentYear(selectedDate.getFullYear());
   }, [selectedDate]);
+
+  // Atualizar posição ao abrir e em resize/scroll
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePopupPosition();
+    const onResizeScroll = () => updatePopupPosition();
+    window.addEventListener('resize', onResizeScroll);
+    window.addEventListener('scroll', onResizeScroll, true);
+    return () => {
+      window.removeEventListener('resize', onResizeScroll);
+      window.removeEventListener('scroll', onResizeScroll, true);
+    };
+  }, [isOpen]);
 
   // Formatar data para exibição
   const formatDate = (date: Date) => {
@@ -81,7 +104,7 @@ export default function DatePicker({ selectedDate, onDateChange }: DatePickerPro
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
 
-    const days = [];
+    const days = [] as (Date | null)[];
 
     // Dias vazios do mês anterior
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -148,6 +171,7 @@ export default function DatePicker({ selectedDate, onDateChange }: DatePickerPro
       <div className="relative" ref={dropdownRef}>
         {/* Botão da data atual com largura fixa */}
         <button
+          ref={buttonRef}
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center space-x-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group min-w-[200px] justify-center"
         >
@@ -157,14 +181,17 @@ export default function DatePicker({ selectedDate, onDateChange }: DatePickerPro
           </span>
         </button>
 
-        {/* Dropdown do calendário com posicionamento fixo */}
+        {/* Dropdown do calendário com posicionamento FIXO ancorado ao botão */}
         {isOpen && (
-          <>
-            {/* Overlay para fechar ao clicar fora */}
-            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <Portal>
+            {/* Overlay para fechar ao clicar fora - z altíssimo */}
+            <div className="fixed inset-0 z-[10000]" onClick={() => setIsOpen(false)} />
             
             {/* Calendário */}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50 w-80">
+            <div
+              className="fixed mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 p-4 z-[10001] w-80"
+              style={{ top: popupPos.top, left: popupPos.left, transform: 'translateX(-50%)' }}
+            >
               {/* Header do calendário */}
               <div className="flex items-center justify-between mb-4">
                 <button
@@ -231,7 +258,7 @@ export default function DatePicker({ selectedDate, onDateChange }: DatePickerPro
                 </button>
               </div>
             </div>
-          </>
+          </Portal>
         )}
       </div>
 

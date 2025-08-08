@@ -7,9 +7,11 @@ import Header from '../components/Header';
 import ServiceModal from '../components/ServiceModal';
 import ProductModal from '../components/ProductModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+import ServiceGuideModal from '../components/ServiceGuideModal';
 
 import { useService, ServiceProvider } from '../contexts/ServiceContext';
 import { useProduct, ProductProvider } from '../contexts/ProductContext';
+import { useApp } from '../contexts/AppContext';
 import { Service, Product, Servico, Produto } from '../types';
 
 function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: () => void } = {}) {
@@ -22,11 +24,13 @@ function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: ()
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [showServiceGuide, setShowServiceGuide] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
   
   const { services, addService, updateService, removeService } = useService();
   const { products, addProduct, updateProduct, removeProduct } = useProduct();
+  const { hasServices, updateHasServices, initialLoading } = useApp();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -37,6 +41,15 @@ function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: ()
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Mostrar modal de orientação se não há serviços
+  useEffect(() => {
+    if (!initialLoading && !hasServices && services && services.length === 0) {
+      setShowServiceGuide(true);
+    } else {
+      setShowServiceGuide(false);
+    }
+  }, [hasServices, services, initialLoading]);
 
   const filteredServices = services || [];
 
@@ -71,7 +84,13 @@ function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: ()
       await updateService(editingService.id, service);
     } else {
       console.log('➕ Criando novo serviço');
-      await addService(service);
+      const success = await addService(service);
+      
+      // Se foi o primeiro serviço criado com sucesso, atualizar has_services
+      if (success && !hasServices) {
+        console.log('✅ Primeiro serviço criado, atualizando has_services para true');
+        updateHasServices(true);
+      }
     }
     setIsServiceModalOpen(false);
   };
@@ -97,6 +116,13 @@ function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: ()
   const handleConfirmDelete = async () => {
     if (serviceToDelete) {
       await removeService(serviceToDelete.id);
+      
+      // Verificar se era o último serviço
+      if (services && services.length === 1 && hasServices) {
+        console.log('❌ Último serviço deletado, atualizando has_services para false');
+        updateHasServices(false);
+      }
+      
       setServiceToDelete(null);
     }
     if (productToDelete) {
@@ -110,6 +136,12 @@ function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: ()
     setDeleteModalOpen(false);
     setServiceToDelete(null);
     setProductToDelete(null);
+  };
+
+  const handleAddServiceFromGuide = () => {
+    setShowServiceGuide(false);
+    setEditingService(null);
+    setIsServiceModalOpen(true);
   };
 
   const formatDuration = (minutes: number) => {
@@ -460,6 +492,12 @@ function ServicosContent({ onToggleMobileSidebar }: { onToggleMobileSidebar?: ()
         onConfirm={handleConfirmDelete}
         title={`Excluir ${activeTab === 'servicos' ? 'Serviço' : 'Produto'}`}
         message={`Tem certeza que deseja excluir este ${activeTab === 'servicos' ? 'serviço' : 'produto'}? Esta ação não pode ser desfeita.`}
+      />
+
+      <ServiceGuideModal
+        isOpen={showServiceGuide}
+        onClose={() => setShowServiceGuide(false)}
+        onAddService={handleAddServiceFromGuide}
       />
     </div>
   );

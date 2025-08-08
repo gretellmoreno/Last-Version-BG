@@ -2102,3 +2102,21 @@ input[type="time"]::-webkit-datetime-edit-second-field {
     background-size: 120% 120% !important;
   }
 }
+
+/* Remover setas de inputs numéricos (Chrome, Safari, Edge) */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Remover setas de inputs numéricos (Firefox) */
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Opcional: remover seta nativa de select onde não controlamos via classe */
+select {
+  /* Isto mantém estilo padrão se não sobrescrito, mas reduz ícones intrusivos em alguns navegadores */
+  background-image: none;
+}

@@ -262,7 +262,7 @@ const MarketingApp: React.FC = () => {
           <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-6 h-6 text-green-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Salão Criado com Sucesso! 🥳</h2>
+          <h2 className="text-xl font-bold text-gray-900">Salão Criado com Sucesso!</h2>
         </div>
       </div>
     );

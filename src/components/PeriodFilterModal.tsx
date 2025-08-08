@@ -1,8 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import Calendar from 'lucide-react/dist/esm/icons/calendar';
-import Clock from 'lucide-react/dist/esm/icons/clock';
-import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days';
-import CalendarRange from 'lucide-react/dist/esm/icons/calendar-range';
+import React, { useState, useEffect, useRef } from 'react';
 import { getTodayLocal, getStartOfMonth, getEndOfMonth } from '../utils/dateUtils';
 
 interface PeriodFilterModalProps {
@@ -21,178 +17,124 @@ export default function PeriodFilterModal({ isOpen, onClose, onApply, currentPer
     end: getTodayLocal()
   });
 
+  const startRef = useRef<HTMLInputElement>(null);
+  const endRef = useRef<HTMLInputElement>(null);
+  const [activeShortcut, setActiveShortcut] = useState<null | 'today' | 'current_month' | 'last_week' | 'last_month'>(null);
+
   // Atualizar selectedPeriod quando currentPeriod mudar
   useEffect(() => {
     if (currentPeriod?.start && currentPeriod?.end) {
       setSelectedPeriod(currentPeriod);
     }
   }, [currentPeriod]);
+  // Mantemos a animação enquanto o atalho estiver selecionado.
 
   if (!isOpen) return null;
 
   const handleApply = () => {
-    // Validar se as datas são válidas antes de aplicar
     if (!selectedPeriod.start || !selectedPeriod.end) {
-      console.warn('⚠️ PeriodFilterModal: Datas inválidas:', selectedPeriod);
       return;
     }
-    
-    // Garantir que as datas estão no formato correto
     const startDate = selectedPeriod.start || getTodayLocal();
     const endDate = selectedPeriod.end || getTodayLocal();
-    
-    console.log('✅ PeriodFilterModal: Aplicando período:', { start: startDate, end: endDate });
     onApply({ start: startDate, end: endDate });
     onClose();
   };
 
-  // Funções para os botões de atalho
+  // Atalhos
   const setToday = () => {
     const today = getTodayLocal();
     setSelectedPeriod({ start: today, end: today });
+    setActiveShortcut('today');
   };
-
   const setCurrentMonth = () => {
-    const start = getStartOfMonth();
-    const end = getEndOfMonth();
-    setSelectedPeriod({ start, end });
+    setSelectedPeriod({ start: getStartOfMonth(), end: getEndOfMonth() });
+    setActiveShortcut('current_month');
   };
-
   const setLastWeek = () => {
     const today = new Date();
     const lastWeek = new Date(today);
     lastWeek.setDate(today.getDate() - 7);
-    
-    // Usar as funções do dateUtils que tratam corretamente o timezone
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-    
-    const start = formatDate(lastWeek);
-    const end = formatDate(today);
-    setSelectedPeriod({ start, end });
+    const formatDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    setSelectedPeriod({ start: formatDate(lastWeek), end: formatDate(today) });
+    setActiveShortcut('last_week');
   };
-
   const setLastMonth = () => {
     const today = new Date();
     const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-    
-    // Usar as funções do dateUtils que tratam corretamente o timezone
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-    
-    const start = formatDate(lastMonth);
-    const end = formatDate(lastMonthEnd);
-    setSelectedPeriod({ start, end });
+    const formatDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    setSelectedPeriod({ start: formatDate(lastMonth), end: formatDate(lastMonthEnd) });
+    setActiveShortcut('last_month');
   };
+
+  const focusStart = () => startRef.current?.showPicker?.() || startRef.current?.focus();
+  const focusEnd = () => endRef.current?.showPicker?.() || endRef.current?.focus();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Calendar size={20} className="text-purple-600" />
+        {/* Header */}
+        <div className="p-5 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Selecionar Período</h3>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Linha compacta com datas lado a lado e toda clicável */}
+          <div
+            className="flex items-center gap-2 w-full"
+          >
+            <div className="flex-1 min-w-0">
+              <label htmlFor="start-date" className="block text-[11px] font-medium text-gray-600 mb-1">Data Inicial</label>
+              <div
+                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+                onClick={focusStart}
+              >
+                <input
+                  ref={startRef}
+                  type="date"
+                  id="start-date"
+                  value={selectedPeriod.start}
+                  onChange={(e) => { setSelectedPeriod({ ...selectedPeriod, start: e.target.value }); setActiveShortcut(null); }}
+                  className="w-full bg-transparent focus:outline-none text-sm h-6"
+                />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Selecionar Período</h3>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
 
-        <div className="p-6 space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="start-date" className="block text-sm font-medium text-gray-700">
-              Data Inicial
-            </label>
-            <input
-              type="date"
-              id="start-date"
-              value={selectedPeriod.start}
-              onChange={(e) => setSelectedPeriod({ ...selectedPeriod, start: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-            />
+            <div className="flex-1 min-w-0">
+              <label htmlFor="end-date" className="block text-[11px] font-medium text-gray-600 mb-1">Data Final</label>
+              <div
+                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+                onClick={focusEnd}
+              >
+                <input
+                  ref={endRef}
+                  type="date"
+                  id="end-date"
+                  value={selectedPeriod.end}
+                  onChange={(e) => { setSelectedPeriod({ ...selectedPeriod, end: e.target.value }); setActiveShortcut(null); }}
+                  className="w-full bg-transparent focus:outline-none text-sm h-6"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="end-date" className="block text-sm font-medium text-gray-700">
-              Data Final
-            </label>
-            <input
-              type="date"
-              id="end-date"
-              value={selectedPeriod.end}
-              onChange={(e) => setSelectedPeriod({ ...selectedPeriod, end: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-            />
-          </div>
-
-          {/* Botões de Atalho */}
+          {/* Atalhos sem cor; animação ao selecionar */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Atalhos Rápidos</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-1">Atalhos Rápidos</h4>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={setToday}
-                className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
-              >
-                <Clock size={16} className="mr-2" />
-                Hoje
-              </button>
-              <button
-                onClick={setCurrentMonth}
-                className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border border-green-200"
-              >
-                <CalendarDays size={16} className="mr-2" />
-                Mês Atual
-              </button>
-              <button
-                onClick={setLastWeek}
-                className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200"
-              >
-                <CalendarRange size={16} className="mr-2" />
-                Última Semana
-              </button>
-              <button
-                onClick={setLastMonth}
-                className="flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-200"
-              >
-                <Calendar size={16} className="mr-2" />
-                Mês Passado
-              </button>
+              <button onClick={setToday} className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${activeShortcut==='today' ? 'ring-2 ring-indigo-500 animate-pulse' : 'border-gray-300 hover:bg-gray-50'}`}>Hoje</button>
+              <button onClick={setCurrentMonth} className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${activeShortcut==='current_month' ? 'ring-2 ring-indigo-500 animate-pulse' : 'border-gray-300 hover:bg-gray-50'}`}>Mês Atual</button>
+              <button onClick={setLastWeek} className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${activeShortcut==='last_week' ? 'ring-2 ring-indigo-500 animate-pulse' : 'border-gray-300 hover:bg-gray-50'}`}>Última Semana</button>
+              <button onClick={setLastMonth} className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${activeShortcut==='last_month' ? 'ring-2 ring-indigo-500 animate-pulse' : 'border-gray-300 hover:bg-gray-50'}`}>Mês Passado</button>
             </div>
           </div>
         </div>
 
-        <div className="p-6 border-t border-gray-200">
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleApply}
-              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
-            >
-              Aplicar
-            </button>
+        <div className="p-5 border-t border-gray-200">
+          <div className="flex justify-end gap-3">
+            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancelar</button>
+            <button onClick={handleApply} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">Aplicar</button>
           </div>
         </div>
       </div>

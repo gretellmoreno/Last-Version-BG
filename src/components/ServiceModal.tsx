@@ -7,6 +7,24 @@ import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { Servico } from '../types';
 
+// Utilidades para moeda BRL
+function formatCurrencyBRLFromDigits(digits: string): string {
+  // Mantém apenas números
+  const cleaned = digits.replace(/\D/g, '');
+  const value = (parseInt(cleaned || '0', 10) / 100).toFixed(2);
+  const [inteiro, decimal] = value.split('.');
+  // Adiciona separador de milhar e vírgula decimal
+  const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${inteiroFormatado},${decimal}`;
+}
+
+function parseCurrencyBRLToNumber(text: string): number {
+  // Remove tudo exceto dígitos e vírgula/ponto, normaliza vírgula para ponto
+  const normalized = text.replace(/\./g, '').replace(',', '.');
+  const num = parseFloat(normalized);
+  return isNaN(num) ? 0 : num;
+}
+
 interface ServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,7 +35,7 @@ interface ServiceModalProps {
 
 interface ServiceFormData {
   nome: string;
-  preco: string;
+  preco: string; // Mantemos como string formatada (ex: "1.234,56")
   tempoAproximado: string;
   comissao: string;
   observacoes: string;
@@ -39,6 +57,7 @@ export default function ServiceModal({
   });
   const [isMobile, setIsMobile] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [calculaComissao, setCalculaComissao] = useState(false);
 
   // Detecção de mobile
   useEffect(() => {
@@ -55,13 +74,17 @@ export default function ServiceModal({
   // Preencher formulário quando editando
   useEffect(() => {
     if (editingService) {
+      const hasCommission = (editingService.comissao ?? 0) > 0;
+      // Preço vem numérico; formatar para BRL sem símbolo
+      const precoFormatado = formatCurrencyBRLFromDigits(String(Math.round((editingService.preco || 0) * 100)));
       setServiceForm({
         nome: editingService.nome || '',
-        preco: editingService.preco.toString() || '',
+        preco: precoFormatado || '',
         tempoAproximado: editingService.duracao.toString() || '',
-        comissao: editingService.comissao.toString() || '',
+        comissao: hasCommission ? editingService.comissao.toString() : '',
         observacoes: ''
       });
+      setCalculaComissao(hasCommission);
     } else {
       setServiceForm({
         nome: '',
@@ -70,6 +93,7 @@ export default function ServiceModal({
         comissao: '',
         observacoes: ''
       });
+      setCalculaComissao(false);
     }
     setErrors({});
   }, [editingService, isOpen]);
@@ -83,7 +107,7 @@ export default function ServiceModal({
     
     if (!serviceForm.preco.trim()) {
       newErrors.preco = 'Preço é obrigatório';
-    } else if (parseFloat(serviceForm.preco) <= 0) {
+    } else if (parseCurrencyBRLToNumber(serviceForm.preco) <= 0) {
       newErrors.preco = 'Preço deve ser maior que zero';
     }
     
@@ -93,10 +117,13 @@ export default function ServiceModal({
       newErrors.tempoAproximado = 'Tempo mínimo é 5 minutos';
     }
     
-    if (!serviceForm.comissao.trim()) {
-      newErrors.comissao = 'Comissão é obrigatória';
-    } else if (parseFloat(serviceForm.comissao) < 0 || parseFloat(serviceForm.comissao) > 100) {
-      newErrors.comissao = 'Comissão deve estar entre 0 e 100%';
+    // Comissão apenas se o switch estiver ligado
+    if (calculaComissao) {
+      if (!serviceForm.comissao.trim()) {
+        newErrors.comissao = 'Comissão é obrigatória quando ativada';
+      } else if (parseFloat(serviceForm.comissao) < 0 || parseFloat(serviceForm.comissao) > 100) {
+        newErrors.comissao = 'Comissão deve estar entre 0 e 100%';
+      }
     }
     
     setErrors(newErrors);
@@ -106,7 +133,7 @@ export default function ServiceModal({
   const handleUpdateForm = (field: keyof ServiceFormData, value: string | boolean) => {
     setServiceForm(prev => ({
       ...prev,
-      [field]: value
+      [field]: value as any
     }));
     
     // Limpar erro do campo quando user começar a digitar
@@ -118,33 +145,40 @@ export default function ServiceModal({
     }
   };
 
+  const onChangePreco = (raw: string) => {
+    const masked = formatCurrencyBRLFromDigits(raw);
+    handleUpdateForm('preco', masked);
+  };
+
   const isFormValid = () => {
-    return serviceForm.nome.trim() !== '' && 
+    const baseValid = serviceForm.nome.trim() !== '' && 
            serviceForm.preco.trim() !== '' &&
            serviceForm.tempoAproximado.trim() !== '' &&
            parseInt(serviceForm.tempoAproximado) >= 5 &&
-           serviceForm.comissao.trim() !== '' &&
            Object.keys(errors).length === 0;
+
+    if (!baseValid) return false;
+
+    if (calculaComissao) {
+      return serviceForm.comissao.trim() !== '';
+    }
+
+    return true;
   };
 
   const handleSave = () => {
-    console.log('🔥 ServiceModal - handleSave chamado!');
-    console.log('Formulário:', serviceForm);
-    
     if (!validateForm()) {
-      console.log('❌ Validação falhou');
       return;
     }
     
     const servico: Servico = {
       id: editingService?.id || Date.now().toString(),
       nome: serviceForm.nome.trim(),
-      preco: parseFloat(serviceForm.preco) || 0,
+      preco: parseCurrencyBRLToNumber(serviceForm.preco),
       duracao: parseInt(serviceForm.tempoAproximado) || 0,
-      comissao: parseFloat(serviceForm.comissao) || 0
+      comissao: calculaComissao ? (parseFloat(serviceForm.comissao) || 0) : 0
     };
     
-    console.log('✅ Serviço criado:', servico);
     onSave(servico);
     onClose();
   };
@@ -229,12 +263,11 @@ export default function ServiceModal({
                   R$
                 </span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="0,00"
-                  step="0.01"
-                  min="0"
                   value={serviceForm.preco}
-                  onChange={(e) => handleUpdateForm('preco', e.target.value)}
+                  onChange={(e) => onChangePreco(e.target.value)}
                   className={`w-full pl-8 pr-3 py-2.5 border rounded-lg text-sm transition-colors ${
                     errors.preco 
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
@@ -262,7 +295,7 @@ export default function ServiceModal({
                       const totalMinutes = hours * 60 + minutes;
                       handleUpdateForm('tempoAproximado', totalMinutes.toString());
                     }}
-                    className={`w-full px-3 py-2.5 border rounded-lg text-sm transition-colors ${
+                    className={`appearance-none w-full px-3 py-2.5 border rounded-lg text-sm transition-colors ${
                       errors.tempoAproximado 
                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
                         : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500/20'
@@ -287,7 +320,7 @@ export default function ServiceModal({
                       const totalMinutes = hours * 60 + minutes;
                       handleUpdateForm('tempoAproximado', totalMinutes.toString());
                     }}
-                    className={`w-full px-3 py-2.5 border rounded-lg text-sm transition-colors ${
+                    className={`appearance-none w-full px-3 py-2.5 border rounded-lg text-sm transition-colors ${
                       errors.tempoAproximado 
                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
                         : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500/20'
@@ -306,34 +339,50 @@ export default function ServiceModal({
             </div>
           </div>
 
-          {/* Comissão */}
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              <Percent size={12} className="inline mr-1" />
-              Comissão do Profissional
-            </label>
-            <div className="relative">
+          {/* Comissão - opcional com checkbox */}
+          <div className="pt-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Percent size={12} className="text-gray-600" />
               <input
-                type="number"
-                placeholder="50"
-                min="0"
-                max="100"
-                value={serviceForm.comissao}
-                onChange={(e) => handleUpdateForm('comissao', e.target.value)}
-                className={`w-full px-3 pr-8 py-2.5 border rounded-lg text-sm transition-colors ${
-                  errors.comissao 
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
-                    : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500/20'
-                } focus:ring-2 focus:outline-none`}
-                style={{ fontSize: isMobile ? '16px' : '14px' }}
+                id="calcula-comissao"
+                type="checkbox"
+                checked={calculaComissao}
+                onChange={(e) => setCalculaComissao(e.target.checked)}
+                className="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
               />
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
-                %
-              </span>
+              <label htmlFor="calcula-comissao" className="text-xs font-medium text-gray-700 cursor-pointer">
+                Calcular comissão para este serviço?
+              </label>
             </div>
-            {errors.comissao && <p className="text-xs text-red-600 mt-1">{errors.comissao}</p>}
-          </div>
 
+            {calculaComissao && (
+              <div className="mt-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  % Comissão do Profissional
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder="50"
+                    min="0"
+                    max="100"
+                    value={serviceForm.comissao}
+                    onChange={(e) => handleUpdateForm('comissao', e.target.value)}
+                    className={`w-full px-3 pr-8 py-2.5 border rounded-lg text-sm transition-colors ${
+                      errors.comissao 
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
+                        : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500/20'
+                    } focus:ring-2 focus:outline-none`}
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
+                    %
+                  </span>
+                </div>
+                {errors.comissao && <p className="text-xs text-red-600 mt-1">{errors.comissao}</p>}
+              </div>
+            )}
+          </div>
 
         </div>
 

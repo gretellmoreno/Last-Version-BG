@@ -201,6 +201,11 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     }
 
     const dailyData = data.reportData?.daily_report || [];
+    const totalsComandas = {
+      revenue: dailyData.reduce((acc: number, d: any) => acc + (d.services_revenue || 0), 0),
+      profit: dailyData.reduce((acc: number, d: any) => acc + (d.services_profit || 0), 0),
+      count: dailyData.reduce((acc: number, d: any) => acc + (d.services_count || 0), 0)
+    };
 
     return (
       <div className="space-y-6">
@@ -215,7 +220,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
             } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
             <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Receita</h3>
-            <p className="text-sm font-bold text-gray-900">Valor Total</p>
+            <p className="text-sm font-bold text-gray-900">{formatCurrency(totalsComandas.revenue)}</p>
           </button>
           <button
             onClick={() => setActiveServicesMetric('services_profit')}
@@ -226,7 +231,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
             } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
             <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Lucro</h3>
-            <p className="text-sm font-bold text-gray-900">Valor Total</p>
+            <p className="text-sm font-bold text-gray-900">{formatCurrency(totalsComandas.profit)}</p>
           </button>
           <button
             onClick={() => setActiveServicesMetric('services_count')}
@@ -237,7 +242,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
             } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
             <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Atendimentos</h3>
-            <p className="text-sm font-bold text-gray-900">Realizados</p>
+            <p className="text-sm font-bold text-gray-900">{totalsComandas.count}</p>
           </button>
         </div>
 
@@ -274,6 +279,11 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     }
 
     const dailyData = data.reportData?.daily_report || [];
+    const totalsProdutos = {
+      revenue: dailyData.reduce((acc: number, d: any) => acc + (d.products_revenue || 0), 0),
+      profit: dailyData.reduce((acc: number, d: any) => acc + (d.products_profit || 0), 0),
+      items: dailyData.reduce((acc: number, d: any) => acc + (d.products_items_sold || 0), 0)
+    };
 
     return (
       <div className="space-y-6">
@@ -288,7 +298,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
             } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
             <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Receita</h3>
-            <p className="text-sm font-bold text-gray-900">Valor Total</p>
+            <p className="text-sm font-bold text-gray-900">{formatCurrency(totalsProdutos.revenue)}</p>
           </button>
           <button
             onClick={() => setActiveProductsMetric('products_profit')}
@@ -299,7 +309,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
             } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
             <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Lucro</h3>
-            <p className="text-sm font-bold text-gray-900">Valor Total</p>
+            <p className="text-sm font-bold text-gray-900">{formatCurrency(totalsProdutos.profit)}</p>
           </button>
           <button
             onClick={() => setActiveProductsMetric('products_items_sold')}
@@ -310,7 +320,7 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
             } border backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.02]`}
           >
             <h3 className="text-xs font-semibold uppercase text-gray-600 mb-1">Itens</h3>
-            <p className="text-sm font-bold text-gray-900">Vendidos</p>
+            <p className="text-sm font-bold text-gray-900">{totalsProdutos.items}</p>
           </button>
         </div>
 
@@ -368,7 +378,27 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
       );
     }
 
-    const { rankings } = data.clientes.report;
+    // Garantir estrutura segura mesmo quando API não retornar rankings
+    const rankings = data.clientes?.report?.rankings ?? { by_revenue: [], by_visits: [] };
+
+    // Se não há nenhum dado em nenhuma métrica, mostrar estado vazio amigável
+    const noClients = (!rankings.by_revenue || rankings.by_revenue.length === 0) &&
+                      (!rankings.by_visits || rankings.by_visits.length === 0);
+
+    if (noClients) {
+      return (
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
+            <h2 className={`font-semibold text-gray-900 mb-4 ${isMobile ? 'text-sm' : 'text-lg'}`}>Melhores Clientes</h2>
+            <div className="text-center py-14">
+              <div className="text-5xl mb-4">🧾</div>
+              <h3 className="text-base font-medium text-gray-900 mb-1">Ainda não foi atendido nenhum cliente</h3>
+              <p className="text-gray-500 text-sm">Assim que você realizar atendimentos, os melhores clientes aparecerão aqui.</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-8">
@@ -593,6 +623,12 @@ function RelatorioContent({ onToggleMobileSidebar }: RelatorioProps) {
     <div className="flex-1 flex flex-col h-screen page-content">
       <Header 
         title="Relatório" 
+        subtitle={
+          activeTab === 'resumo' ? 'Resumo' :
+          activeTab === 'comandas' ? 'Atendimentos' :
+          activeTab === 'produtos' ? 'Venda de Produtos' :
+          'Melhores Clientes'
+        }
         onMenuClick={onToggleMobileSidebar}
         isMobile={isMobile}
       />
