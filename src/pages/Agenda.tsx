@@ -7,6 +7,8 @@ import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import Globe from 'lucide-react/dist/esm/icons/globe';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import Archive from 'lucide-react/dist/esm/icons/archive';
 import X from 'lucide-react/dist/esm/icons/x';
 import UserCircle from 'lucide-react/dist/esm/icons/user-circle';
 import CalendarIcon from 'lucide-react/dist/esm/icons/calendar';
@@ -491,6 +493,7 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
   const [showOnlineModal, setShowOnlineModal] = useState(false);
   const [onlineAppointments, setOnlineAppointments] = useState<any[]>([]);
   const [loadingOnline, setLoadingOnline] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
   
   // Estados para notificação de novos agendamentos
   const [newOnlineAppointmentsCount, setNewOnlineAppointmentsCount] = useState(0);
@@ -538,24 +541,15 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     if (!currentSalon?.id) return;
     setLoadingOnline(true);
     setShowOnlineModal(true);
-    
-    // Marcar que o modal foi aberto agora
+    setShowCancelled(false); // abrir por padrão em "ativos"
     const now = new Date();
     setLastViewedOnlineModal(now);
-    // Salvar no localStorage para persistir entre sessões
-    if (currentSalon?.id) {
-      localStorage.setItem(`lastViewedOnlineModal_${currentSalon.id}`, now.toISOString());
-    }
+    localStorage.setItem(`lastViewedOnlineModal_${currentSalon.id}`, now.toISOString());
     setNewOnlineAppointmentsCount(0);
     
     const { data, error } = await supabaseService.appointments.listOnlineAppointments({ salonId: currentSalon.id });
-    if (!error && Array.isArray(data)) {
-      // Ordenar por data de criação mais recente primeiro
-      const sortedData = data.sort((a: any, b: any) => {
-        const dateA = new Date(a.created_at || 0);
-        const dateB = new Date(b.created_at || 0);
-        return dateB.getTime() - dateA.getTime(); // Mais recente primeiro
-      });
+    if (!error && data) {
+      const sortedData = [...data].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setOnlineAppointments(sortedData);
     } else {
       setOnlineAppointments([]);
@@ -563,6 +557,39 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
     }
     setLoadingOnline(false);
   };
+
+  // Carregar cancelados
+  const loadCancelledOnline = useCallback(async () => {
+    if (!currentSalon?.id) return;
+    setLoadingOnline(true);
+    try {
+      const { data, error } = await supabaseService.appointments.listOnlineAppointments({ salonId: currentSalon.id });
+      if (!error && data) {
+        const cancelled = (data as any[]).filter((a) => a.status === 'cancelado');
+        const sorted = cancelled.sort((a: any, b: any) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
+        setOnlineAppointments(sorted);
+      } else {
+        setOnlineAppointments([]);
+      }
+    } finally {
+      setLoadingOnline(false);
+    }
+  }, [currentSalon?.id]);
+
+  // Utilitário: tempo relativo "há X"
+  const getRelativeTime = useCallback((dateInput?: string | Date | null) => {
+    if (!dateInput) return '';
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'agora';
+    if (minutes < 60) return `há ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `há ${hours} h`;
+    const days = Math.floor(hours / 24);
+    return `há ${days} d`;
+  }, []);
 
   // Hook para detectar mobile
   useEffect(() => {
@@ -727,14 +754,54 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
               }
               lastNotificationRef.current = now;
             }
-          } else if (payload.eventType === 'UPDATE' && shouldShowNotification) {
-            toast('📝 Agendamento atualizado', {
-              duration: 2500,
-              position: 'top-right',
-              icon: 'ℹ️',
-            });
-            lastNotificationRef.current = now;
+          } else if (payload.eventType === 'UPDATE') {
+            const newRecord = payload.new as any;
+            const oldRecord = payload.old as any;
+
+            // Se houve cancelamento (status mudou para cancelado)
+            if (newRecord?.status === 'cancelado' && oldRecord?.status !== 'cancelado') {
+              // Atualizar contador e (se aberto) o feed do modal
+              checkNewOnlineAppointments();
+              if (showOnlineModal && currentSalon?.id) {
+                (async () => {
+                  const { data, error } = await supabaseService.appointments.listOnlineAppointments({ salonId: currentSalon.id });
+                  if (!error && data) {
+                    const sorted = [...data].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                    setOnlineAppointments(sorted);
+                  }
+                })();
+              }
+
+              if (shouldShowNotification) {
+                toast('❌ Agendamento online cancelado', {
+                  duration: 3000,
+                  position: 'top-right',
+                  icon: '🛑',
+                });
+                lastNotificationRef.current = now;
+              }
+            } else if (shouldShowNotification) {
+              // Outros updates
+              toast('📝 Agendamento atualizado', {
+                duration: 2500,
+                position: 'top-right',
+                icon: 'ℹ️',
+              });
+              lastNotificationRef.current = now;
+            }
           } else if (payload.eventType === 'DELETE' && shouldShowNotification) {
+            // Tratar como remoção/cancelamento: atualizar contador/feed também
+            checkNewOnlineAppointments();
+            if (showOnlineModal && currentSalon?.id) {
+              (async () => {
+                const { data, error } = await supabaseService.appointments.listOnlineAppointments({ salonId: currentSalon.id });
+                if (!error && data) {
+                  const sorted = [...data].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                  setOnlineAppointments(sorted);
+                }
+              })();
+            }
+
             toast.error('🗑️ Agendamento cancelado', {
               duration: 3000,
               position: 'top-right',
@@ -1699,118 +1766,93 @@ function AgendaContent({ onToggleMobileSidebar, isMobile: isMobileProp }: { onTo
 
       {/* Modal de agendamentos online */}
       {showOnlineModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-          <div className={`bg-white rounded-2xl shadow-2xl ${isMobile ? 'w-full max-w-sm mx-4 max-h-[85vh] p-4' : 'w-full max-w-lg p-6 mx-4'} relative`}>
-            {/* Header do modal */}
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
+          <div className={`bg-white rounded-2xl w-full ${isMobile ? 'max-w-md' : 'max-w-2xl'} shadow-2xl`}>
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-lg' : 'text-xl'}`}>Agendamentos Online</h2>
-              <button 
-                onClick={() => setShowOnlineModal(false)} 
-                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Toggle de cancelados */}
+                <button
+                  onClick={async () => {
+                    const next = !showCancelled;
+                    setShowCancelled(next);
+                    if (next) {
+                      await loadCancelledOnline();
+                    } else {
+                      // Recarregar ativos padrão
+                      setLoadingOnline(true);
+                      const { data } = await supabaseService.appointments.listOnlineAppointments({ salonId: currentSalon!.id });
+                      const sorted = (data || []).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                      setOnlineAppointments(sorted);
+                      setLoadingOnline(false);
+                    }
+                  }}
+                  title={showCancelled ? 'Ver agendamentos ativos' : 'Ver cancelamentos'}
+                  className={`p-2 rounded-lg border ${showCancelled ? 'bg-red-50 border-red-200 text-red-600' : 'bg-gray-50 border-gray-200 text-gray-600'} hover:opacity-90`}
+                >
+                  {/* Ícone moderno */}
+                  {showCancelled ? <Archive className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                </button>
+                <button className="p-2 hover:bg-gray-100 rounded-lg" onClick={() => setShowOnlineModal(false)} title="Fechar">
+                  <X className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
             </div>
-            
-            {/* Conteúdo do modal */}
-            {loadingOnline ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#31338D] mx-auto mb-3"></div>
-                <p className="text-gray-500">Carregando agendamentos online...</p>
-              </div>
-            ) : onlineAppointments.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
+            <div className="p-4 max-h-[70vh] overflow-y-auto">
+              {loadingOnline ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-gray-200 border-t-purple-500 rounded-full animate-spin mx-auto mb-3"></div>
+                  <p className="text-gray-500">{showCancelled ? 'Carregando cancelamentos...' : 'Carregando agendamentos online...'}</p>
                 </div>
-                <p className="text-gray-500">Nenhum agendamento online encontrado para esta data.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto px-1 scrollbar-hide">
-                {onlineAppointments.map((ag: any) => {
-                  let minutos: number | null = null;
-                  if (ag.created_at) {
-                    const created = new Date(ag.created_at);
-                    const now = new Date();
-                    minutos = Math.floor((now.getTime() - created.getTime()) / 60000);
-                  }
-                  return (
-                    <div key={ag.id} className="w-full bg-gradient-to-r from-gray-50 to-white border border-gray-200 shadow-sm rounded-xl px-4 py-4 flex flex-col gap-2 hover:shadow-md transition-all duration-200">
-                      {/* Header do card */}
+              ) : onlineAppointments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {showCancelled ? 'Nenhum cancelamento encontrado.' : 'Nenhum agendamento online encontrado.'}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {onlineAppointments.map((appt: any) => (
+                    <div key={appt.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                       <div className="flex items-center justify-between">
-                        <div className="font-semibold text-gray-900 text-base truncate flex-1">
-                          {ag.client?.name || 'Cliente não definido'}
+                        <div className="font-semibold text-gray-900 truncate">{appt.client_name || appt.client?.name || 'Cliente'}</div>
+                        <div className="text-xs text-gray-500">
+                          {showCancelled
+                            ? getRelativeTime(appt.updated_at || appt.cancelled_at)
+                            : getRelativeTime(appt.created_at)}
                         </div>
-                        {minutos !== null && (
-                          <div className="text-xs font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full ml-2 border border-gray-200">
-                            {formatElapsedTime(minutos)}
-                          </div>
-                        )}
                       </div>
-                      
-                      {/* Informações em grid para desktop */}
-                      <div className={`${isMobile ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-4'}`}>
-                        {/* Data e horário */}
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                          </svg>
-                          <span className="truncate">{ag.date && ag.date.split('-').reverse().join('/')} - {ag.start_time?.slice(0,5)}</span>
-                        </div>
-                        
-                        {/* Profissional */}
+                      <div className="mt-2 text-sm text-gray-700 flex items-center gap-2">
+                        <span>{(appt.date ? new Date(appt.date).toLocaleDateString('pt-BR') : appt.day)} - {(appt.start_time || appt.time || '').substring(0,5)}</span>
+                        <span className="mx-1">•</span>
+                        {/* Avatar do profissional */}
                         <div className="flex items-center gap-2">
-                          {ag.professional?.url_foto ? (
-                            <div className="w-6 h-6 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
-                              <img
-                                src={ag.professional.url_foto}
-                                alt={ag.professional?.name || 'Profissional'}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  // Fallback para ícone se a imagem falhar
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const parent = target.parentElement;
-                                  if (parent) {
-                                    parent.innerHTML = `
-                                      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                      </svg>
-                                    `;
-                                    parent.className = 'w-6 h-6 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm';
-                                  }
-                                }}
-                              />
-                            </div>
+                          {appt.professional_photo_url || appt.professional?.url_foto ? (
+                            <img
+                              src={appt.professional_photo_url || appt.professional?.url_foto}
+                              alt={appt.professional_name || appt.professional?.name || 'Profissional'}
+                              className="w-6 h-6 rounded-full object-cover border"
+                            />
                           ) : (
-                            <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
+                            <div
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px]"
+                              style={{ backgroundColor: DEFAULT_PROFESSIONAL_COLOR }}
+                            >
+                              {(appt.professional_name || appt.professional?.name || 'P')[0]}
                             </div>
                           )}
-                          <span className="text-sm text-gray-600 truncate">{ag.professional?.name || 'Profissional não definido'}</span>
+                          <span>{appt.professional_name || appt.professional?.name}</span>
                         </div>
-                      </div>
-                      
-                      {/* Serviços - sempre em linha separada */}
-                      {Array.isArray(ag.services) && ag.services.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 15.75V18l-7.5-4.5v-6.75l7.5-4.5v6.75z" />
-                          </svg>
-                          <span className="text-sm text-gray-600 truncate">
-                            {ag.services.map((s: any) => s.name).join(', ')}
+                        {showCancelled && (
+                          <span className="ml-auto text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                            Cancelado {getRelativeTime(appt.updated_at || appt.cancelled_at)}
                           </span>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">{(appt.services || appt.services_list || []).map((s: any) => s.name || s).join(', ')}</div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
